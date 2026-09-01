@@ -116,6 +116,10 @@ function initCollectionTab() {
             document.body.setAttribute('data-page', MEDIA_PAGE_KEY[currentMediaFilter] || 'list');
             updateStatistics(filterByMedia(myGamesCache));
             displayMyGames(sortMyGames(myGamesCache));
+            // The category row is shared, so keep the Custom Lists view in sync too.
+            if (clExpandedListId && typeof clRenderAccGames === 'function') {
+                clRenderAccGames(clExpandedListId);
+            }
         });
     });
 
@@ -826,6 +830,7 @@ function clRenderAccGames(listId) {
     var f        = clFilters[listId];
     var editMode = clIsEditMode[listId];
     var games    = (clListGames[listId] || []).slice();
+    if (currentMediaFilter !== 'all') games = games.filter(function(g) { return (g.media_type || 'game') === currentMediaFilter; });
     if (f.status !== 'all') games = games.filter(function(g) { return g.status === f.status; });
     if (f.search) games = games.filter(function(g) { return g.name.toLowerCase().includes(f.search); });
     switch (f.sort) {

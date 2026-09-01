@@ -28,6 +28,14 @@
             <button type="button" class="page-tab" role="tab" id="tabBtnLists" data-tab="lists" aria-controls="tab-lists" aria-selected="false" tabindex="-1">Custom Lists</button>
         </div>
 
+        <div class="media-tabs" role="tablist" aria-label="Filter by category">
+            <button class="media-tab active" data-media="all" role="tab" aria-selected="true">All</button>
+            <button class="media-tab" data-media="movie" role="tab" aria-selected="false">Movies</button>
+            <button class="media-tab" data-media="series" role="tab" aria-selected="false">Shows</button>
+            <button class="media-tab" data-media="anime" role="tab" aria-selected="false">Anime</button>
+            <button class="media-tab" data-media="game" role="tab" aria-selected="false">Games</button>
+        </div>
+
         <div class="tab-panel active" id="tab-collection" role="tabpanel" aria-labelledby="tabBtnCollection">
 
             <div class="stats-dashboard">
@@ -117,14 +125,6 @@
                         <button id="editListBtn" class="btn btn-secondary">Edit</button>
                         <button id="doneEditingBtn" class="btn btn-success" style="display:none;">Done</button>
                     </div>
-                </div>
-
-                <div class="media-tabs" role="tablist" aria-label="Filter by category">
-                    <button class="media-tab active" data-media="all" role="tab" aria-selected="true">All</button>
-                    <button class="media-tab" data-media="movie" role="tab" aria-selected="false">Movies</button>
-                    <button class="media-tab" data-media="series" role="tab" aria-selected="false">Shows</button>
-                    <button class="media-tab" data-media="anime" role="tab" aria-selected="false">Anime</button>
-                    <button class="media-tab" data-media="game" role="tab" aria-selected="false">Games</button>
                 </div>
 
                 <div class="status-tabs">
