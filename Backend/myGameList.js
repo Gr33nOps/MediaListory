@@ -1,7 +1,7 @@
 const express = require('express');
 const { clientError } = require('./errors');
 const { parseIgdbClientId, slugify } = require('./igdbUtils');
-const { parseMediaRef, externalRef, isValidMediaType } = require('./tmdbUtils');
+const { parseMediaRef, externalRef, isValidMediaType, providerFor } = require('./tmdbUtils');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
@@ -18,29 +18,43 @@ module.exports = (db, verifyToken, checkBanned) => {
     return value || [];
   }
 
-  // Resolve the media identity from an add/list payload. Supports games (IGDB)
-  // and movies/series (TMDB). Returns { media_type, external_id, ref } or null.
+  // Resolve the media identity from an add/list payload. Supports games (IGDB),
+  // movies/series (TMDB), and anime (Kitsu). Returns
+  // { media_type, provider, external_id, ref } or null. IDs are kept separate per
+  // provider + media_type so they can never collide.
   function resolveMedia(data) {
     if (!data) return null;
 
-    // Explicit TMDB media (movies/series).
+    // Explicit non-game media (movies/series -> TMDB, anime -> Kitsu).
     if (data.media_type && isValidMediaType(data.media_type) && data.media_type !== 'game') {
-      const tmdbId = parseInt(data.tmdb_id, 10);
-      if (tmdbId > 0) {
-        return { media_type: data.media_type, external_id: tmdbId, ref: externalRef(data.media_type, tmdbId) };
+      const raw = data.provider_id != null ? data.provider_id
+        : (data.tmdb_id != null ? data.tmdb_id : data.kitsu_id);
+      const id = parseInt(raw, 10);
+      if (id > 0) {
+        return {
+          media_type: data.media_type,
+          provider: providerFor(data.media_type),
+          external_id: id,
+          ref: externalRef(data.media_type, id)
+        };
       }
     }
 
     // Games via IGDB (default / backward compatible).
     const igdbId = parseIgdbClientId(data.igdb_id) || parseIgdbClientId(data.game_id);
     if (igdbId) {
-      return { media_type: 'game', external_id: igdbId, ref: `igdb_${igdbId}` };
+      return { media_type: 'game', provider: 'igdb', external_id: igdbId, ref: `igdb_${igdbId}` };
     }
 
-    // Fallback: parse a universal ref string (igdb_/tmdb_movie_/tmdb_series_).
+    // Fallback: parse a universal ref string.
     const parsed = parseMediaRef(data.game_id);
     if (parsed) {
-      return { media_type: parsed.media_type, external_id: parsed.id, ref: externalRef(parsed.media_type, parsed.id) };
+      return {
+        media_type: parsed.media_type,
+        provider: providerFor(parsed.media_type),
+        external_id: parsed.id,
+        ref: externalRef(parsed.media_type, parsed.id)
+      };
     }
     return null;
   }
@@ -68,8 +82,10 @@ module.exports = (db, verifyToken, checkBanned) => {
       const slug = generateSlug(mediaData.name) || media.ref;
       const payload = {
         game_id:          media.ref,
-        igdb_id:          media.media_type === 'game'  ? media.external_id : null,
-        tmdb_id:          media.media_type === 'game'  ? null : media.external_id,
+        igdb_id:          media.provider === 'igdb' ? media.external_id : null,
+        tmdb_id:          media.provider === 'tmdb' ? media.external_id : null,
+        provider:         media.provider,
+        provider_id:      String(media.external_id),
         media_type:       media.media_type,
         name:             mediaData.name,
         slug,
@@ -78,6 +94,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         rating:           mediaData.rating            || null,
         metacritic_score: mediaData.metacritic_score  || null,
         released:         mediaData.released          || null,
+        episode_count:    (mediaData.number_of_episodes != null ? mediaData.number_of_episodes
+                            : (mediaData.episode_count != null ? mediaData.episode_count : null)),
         playtime:         mediaData.playtime          || 0,
         genres:           JSON.stringify(mediaData.genres     || []),
         platforms:        JSON.stringify(mediaData.platforms  || []),
@@ -169,8 +187,10 @@ module.exports = (db, verifyToken, checkBanned) => {
           'games.metacritic_score',
           'games.playtime',
           'games.media_type',
+          'games.provider',
           'games.igdb_id',
           'games.tmdb_id',
+          'games.episode_count',
           'games.game_id as media_ref',
           'games.genres as genres_json',
           'games.platforms as platforms_json',
@@ -215,19 +235,26 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   router.put('/games/:gameId', verifyToken, checkBanned, async (req, res) => {
     try {
-      const { status, score } = req.body;
+      const { status, score, progress } = req.body;
       const userGame = await db('user_game_lists')
         .where({ user_id: req.userId, game_id: req.params.gameId })
         .first();
       if (!userGame) return res.status(404).json({ error: 'Game not found in your list' });
 
+      const update = {
+        status:     status !== undefined ? status : userGame.status,
+        score:      score  !== undefined ? score  : userGame.score,
+        updated_at: db.fn.now()
+      };
+      // Episode/step progress (series/anime). Clamp to >= 0.
+      if (progress !== undefined) {
+        const p = parseInt(progress, 10);
+        update.progress = Number.isNaN(p) ? null : Math.max(0, p);
+      }
+
       await db('user_game_lists')
         .where({ user_id: req.userId, game_id: req.params.gameId })
-        .update({
-          status:     status !== undefined ? status : userGame.status,
-          score:      score  !== undefined ? score  : userGame.score,
-          updated_at: db.fn.now()
-        });
+        .update(update);
 
       res.json({ message: 'Game updated successfully' });
     } catch (error) {

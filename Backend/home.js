@@ -121,6 +121,7 @@ module.exports = (db) => {
         .select(
           'id', 'game_id', 'name', 'description', 'background_image',
           'rating', 'metacritic_score', 'playtime', 'igdb_id', 'tmdb_id', 'media_type',
+          'provider', 'provider_id', 'episode_count',
           'genres', 'platforms', 'publishers', 'developers',
           db.raw("TO_CHAR(released, 'YYYY-MM-DD') as released")
         )

@@ -10,7 +10,10 @@ const { slugify } = require('./igdbUtils');
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/';
 
-const MEDIA_TYPES = ['game', 'movie', 'series'];
+const MEDIA_TYPES = ['game', 'movie', 'series', 'anime'];
+
+// Which external provider backs each media type.
+const MEDIA_PROVIDER = { game: 'igdb', movie: 'tmdb', series: 'tmdb', anime: 'kitsu' };
 
 // TMDB uses 'movie' and 'tv'; MediaListory uses 'movie' and 'series'.
 function tmdbEndpointFor(mediaType) {
@@ -32,6 +35,7 @@ function externalRef(mediaType, id) {
   if (Number.isNaN(n) || n <= 0) return null;
   if (mediaType === 'movie') return `tmdb_movie_${n}`;
   if (mediaType === 'series') return `tmdb_series_${n}`;
+  if (mediaType === 'anime') return `kitsu_${n}`;
   if (mediaType === 'game') return `igdb_${n}`;
   return null;
 }
@@ -44,9 +48,15 @@ function parseMediaRef(value) {
   if (m) return { media_type: 'movie', id: parseInt(m[1], 10) };
   m = s.match(/^tmdb_series_(\d+)$/i);
   if (m) return { media_type: 'series', id: parseInt(m[1], 10) };
+  m = s.match(/^kitsu_(\d+)$/i);
+  if (m) return { media_type: 'anime', id: parseInt(m[1], 10) };
   m = s.match(/^igdb_(\d+)$/i);
   if (m) return { media_type: 'game', id: parseInt(m[1], 10) };
   return null;
+}
+
+function providerFor(mediaType) {
+  return MEDIA_PROVIDER[mediaType] || null;
 }
 
 function isValidMediaType(mediaType) {
@@ -102,6 +112,8 @@ function normalizeTmdbMovie(movie, genreMap) {
   return {
     id: externalRef('movie', movie.id),
     media_type: 'movie',
+    provider: 'tmdb',
+    provider_id: String(movie.id),
     tmdb_id: movie.id,
     name: movie.title || movie.original_title || 'Untitled',
     background_image: tmdbImage(movie.poster_path, 'w500'),
@@ -125,6 +137,8 @@ function normalizeTmdbSeries(series, genreMap) {
   return {
     id: externalRef('series', series.id),
     media_type: 'series',
+    provider: 'tmdb',
+    provider_id: String(series.id),
     tmdb_id: series.id,
     name: series.name || series.original_name || 'Untitled',
     background_image: tmdbImage(series.poster_path, 'w500'),
@@ -147,15 +161,23 @@ function normalizeTmdb(mediaType, obj, genreMap) {
   return null;
 }
 
-/** Normalized media object -> row for the shared `games` table. */
+/** Normalized media object (any provider) -> row for the shared `games` table. */
 function mediaToRow(media) {
-  if (!media || !media.media_type || !media.tmdb_id) return null;
-  const ref = externalRef(media.media_type, media.tmdb_id);
+  if (!media || !media.media_type) return null;
+  const provider = media.provider || MEDIA_PROVIDER[media.media_type];
+  const providerId = media.provider_id != null ? String(media.provider_id)
+    : (media.tmdb_id != null ? String(media.tmdb_id)
+      : (media.kitsu_id != null ? String(media.kitsu_id) : null));
+  if (!provider || !providerId) return null;
+  const ref = externalRef(media.media_type, providerId);
   if (!ref) return null;
+  const numId = parseInt(providerId, 10);
   return {
     game_id: ref,
-    igdb_id: null,
-    tmdb_id: media.tmdb_id,
+    igdb_id: provider === 'igdb' ? numId : null,
+    tmdb_id: provider === 'tmdb' ? numId : null,
+    provider,
+    provider_id: providerId,
     media_type: media.media_type,
     name: media.name,
     slug: slugify(media.name),
@@ -164,6 +186,8 @@ function mediaToRow(media) {
     rating: media.rating != null ? media.rating : null,
     metacritic_score: media.metacritic_score != null ? media.metacritic_score : null,
     released: media.released || null,
+    episode_count: media.number_of_episodes != null ? media.number_of_episodes
+      : (media.episode_count != null ? media.episode_count : null),
     playtime: 0,
     genres: JSON.stringify(media.genres || []),
     platforms: JSON.stringify(media.platforms || []),
@@ -174,11 +198,13 @@ function mediaToRow(media) {
 
 module.exports = {
   MEDIA_TYPES,
+  MEDIA_PROVIDER,
   TMDB_IMAGE_BASE,
   tmdbEndpointFor,
   tmdbImage,
   externalRef,
   parseMediaRef,
+  providerFor,
   isValidMediaType,
   ratingFromVote,
   resolveGenres,

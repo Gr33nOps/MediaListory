@@ -39,7 +39,7 @@ module.exports = (db, verifyToken, checkBanned) => {
           .select('games.media_type', db.raw('COUNT(*) as count'))
       ]);
 
-      const mediaBreakdown = { game: 0, movie: 0, series: 0 };
+      const mediaBreakdown = { game: 0, movie: 0, series: 0, anime: 0 };
       (breakdownRows || []).forEach(r => {
         const key = r.media_type || 'game';
         if (mediaBreakdown[key] === undefined) mediaBreakdown[key] = 0;

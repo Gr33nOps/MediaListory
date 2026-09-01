@@ -406,6 +406,15 @@ try {
   process.exit(1);
 }
 
+try {
+  const kitsuRoutes = require('./kitsu');
+  app.use('/api/kitsu', igdbLimiter, kitsuRoutes(optionalAuth, passThrough, db));
+  console.log('  Kitsu (anime) proxy routes loaded');
+} catch (error) {
+  console.error('  Error loading Kitsu proxy routes:', error.message);
+  process.exit(1);
+}
+
 // Compatibility aliases for external clients (/api remains for this app).
 try {
   const authRoutes = require('./auth');
@@ -418,6 +427,7 @@ try {
   const moderatorRoutes = require('./moderator');
   const igdbRoutes = require('./igdb');
   const tmdbRoutes = require('./tmdb');
+  const kitsuRoutes = require('./kitsu');
 
   app.use('/api/v1/auth', authLimiter, authRoutes(db, jwt, JWT_SECRET, verifyToken, checkBanned));
   app.use('/api/v1', homeRoutes(db));
@@ -429,6 +439,7 @@ try {
   app.use('/api/v1/moderator', moderatorRoutes(db, verifyToken, verifyModerator, logModeratorActivity));
   app.use('/api/v1/igdb', igdbLimiter, igdbRoutes(optionalAuth, passThrough, db));
   app.use('/api/v1/tmdb', igdbLimiter, tmdbRoutes(optionalAuth, passThrough, db));
+  app.use('/api/v1/kitsu', igdbLimiter, kitsuRoutes(optionalAuth, passThrough, db));
   console.log('  /api/v1 aliases loaded');
 } catch (error) {
   console.error('  Error loading /api/v1 aliases:', error.message);
@@ -458,6 +469,7 @@ app.get('/auth.html', (req, res) => res.sendFile(path.join(frontendPath, 'auth.h
 app.get('/home.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
 app.get('/movies.html', (req, res) => res.sendFile(path.join(frontendPath, 'movies.html')));
 app.get('/series.html', (req, res) => res.sendFile(path.join(frontendPath, 'series.html')));
+app.get('/anime.html', (req, res) => res.sendFile(path.join(frontendPath, 'anime.html')));
 app.get('/profile.html', (req, res) => res.sendFile(path.join(frontendPath, 'profile.html')));
 app.get('/myGameList.html', (req, res) => res.sendFile(path.join(frontendPath, 'myGameList.html')));
 app.get('/friends.html', (req, res) => res.sendFile(path.join(frontendPath, 'friends.html')));

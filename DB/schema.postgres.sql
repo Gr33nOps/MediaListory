@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS games (
   game_id TEXT UNIQUE,
   igdb_id INTEGER UNIQUE,
   tmdb_id INTEGER,
-  media_type VARCHAR(16) NOT NULL DEFAULT 'game',
+  provider VARCHAR(16),          -- igdb | tmdb | kitsu
+  provider_id TEXT,              -- external id within the provider
+  media_type VARCHAR(16) NOT NULL DEFAULT 'game', -- game | movie | series | anime
+  episode_count INTEGER,         -- total episodes (series/anime)
   name VARCHAR(255) NOT NULL,
   slug VARCHAR(255),
   description TEXT,
@@ -54,9 +57,13 @@ CREATE TABLE IF NOT EXISTS games (
 CREATE INDEX IF NOT EXISTS idx_games_igdb_id ON games (igdb_id);
 CREATE INDEX IF NOT EXISTS idx_games_name ON games (name);
 CREATE INDEX IF NOT EXISTS idx_games_media_type ON games (media_type);
+CREATE INDEX IF NOT EXISTS idx_games_provider ON games (provider);
 -- Movies and series share TMDB's numeric id space, so uniqueness is per media type.
 CREATE UNIQUE INDEX IF NOT EXISTS games_media_tmdb_uidx
   ON games (media_type, tmdb_id) WHERE tmdb_id IS NOT NULL;
+-- Hard collision guard across providers.
+CREATE UNIQUE INDEX IF NOT EXISTS games_provider_media_uidx
+  ON games (provider, media_type, provider_id) WHERE provider IS NOT NULL AND provider_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS user_game_lists (
   id BIGSERIAL PRIMARY KEY,
@@ -65,7 +72,8 @@ CREATE TABLE IF NOT EXISTS user_game_lists (
   status VARCHAR(32) NOT NULL DEFAULT 'plan_to_play',
   score SMALLINT,
   notes TEXT, -- used by GET /api/user/export
-  progress_hours NUMERIC,
+  progress INTEGER,       -- episodes watched (series/anime)
+  progress_hours NUMERIC, -- playtime (games)
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, game_id)
