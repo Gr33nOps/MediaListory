@@ -134,14 +134,14 @@ function displayStats(games, followers, following) {
     document.getElementById('followersCount').textContent = followers.length;
     document.getElementById('followingCount').textContent = following.length;
 
-    var breakdown = { game: 0, movie: 0, series: 0 };
+    var breakdown = { game: 0, movie: 0, series: 0, anime: 0 };
     games.forEach(function(g) {
         var t = g.media_type || 'game';
         if (breakdown[t] === undefined) breakdown[t] = 0;
         breakdown[t]++;
     });
     var el = document.getElementById('mediaBreakdown');
-    if (el) el.textContent = breakdown.game + ' games · ' + breakdown.movie + ' movies · ' + breakdown.series + ' series';
+    if (el) el.textContent = breakdown.movie + ' movies · ' + breakdown.series + ' series · ' + breakdown.anime + ' anime · ' + breakdown.game + ' games';
 }
 
 function formatDate(dateString) {

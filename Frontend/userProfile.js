@@ -191,7 +191,7 @@ function displayUserProfile(user) {
         var line = document.createElement('div');
         line.id = 'mediaBreakdownLine';
         line.style.cssText = 'font-size:0.82rem;color:#94a3b8;margin-top:4px;';
-        line.textContent = (bd.game || 0) + ' games · ' + (bd.movie || 0) + ' movies · ' + (bd.series || 0) + ' series';
+        line.textContent = (bd.movie || 0) + ' movies · ' + (bd.series || 0) + ' series · ' + (bd.anime || 0) + ' anime · ' + (bd.game || 0) + ' games';
         if (titleEl && titleEl.parentNode) titleEl.parentNode.insertBefore(line, titleEl.nextSibling);
     }
     document.getElementById('customListsTitle').textContent = (user.display_name || user.username) + "'s Lists";

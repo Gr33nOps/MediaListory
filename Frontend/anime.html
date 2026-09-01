@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Anime - MediaListory</title>
+    <meta name="description" content="Track, rate, and share the anime you watch with MediaListory.">
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div id="main-content" tabindex="-1" class="container">
+        <nav class="navbar" id="appNav" data-active="anime" data-brand="MediaListory"></nav>
+
+        <div class="search-container">
+            <div class="search-bar">
+                <label class="sr-only" for="searchInput">Search anime</label>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search for anime..." aria-label="Search anime">
+                <button id="searchBtn" class="btn btn-primary">Search</button>
+            </div>
+            <div class="search-filters">
+                <label class="sr-only" for="sortBy">Sort anime</label>
+                <select id="sortBy" class="filter-select" aria-label="Sort anime">
+                    <option value="popularity-desc" selected>Popularity</option>
+                    <option value="rating-desc">Top Rated</option>
+                    <option value="release-desc">Newest</option>
+                    <option value="release-asc">Oldest</option>
+                    <option value="coming-soon">Coming Soon</option>
+                </select>
+                <button id="filterBtn" class="btn btn-secondary">Filters</button>
+            </div>
+        </div>
+
+        <div id="filterSection" class="filter-section hidden">
+            <div class="filter-group">
+                <select id="genre" class="filter-select">
+                    <option value="">All Genres</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button id="applyFiltersBtn" class="btn btn-primary">Apply</button>
+                <button id="resetFiltersBtn" class="btn btn-secondary">Reset</button>
+            </div>
+        </div>
+
+        <div id="loadingIndicator" class="loading-indicator" style="display:none;">
+            <div class="spinner"></div>
+            <p>Loading anime...</p>
+        </div>
+
+        <div id="searchResults" class="games-grid"></div>
+
+        <div class="pagination" style="margin-top:30px;">
+            <button id="prevPageBtn" class="btn" disabled>Previous</button>
+            <span id="pageInfo" class="page-info">Page 1</span>
+            <button id="nextPageBtn" class="btn">Next</button>
+        </div>
+
+        <div id="gameModal" class="modal" hidden role="dialog">
+            <div class="modal-content">
+                <button type="button" class="close-btn" id="closeModalBtn" aria-label="Close">×</button>
+                <div id="gameDetails"></div>
+            </div>
+        </div>
+
+        <footer class="site-footer">
+            <div class="footer-inner">
+                <div class="footer-brand">
+                    <div class="brand-name">MediaListory</div>
+                    <p>Track the games, movies, series, and anime you love, discover what to enjoy next, and share your library with friends.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Navigate</h4>
+                    <ul>
+                        <li><a href="movies.html">Movies</a></li>
+                        <li><a href="series.html">Series</a></li>
+                        <li><a href="anime.html">Anime</a></li>
+                        <li><a href="home.html">Games</a></li>
+                        <li><a href="myGameList.html">My Library</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Data &amp; Credits</h4>
+                    <ul>
+                        <li><a href="https://kitsu.io" target="_blank" rel="noopener noreferrer">Kitsu</a></li>
+                        <li><a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a></li>
+                        <li><a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer">IGDB</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-igdb">
+                <img src="https://kitsu.io/favicon.ico" alt="Kitsu logo" onerror="this.style.display='none'">
+                <div class="footer-igdb-text">
+                    Anime data powered by <a href="https://kitsu.io" target="_blank" rel="noopener noreferrer">Kitsu</a>.
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <span>© 2026 MediaListory. All rights reserved.</span>
+                <div class="footer-bottom-links">
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms of Service</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="common.js"></script>
+    <script>window.MEDIA_TYPE = 'anime';</script>
+    <script src="media-browse.js"></script>
+</body>
+</html>

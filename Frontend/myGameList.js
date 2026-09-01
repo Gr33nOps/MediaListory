@@ -293,10 +293,12 @@ function displayMyGames(games) {
     if (filtered.length === 0) {
         if (!currentSearchTerm && currentStatusFilter === 'all') {
             var browseHref = currentMediaFilter === 'movie' ? 'movies.html'
-                : currentMediaFilter === 'series' ? 'series.html' : 'home.html';
+                : currentMediaFilter === 'series' ? 'series.html'
+                : currentMediaFilter === 'anime' ? 'anime.html' : 'home.html';
             var browseLabel = currentMediaFilter === 'movie' ? 'Browse movies'
                 : currentMediaFilter === 'series' ? 'Browse series'
-                : currentMediaFilter === 'game' ? 'Browse games' : 'Browse games, movies & series';
+                : currentMediaFilter === 'anime' ? 'Browse anime'
+                : currentMediaFilter === 'game' ? 'Browse games' : 'Browse movies, series, anime & games';
             container.innerHTML = '<div class="coll-empty-state">' +
                 '<div class="coll-empty-icon">Your library is empty</div>' +
                 '<p>Start building your library by browsing and adding games, movies, and series you have enjoyed or want to explore.</p>' +
@@ -326,6 +328,10 @@ function renderCollectionRow(game) {
     var statusText  = (typeof statusLabel === 'function') ? statusLabel(game.status, mediaType) : (STATUS_LABEL[game.status] || game.status);
     var typeText    = (typeof mediaTypeLabel === 'function') ? mediaTypeLabel(mediaType) : mediaType;
     var imgSrc      = game.background_image || '/img/no-image.svg';
+    var progressHtml = '';
+    if ((mediaType === 'series' || mediaType === 'anime') && game.episode_count) {
+        progressHtml = '<span class="coll-item-progress">' + (game.progress || 0) + '/' + game.episode_count + ' eps</span>';
+    }
 
     var editActions = isEditMode
         ? '<div class="coll-item-edit-actions">' +
@@ -343,6 +349,7 @@ function renderCollectionRow(game) {
                     '<span class="media-type-pill media-type-' + esc(mediaType) + '">' + esc(typeText) + '</span>' +
                     '<span class="status-dot-inline" style="background:' + statusColor + ';"></span>' +
                     '<span class="coll-item-status">' + esc(statusText) + '</span>' +
+                    progressHtml +
                 '</div>' +
             '</div>' +
             '<div class="coll-item-right">' +
@@ -366,9 +373,10 @@ function buildDetailInfoItems(game) {
     if (mediaType === 'movie') {
         if (devs.length) items.push({ label: 'Director', value: devs.join(', ') });
         if (pubs.length) items.push({ label: 'Studio', value: pubs.join(', ') });
-    } else if (mediaType === 'series') {
-        if (devs.length) items.push({ label: 'Creator', value: devs.join(', ') });
+    } else if (mediaType === 'series' || mediaType === 'anime') {
+        if (devs.length) items.push({ label: mediaType === 'anime' ? 'Studio' : 'Creator', value: devs.join(', ') });
         if (pubs.length) items.push({ label: 'Network', value: pubs.join(', ') });
+        if (game.episode_count) items.push({ label: 'Episodes', value: String(game.episode_count) });
     } else {
         if (pubs.length) items.push({ label: 'Publisher', value: pubs.join(', ') });
         if (devs.length) items.push({ label: 'Developer', value: devs.join(', ') });
@@ -436,6 +444,21 @@ function showUpdateModal(gameId) {
     document.getElementById('updateScore').value         = game && game.score ? game.score : '';
     document.getElementById('updateGameName').textContent = game ? game.name : '';
     document.getElementById('updateMessage').innerHTML   = '';
+
+    // Episode progress only applies to series/anime that have a known episode count.
+    var mediaType = game ? (game.media_type || 'game') : 'game';
+    var progRow = document.getElementById('updateProgressRow');
+    var progInput = document.getElementById('updateProgress');
+    var showProgress = game && (mediaType === 'series' || mediaType === 'anime') && game.episode_count;
+    if (progRow) progRow.style.display = showProgress ? 'block' : 'none';
+    if (progInput) {
+        progInput.value = game && game.progress != null ? game.progress : '';
+        if (showProgress) { progInput.max = game.episode_count; }
+    }
+    if (game) {
+        var t = document.querySelector('#updateModal h3');
+        if (t) t.textContent = 'Update ' + ((typeof mediaTypeLabel === 'function') ? mediaTypeLabel(mediaType) : 'item');
+    }
     if (typeof openModal === 'function') openModal('updateModal');
     else document.getElementById('updateModal').style.display = 'flex';
     setTimeout(function() {
@@ -467,13 +490,20 @@ function closeUpdateModal() {
 async function confirmUpdate() {
     var status = document.getElementById('updateStatus').value;
     var score  = document.getElementById('updateScore').value;
+    var progRow = document.getElementById('updateProgressRow');
+    var progInput = document.getElementById('updateProgress');
     var msgDiv = document.getElementById('updateMessage');
     if (score && (score < 1 || score > 10)) { showError(msgDiv, 'Score must be between 1 and 10'); return; }
+    var body = { status: status, score: score ? parseInt(score) : null };
+    if (progRow && progRow.style.display !== 'none' && progInput) {
+        var pv = progInput.value;
+        body.progress = pv === '' ? null : Math.max(0, parseInt(pv, 10) || 0);
+    }
     try {
         var r = await fetch(`${API_BASE}/user/games/${currentUpdateGameId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ status: status, score: score ? parseInt(score) : null })
+            body: JSON.stringify(body)
         });
         var d = await r.json();
         if (r.ok) {
