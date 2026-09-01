@@ -3501,3 +3501,28 @@ a:focus-visible {
         transform: none;
     }
 }
+/* ── Shared site footer (Games / Movies / Series browse pages) ──────────── */
+.site-footer { margin-top: 64px; border-top: 1px solid #1e293b; padding: 48px 0 24px; color: #64748b; font-size: 0.85rem; }
+.footer-inner { display: flex; flex-wrap: wrap; gap: 48px; justify-content: space-between; margin-bottom: 36px; }
+.footer-brand .brand-name { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin-bottom: 10px; letter-spacing: -0.01em; }
+.footer-brand p { max-width: 260px; line-height: 1.65; color: #64748b; }
+.footer-col h4 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; margin-bottom: 14px; }
+.footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.footer-col ul li a { color: #64748b; text-decoration: none; transition: color 0.18s; }
+.footer-col ul li a:hover { color: #e2e8f0; }
+.footer-igdb { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; margin-bottom: 28px; }
+.footer-igdb img { height: 26px; width: auto; flex-shrink: 0; }
+.footer-igdb-text { font-size: 0.78rem; line-height: 1.6; color: #64748b; }
+.footer-igdb-text a { color: #3b82f6; text-decoration: none; }
+.footer-igdb-text a:hover { text-decoration: underline; }
+.footer-bottom { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding-top: 20px; border-top: 1px solid #1e293b; font-size: 0.78rem; color: #475569; }
+.footer-bottom-links { display: flex; gap: 20px; }
+.footer-bottom-links a { color: #475569; text-decoration: none; transition: color 0.18s; }
+.footer-bottom-links a:hover { color: #94a3b8; }
+@media (max-width: 600px) { .footer-inner { gap: 32px; } .footer-col { min-width: 120px; } }
+
+/* ── Media-type pills (library + profiles) ─────────────────────────────── */
+.media-type-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 8px; border: 1px solid transparent; }
+.media-type-game { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.35); }
+.media-type-movie { background: rgba(168,85,247,0.15); color: #c084fc; border-color: rgba(168,85,247,0.35); }
+.media-type-series { background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.35); }

@@ -431,12 +431,41 @@
     return msg;
   }
 
+  // Same internal status keys across all media; labels differ per category so the
+  // UI reads naturally (games "play", movies/series "watch").
+  var STATUS_KEYS = ['playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];
+  var STATUS_LABELS = {
+    game:   { playing: 'Playing', completed: 'Completed', plan_to_play: 'Plan to Play', on_hold: 'On Hold', dropped: 'Dropped' },
+    movie:  { playing: 'Watching', completed: 'Watched', plan_to_play: 'Plan to Watch', on_hold: 'On Hold', dropped: 'Dropped' },
+    series: { playing: 'Watching', completed: 'Completed', plan_to_play: 'Plan to Watch', on_hold: 'On Hold', dropped: 'Dropped' }
+  };
+
+  function mediaTypeLabel(mediaType, plural) {
+    var map = { game: 'Game', movie: 'Movie', series: 'Series' };
+    var base = map[mediaType] || 'Game';
+    if (!plural) return base;
+    return mediaType === 'series' ? 'Series' : base + 's';
+  }
+
+  function statusLabel(status, mediaType) {
+    var set = STATUS_LABELS[mediaType] || STATUS_LABELS.game;
+    return set[status] || status || '';
+  }
+
+  function statusOptions(mediaType, selected) {
+    var set = STATUS_LABELS[mediaType] || STATUS_LABELS.game;
+    return STATUS_KEYS.map(function (key) {
+      var sel = key === selected ? ' selected' : '';
+      return '<option value="' + key + '"' + sel + '>' + set[key] + '</option>';
+    }).join('');
+  }
+
   function mountAppNav() {
     var el = document.getElementById('appNav');
     if (!el) return;
 
     var active = el.getAttribute('data-active') || '';
-    var brand = el.getAttribute('data-brand') || 'My Game List';
+    var brand = el.getAttribute('data-brand') || 'MediaListory';
     var user = getStoredUser();
 
     function link(href, key, label) {
@@ -445,9 +474,12 @@
         (active === key ? ' aria-current="page"' : '') + '>' + label + '</a>';
     }
 
+    // Three categories of one app: Games (IGDB), Movies + Series (TMDB).
     var actions =
-      link('home.html', 'home', 'Home') +
-      link('myGameList.html', 'list', 'My List') +
+      link('home.html', 'games', 'Games') +
+      link('movies.html', 'movies', 'Movies') +
+      link('series.html', 'series', 'Series') +
+      link('myGameList.html', 'list', 'My Library') +
       link('friends.html', 'friends', 'Following') +
       link('profile.html', 'profile', 'Profile');
 
@@ -538,4 +570,8 @@
   global.getDensity = getDensity;
   global.applyDensity = applyDensity;
   global.initDensity = initDensity;
+  global.mediaTypeLabel = mediaTypeLabel;
+  global.statusLabel = statusLabel;
+  global.statusOptions = statusOptions;
+  global.MEDIA_STATUS_KEYS = STATUS_KEYS;
 })(typeof window !== 'undefined' ? window : globalThis);

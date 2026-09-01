@@ -133,6 +133,15 @@ function displayStats(games, followers, following) {
     document.getElementById('totalGames').textContent     = totalGames;
     document.getElementById('followersCount').textContent = followers.length;
     document.getElementById('followingCount').textContent = following.length;
+
+    var breakdown = { game: 0, movie: 0, series: 0 };
+    games.forEach(function(g) {
+        var t = g.media_type || 'game';
+        if (breakdown[t] === undefined) breakdown[t] = 0;
+        breakdown[t]++;
+    });
+    var el = document.getElementById('mediaBreakdown');
+    if (el) el.textContent = breakdown.game + ' games · ' + breakdown.movie + ' movies · ' + breakdown.series + ' series';
 }
 
 function formatDate(dateString) {

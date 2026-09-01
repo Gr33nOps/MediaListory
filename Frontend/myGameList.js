@@ -6,6 +6,7 @@ let currentUser = (typeof getStoredUser === 'function') ? getStoredUser() : null
 let myGamesCache          = [];
 let currentMyGamesSort    = 'recently_added';
 let currentStatusFilter   = 'all';
+let currentMediaFilter    = 'all';
 let currentSearchTerm     = '';
 let isEditMode            = false;
 let currentUpdateGameId   = null;
@@ -101,6 +102,21 @@ function initCollectionTab() {
         });
     });
 
+    // Category tabs: All / Games / Movies / Series.
+    document.querySelectorAll('.media-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.media-tab').forEach(function(t) {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+            currentMediaFilter = tab.dataset.media;
+            updateStatistics(filterByMedia(myGamesCache));
+            displayMyGames(sortMyGames(myGamesCache));
+        });
+    });
+
     document.getElementById('editListBtn').addEventListener('click', function() { toggleEditMode(true); });
     document.getElementById('doneEditingBtn').addEventListener('click', function() { toggleEditMode(false); });
 
@@ -158,7 +174,7 @@ async function loadMyGames() {
         var data = await response.json();
         if (response.ok) {
             myGamesCache = data.games;
-            updateStatistics(data.games);
+            updateStatistics(filterByMedia(data.games));
             displayMyGames(sortMyGames(data.games));
         } else {
             showError(document.getElementById('myGamesGrid'), 'Failed to fetch games. Please try again.');
@@ -234,6 +250,11 @@ function updatePieChart(stats) {
     document.getElementById('pieChartSvg').innerHTML = svgPaths;
 }
 
+function filterByMedia(games) {
+    if (currentMediaFilter === 'all') return games;
+    return games.filter(function(g) { return (g.media_type || 'game') === currentMediaFilter; });
+}
+
 function sortMyGames(games) {
     var sorted = games.slice();
     switch (currentMyGamesSort) {
@@ -261,8 +282,8 @@ function getRatingColor(score) {
 
 function displayMyGames(games) {
     var container = document.getElementById('myGamesGrid');
-    var filtered  = games;
-    if (currentStatusFilter !== 'all') filtered = games.filter(function(g) { return g.status === currentStatusFilter; });
+    var filtered  = filterByMedia(games);
+    if (currentStatusFilter !== 'all') filtered = filtered.filter(function(g) { return g.status === currentStatusFilter; });
     if (currentSearchTerm) {
         filtered = filtered.filter(function(g) {
             return g.name.toLowerCase().includes(currentSearchTerm) ||
@@ -271,10 +292,15 @@ function displayMyGames(games) {
     }
     if (filtered.length === 0) {
         if (!currentSearchTerm && currentStatusFilter === 'all') {
+            var browseHref = currentMediaFilter === 'movie' ? 'movies.html'
+                : currentMediaFilter === 'series' ? 'series.html' : 'home.html';
+            var browseLabel = currentMediaFilter === 'movie' ? 'Browse movies'
+                : currentMediaFilter === 'series' ? 'Browse series'
+                : currentMediaFilter === 'game' ? 'Browse games' : 'Browse games, movies & series';
             container.innerHTML = '<div class="coll-empty-state">' +
-                '<div class="coll-empty-icon">Your collection is empty</div>' +
-                '<p>Start building your game list by browsing and adding games you have played or want to play.</p>' +
-                '<a href="home.html" class="btn btn-primary" style="margin-top:16px;">Browse games</a>' +
+                '<div class="coll-empty-icon">Your library is empty</div>' +
+                '<p>Start building your library by browsing and adding games, movies, and series you have enjoyed or want to explore.</p>' +
+                '<a href="' + browseHref + '" class="btn btn-primary" style="margin-top:16px;">' + browseLabel + '</a>' +
                 '</div>';
             return;
         }
@@ -295,8 +321,10 @@ function displayMyGames(games) {
 }
 
 function renderCollectionRow(game) {
+    var mediaType   = game.media_type || 'game';
     var statusColor = STATUS_COLOR[game.status] || '#666';
-    var statusLabel = STATUS_LABEL[game.status] || game.status;
+    var statusText  = (typeof statusLabel === 'function') ? statusLabel(game.status, mediaType) : (STATUS_LABEL[game.status] || game.status);
+    var typeText    = (typeof mediaTypeLabel === 'function') ? mediaTypeLabel(mediaType) : mediaType;
     var imgSrc      = game.background_image || '/img/no-image.svg';
 
     var editActions = isEditMode
@@ -306,14 +334,15 @@ function renderCollectionRow(game) {
           '</div>'
         : '';
 
-    return '<div class="coll-item list-item" data-game-id="' + game.game_id + '" role="button" tabindex="0" aria-label="' + esc('View details for ' + (game.name || 'game')) + '">' +
-        '<img src="' + esc(imgSrc) + '" alt="' + esc(game.name || 'Game cover') + '" class="coll-item-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+    return '<div class="coll-item list-item" data-game-id="' + game.game_id + '" role="button" tabindex="0" aria-label="' + esc('View details for ' + (game.name || 'title')) + '">' +
+        '<img src="' + esc(imgSrc) + '" alt="' + esc(game.name || 'Cover') + '" class="coll-item-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
         '<div class="coll-item-body">' +
             '<div class="coll-item-main">' +
                 '<div class="coll-item-name">' + esc(game.name) + '</div>' +
                 '<div class="coll-item-meta">' +
+                    '<span class="media-type-pill media-type-' + esc(mediaType) + '">' + esc(typeText) + '</span>' +
                     '<span class="status-dot-inline" style="background:' + statusColor + ';"></span>' +
-                    '<span class="coll-item-status">' + statusLabel + '</span>' +
+                    '<span class="coll-item-status">' + esc(statusText) + '</span>' +
                 '</div>' +
             '</div>' +
             '<div class="coll-item-right">' +
@@ -324,6 +353,31 @@ function renderCollectionRow(game) {
     '</div>';
 }
 
+// Build the detail info grid with labels appropriate to the media type.
+function buildDetailInfoItems(game) {
+    var mediaType = game.media_type || 'game';
+    var names = function(list) { return (list || []).map(function(x) { return x.name || x; }).filter(Boolean); };
+    var items = [];
+    if (game.released) {
+        items.push({ label: 'Released', value: new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) });
+    }
+    var devs = names(game.developers);
+    var pubs = names(game.publishers);
+    if (mediaType === 'movie') {
+        if (devs.length) items.push({ label: 'Director', value: devs.join(', ') });
+        if (pubs.length) items.push({ label: 'Studio', value: pubs.join(', ') });
+    } else if (mediaType === 'series') {
+        if (devs.length) items.push({ label: 'Creator', value: devs.join(', ') });
+        if (pubs.length) items.push({ label: 'Network', value: pubs.join(', ') });
+    } else {
+        if (pubs.length) items.push({ label: 'Publisher', value: pubs.join(', ') });
+        if (devs.length) items.push({ label: 'Developer', value: devs.join(', ') });
+        var plats = names(game.platforms);
+        if (plats.length) items.push({ label: 'Platforms', value: plats.join(' · ') });
+    }
+    return items;
+}
+
 async function showGameDetails(gameId) {
     try {
         var response = await fetch(`${API_BASE}/games/${gameId}`);
@@ -331,19 +385,14 @@ async function showGameDetails(gameId) {
         if (!response.ok) return;
 
         var heroBg = game.background_image || '/img/no-image.svg';
-        var infoItems = [
-            game.released ? { label: 'Released', value: new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) } : null,
-            game.publishers && game.publishers.length ? { label: 'Publisher', value: game.publishers.map(function(p) { return p.name; }).join(', ') } : null,
-            game.developers && game.developers.length ? { label: 'Developer', value: game.developers.map(function(d) { return d.name; }).join(', ') } : null,
-            game.platforms  && game.platforms.length  ? { label: 'Platforms',  value: game.platforms.map(function(p) { return p.name; }).join(' · ') } : null
-        ].filter(Boolean);
+        var infoItems = buildDetailInfoItems(game);
 
         var genreTagsHtml = (game.genres || []).length
-            ? '<div class="game-detail-genres">' + game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + g.name + '</span>'; }).join('') + '</div>'
+            ? '<div class="game-detail-genres">' + game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name || g) + '</span>'; }).join('') + '</div>'
             : '';
 
         var infoGridHtml = infoItems.length
-            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + i.label + '</div><div class="game-detail-info-value">' + i.value + '</div></div>'; }).join('') + '</div>'
+            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(i.label) + '</div><div class="game-detail-info-value">' + esc(i.value) + '</div></div>'; }).join('') + '</div>'
             : '';
 
         var releasedBadge = game.released
@@ -738,18 +787,13 @@ async function clShowGameDetails(gameId) {
         var game = await response.json();
         if (!response.ok) return;
         var heroBg = game.background_image || '/img/no-image.svg';
-        var infoItems = [
-            game.released ? { label: 'Released', value: new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) } : null,
-            game.publishers && game.publishers.length ? { label: 'Publisher', value: game.publishers.map(function(p) { return p.name; }).join(', ') } : null,
-            game.developers && game.developers.length ? { label: 'Developer', value: game.developers.map(function(d) { return d.name; }).join(', ') } : null,
-            game.platforms  && game.platforms.length  ? { label: 'Platforms',  value: game.platforms.map(function(p) { return p.name; }).join(' · ') } : null
-        ].filter(Boolean);
+        var infoItems = buildDetailInfoItems(game);
 
         var genreTagsHtml = (game.genres || []).length
-            ? '<div class="game-detail-genres">' + game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + g.name + '</span>'; }).join('') + '</div>'
+            ? '<div class="game-detail-genres">' + game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name || g) + '</span>'; }).join('') + '</div>'
             : '';
         var infoGridHtml = infoItems.length
-            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + i.label + '</div><div class="game-detail-info-value">' + i.value + '</div></div>'; }).join('') + '</div>'
+            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(i.label) + '</div><div class="game-detail-info-value">' + esc(i.value) + '</div></div>'; }).join('') + '</div>'
             : '';
         var releasedBadge = game.released
             ? '<span class="game-detail-date">' + new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) + '</span>'
