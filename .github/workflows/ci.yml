@@ -30,6 +30,8 @@ jobs:
           test -f Backend/igdb.js
           test -f Backend/tmdb.js
           test -f Backend/tmdbUtils.js
+          test -f Backend/kitsu.js
+          test -f Backend/kitsuUtils.js
           test -f Backend/localUser.js
           test -f Backend/userRoles.js
           test -f Backend/rateLimitStore.js
@@ -40,6 +42,7 @@ jobs:
           test -f Frontend/home.html
           test -f Frontend/movies.html
           test -f Frontend/series.html
+          test -f Frontend/anime.html
           test -f Frontend/media-browse.js
           test -f Frontend/auth.html
           test -f Frontend/404.html
@@ -69,7 +72,7 @@ jobs:
 
       - name: Require resolution (Linux case-sensitive)
         run: |
-          node -e "['./auth','./admin','./moderator','./myGameList','./igdb','./tmdb','./tmdbUtils','./localUser','./userRoles','./errors','./neonAuth','./profile','./userProfile'].forEach(m=>require(m)); console.log('requires ok')"
+          node -e "['./auth','./admin','./moderator','./myGameList','./igdb','./tmdb','./tmdbUtils','./kitsu','./kitsuUtils','./localUser','./userRoles','./errors','./neonAuth','./profile','./userProfile'].forEach(m=>require(m)); console.log('requires ok')"
         working-directory: Backend
 
       - name: Unit + smoke tests

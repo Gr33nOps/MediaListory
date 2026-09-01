@@ -18,24 +18,30 @@ const {
 test('externalRef builds scheme per media type', () => {
   assert.equal(externalRef('movie', 27205), 'tmdb_movie_27205');
   assert.equal(externalRef('series', 1396), 'tmdb_series_1396');
+  assert.equal(externalRef('anime', 7442), 'kitsu_7442');
   assert.equal(externalRef('game', 1942), 'igdb_1942');
   assert.equal(externalRef('movie', 0), null);
   assert.equal(externalRef('movie', 'abc'), null);
 });
 
-test('parseMediaRef round-trips every scheme', () => {
+test('parseMediaRef round-trips every scheme (provider-safe, no collisions)', () => {
   assert.deepEqual(parseMediaRef('tmdb_movie_27205'), { media_type: 'movie', id: 27205 });
   assert.deepEqual(parseMediaRef('tmdb_series_1396'), { media_type: 'series', id: 1396 });
+  assert.deepEqual(parseMediaRef('kitsu_7442'), { media_type: 'anime', id: 7442 });
   assert.deepEqual(parseMediaRef('igdb_1942'), { media_type: 'game', id: 1942 });
   assert.equal(parseMediaRef('nonsense'), null);
   assert.equal(parseMediaRef(''), null);
+  // Same numeric id across providers never collides:
+  assert.notEqual(externalRef('movie', 1), externalRef('game', 1));
+  assert.notEqual(externalRef('anime', 1), externalRef('series', 1));
 });
 
-test('isValidMediaType', () => {
+test('isValidMediaType includes anime', () => {
   assert.ok(isValidMediaType('game'));
   assert.ok(isValidMediaType('movie'));
   assert.ok(isValidMediaType('series'));
-  assert.ok(!isValidMediaType('anime'));
+  assert.ok(isValidMediaType('anime'));
+  assert.ok(!isValidMediaType('book'));
 });
 
 test('tmdbEndpointFor maps series to tv', () => {
