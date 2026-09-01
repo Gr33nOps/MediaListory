@@ -1,0 +1,54 @@
+name: Supabase Keep-Alive
+
+# Supabase pauses free-tier projects after ~7 days of inactivity.
+# This makes a tiny read three times a week so the database stays warm.
+# Secrets required (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL       e.g. https://xxxxxxxx.supabase.co
+#   SUPABASE_ANON_KEY  the public anon key (safe to store; already shipped to the browser)
+
+on:
+  schedule:
+    - cron: "0 12 * * 1,3,5" # Mon, Wed, Fri at 12:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Tiny read against Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query one row via PostgREST
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::Missing SUPABASE_URL or SUPABASE_ANON_KEY repo secret."
+            exit 1
+          fi
+          url="${SUPABASE_URL%/}/rest/v1/games?select=id&limit=1"
+          echo "Pinging $url"
+          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --max-time 30 "$url" || echo "000")
+          echo "HTTP status: ${code}"
+          echo "Body: $(cat /tmp/body.txt 2>/dev/null || true)"
+          # Any HTTP response (even 401/404 from RLS/grants) means the DB answered and is awake.
+          # Only a dropped connection or a 5xx means the project is paused/unreachable.
+          if [ "${code}" = "000" ]; then
+            echo "::error::No response from Supabase - project is likely paused. Restore it from the dashboard."
+            exit 1
+          fi
+          if [ "${code}" -ge 500 ]; then
+            echo "::error::Supabase returned ${code}."
+            exit 1
+          fi
+          echo "Supabase responded (${code}) - project is awake."

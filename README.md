@@ -58,6 +58,29 @@ Do not set `ALLOW_DEGRADED=1` in production.
 
 Details: [`docs/runbook.md`](docs/runbook.md). Probes: `/health` (up), `/ready` (DB + IGDB).
 
+## Maintenance
+
+### Supabase keep-alive
+
+Supabase pauses free-tier projects after ~7 days of inactivity. [`.github/workflows/keepalive.yml`](.github/workflows/keepalive.yml) runs **Mon/Wed/Fri at 12:00 UTC** (and on demand) and makes a tiny PostgREST read (`GET /rest/v1/games?select=id&limit=1`) so the database stays warm.
+
+Required repo secrets (**Settings → Secrets and variables → Actions**):
+
+| Secret | Value |
+|--------|-------|
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_ANON_KEY` | Public anon key (safe to store; already shipped to the browser) |
+
+Run it manually any time from **Actions → Supabase Keep-Alive → Run workflow**. If a project has already been paused, restore it once from the Supabase dashboard — the workflow keeps it awake but cannot wake a paused project.
+
+### Security scanning (Semgrep)
+
+CI runs a **Semgrep SAST** job ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) on `Backend/` and `Frontend/` that **fails the build on any `WARNING`/`ERROR` finding**. Verified false positives are suppressed inline with justified `nosemgrep` comments. Run it locally with:
+
+```bash
+semgrep scan --config p/security-audit --config p/secrets --config p/javascript --config p/nodejs --config p/expressjs --config p/owasp-top-ten --severity WARNING --severity ERROR --error Backend Frontend
+```
+
 ## Layout
 
 ```text
