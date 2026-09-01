@@ -16,6 +16,35 @@ require('dotenv').config({
   override: false
 });
 
+// Error tracking (opt-in via SENTRY_DSN). Loaded defensively: a missing package
+// or an unset DSN is a silent no-op, never a boot failure.
+let Sentry = null;
+try {
+  if (process.env.SENTRY_DSN) {
+    Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      release: process.env.RENDER_GIT_COMMIT || undefined,
+      tracesSampleRate: 0.05,
+      sendDefaultPii: false,
+      beforeSend(event) {
+        try {
+          if (event.request && event.request.headers) {
+            ['authorization', 'Authorization', 'cookie', 'Cookie'].forEach((h) => {
+              delete event.request.headers[h];
+            });
+          }
+        } catch (_) {}
+        return event;
+      }
+    });
+    console.log('Sentry error tracking enabled');
+  }
+} catch (err) {
+  console.warn('Sentry not initialized:', err.message);
+}
+
 const REQUIRED_ENV = [
   'DATABASE_URL',
   'JWT_SECRET',
@@ -80,11 +109,11 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       "default-src": ["'self'"],
-      "script-src": ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.googletagmanager.com'],
+      "script-src": ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.googletagmanager.com', 'https://js.sentry-cdn.com', 'https://browser.sentry-cdn.com'],
       "style-src": ["'self'", "'unsafe-inline'"],
       "img-src": ["'self'", 'data:', 'https:'],
       "font-src": ["'self'", 'data:'],
-      "connect-src": ["'self'", FRONTEND_URL, NEON_AUTH_ORIGIN, 'https://*.neon.tech', 'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://*.google-analytics.com'].filter(Boolean),
+      "connect-src": ["'self'", FRONTEND_URL, NEON_AUTH_ORIGIN, 'https://*.neon.tech', 'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.sentry.io'].filter(Boolean),
       "object-src": ["'none'"],
       "base-uri": ["'self'"],
       "frame-ancestors": ["'none'"]
@@ -482,6 +511,11 @@ app.get('/moderator.html', (req, res) => res.sendFile(path.join(frontendPath, 'm
 app.get('/terms.html', (req, res) => res.sendFile(path.join(frontendPath, 'terms.html')));
 app.get('/privacy.html', (req, res) => res.sendFile(path.join(frontendPath, 'privacy.html')));
 app.get('/robots.txt', (req, res) => res.sendFile(path.join(frontendPath, 'robots.txt')));
+
+// Sentry error handler must sit after routes and before our own error handler.
+if (Sentry && typeof Sentry.setupExpressErrorHandler === 'function') {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 app.use((err, req, res, next) => {
   if (err && err.message === 'Not allowed by CORS') {

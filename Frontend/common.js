@@ -4,6 +4,9 @@
   // To enable Google Analytics 4, put your measurement ID here (e.g. 'G-ABC123').
   // Leave empty to disable analytics entirely. Honors Do Not Track.
   global.MGL_GA_ID = global.MGL_GA_ID || '';
+  // To enable Sentry error tracking, paste your project's DSN here (or set a
+  // <meta name="sentry-dsn" content="..."> tag). Leave empty to disable.
+  global.MGL_SENTRY_DSN = global.MGL_SENTRY_DSN || '';
   // Default same-origin `/api` (local + Vercel rewrite). Override with window.MGL_API_BASE
   // only if calling Render directly (e.g. https://xxx.onrender.com/api).
   var API_BASE = (typeof global.MGL_API_BASE === 'string' && global.MGL_API_BASE)
@@ -32,6 +35,74 @@
     global.gtag = gtag;
     gtag('js', new Date());
     gtag('config', id, { anonymize_ip: true });
+  }
+
+  // ── Sentry error tracking (opt-in) ─────────────────────────────────────
+  // No-op until a DSN is configured (global.MGL_SENTRY_DSN or a
+  // <meta name="sentry-dsn">). Uses Sentry's Loader Script so we never pin an
+  // SDK version, buffers errors from the moment it loads, and scrubs anything
+  // sensitive before an event leaves the browser.
+  function initSentry() {
+    var dsn = global.MGL_SENTRY_DSN;
+    if (!dsn) {
+      var m = document.querySelector('meta[name="sentry-dsn"]');
+      if (m) dsn = m.getAttribute('content');
+    }
+    if (!dsn || !/^https:\/\/[^@\s]+@[^/\s]+\/\d+/.test(dsn)) return; // not configured / malformed
+    var publicKey;
+    try { publicKey = dsn.split('//')[1].split('@')[0]; } catch (_) { return; }
+    if (!publicKey) return;
+
+    var isLocal = /^(localhost$|127\.|0\.0\.0\.0$|\[?::1)/.test(location.hostname);
+
+    // Configure BEFORE the SDK loads; the loader calls sentryOnLoad instead of
+    // auto-init, so this init is the single source of truth.
+    global.sentryOnLoad = function () {
+      if (!global.Sentry || typeof global.Sentry.init !== 'function') return;
+      var user = (typeof getStoredUser === 'function') ? getStoredUser() : null;
+      global.Sentry.init({
+        dsn: dsn,
+        environment: isLocal ? 'development' : 'production',
+        release: 'medialistory@' + (document.documentElement.getAttribute('data-build') || 'web'),
+        sendDefaultPii: false,
+        tracesSampleRate: isLocal ? 0 : 0.05,
+        // Benign / expected noise we never want to page on.
+        ignoreErrors: [
+          'ResizeObserver loop', 'Non-Error promise rejection captured',
+          'AbortError', 'The operation was aborted', 'The user aborted a request',
+          'Load failed', 'NetworkError when attempting to fetch resource',
+          'Failed to fetch'
+        ],
+        denyUrls: [/googletagmanager\.com/i, /google-analytics\.com/i, /translate\.goog/i, /extensions?\//i, /^chrome-extension:\/\//i],
+        beforeSend: function (event, hint) {
+          try {
+            var err = hint && hint.originalException;
+            var msg = (err && err.message) || event.message || '';
+            // Guest-mode 401s and auth-check failures are expected, not bugs.
+            if (/\b401\b|Unauthorized/i.test(msg)) return null;
+            // Never let a session token or email leave the browser.
+            if (event.request && event.request.headers) {
+              delete event.request.headers.Authorization;
+              delete event.request.headers.authorization;
+              delete event.request.headers.Cookie;
+            }
+            var serialized = JSON.stringify(event);
+            if (/authToken|Bearer\s|mgl_token/.test(serialized)) return null;
+          } catch (_) {}
+          return event;
+        }
+      });
+      var pageTag = (document.body && document.body.getAttribute('data-page')) || location.pathname;
+      global.Sentry.setTag('page', pageTag);
+      if (user && user.id) global.Sentry.setUser({ id: String(user.id) }); // id only — no email/PII
+    };
+
+    var s = document.createElement('script');
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    s.src = 'https://js.sentry-cdn.com/' + encodeURIComponent(publicKey) + '.min.js';
+    s.setAttribute('data-lazy', 'no'); // load the SDK eagerly, not on first error
+    document.head.appendChild(s);
   }
 
   function apiIsCrossOrigin() {
@@ -594,6 +665,7 @@
   }
 
   if (typeof document !== 'undefined') {
+    initSentry(); // set up as early as possible so init-time errors are caught
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
         initDensity();
