@@ -90,10 +90,20 @@ async function changePassword({ email, currentPassword, newPassword }) {
   return true;
 }
 
-/** Best-effort password reset request (requires a configured Neon Auth email provider). */
+/** Send a password-reset email via Neon Auth's shared email provider. */
 async function requestPasswordReset({ email, redirectTo }) {
-  await call('/request-password-reset', { body: { email, redirectTo } }).catch(() => {});
-  await call('/forget-password', { body: { email, redirectTo } }).catch(() => {});
+  // Newer Better Auth uses /request-password-reset; older exposes /forget-password.
+  const r = await call('/request-password-reset', { body: { email, redirectTo } }).catch(() => ({ res: { ok: false } }));
+  if (!r.res || !r.res.ok) {
+    await call('/forget-password', { body: { email, redirectTo } }).catch(() => {});
+  }
+  return true;
+}
+
+/** Complete a password reset using the token from the reset email. */
+async function resetPassword({ token, newPassword }) {
+  const { res, data } = await call('/reset-password', { body: { token, newPassword } });
+  if (!res.ok) throw authError(res, data, 'Invalid or expired reset link');
   return true;
 }
 
@@ -125,5 +135,6 @@ module.exports = {
   signInEmail,
   changePassword,
   requestPasswordReset,
+  resetPassword,
   verifyJwt
 };

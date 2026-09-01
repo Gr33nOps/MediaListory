@@ -48,6 +48,19 @@ function showOAuthError(message) {
     }
 }
 
+// Hide OAuth buttons for providers the server has not enabled (e.g. Discord).
+async function syncOAuthButtons() {
+    try {
+        var cfg = await getAuthConfig();
+        var map = { google: 'oauthGoogleBtn', discord: 'oauthDiscordBtn' };
+        Object.keys(map).forEach(function (p) {
+            var btn = document.getElementById(map[p]);
+            if (btn && cfg.providers.indexOf(p) === -1) btn.style.display = 'none';
+        });
+        if (!cfg.providers.length) setOAuthSectionVisible(false);
+    } catch (_) {}
+}
+
 async function startOAuth(provider) {
     var errEl = document.getElementById('oauthError');
     if (errEl) {
@@ -141,6 +154,7 @@ async function handleUrlParams() {
 
     const code             = urlParams.get('code')             || hashParams.get('code');
     const tokenHash        = urlParams.get('token_hash')       || hashParams.get('token_hash');
+    const resetToken       = urlParams.get('token')            || hashParams.get('token');
     const type             = urlParams.get('type')             || hashParams.get('type');
     const error            = urlParams.get('error')            || hashParams.get('error');
     const errorDescription = urlParams.get('error_description')|| hashParams.get('error_description');
@@ -155,8 +169,9 @@ async function handleUrlParams() {
         if (verificationToken) {
             await handleEmailVerification(verificationToken);
         }
-    } else if (type === 'recovery' && code) {
-        window._resetCode = code;
+    } else if ((type === 'recovery' && (resetToken || code)) || resetToken) {
+        // Neon Auth (Better Auth) password-reset links carry ?token=...
+        window._resetCode = resetToken || code;
         showNewPasswordForm();
     }
 }
@@ -300,6 +315,7 @@ function initializeAuthUI() {
     var discordBtn = document.getElementById('oauthDiscordBtn');
     if (googleBtn) googleBtn.addEventListener('click', function() { startOAuth('google'); });
     if (discordBtn) discordBtn.addEventListener('click', function() { startOAuth('discord'); });
+    syncOAuthButtons();
 
     var oauthUsernameForm = document.getElementById('oauthUsernameForm');
     if (oauthUsernameForm) oauthUsernameForm.addEventListener('submit', handleOAuthUsernameSubmit);
@@ -718,7 +734,7 @@ async function handleNewPassword(e) {
         const response = await fetch(`${API_BASE}/auth/reset-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: window._resetCode, password: newPassword })
+            body: JSON.stringify({ token: window._resetCode, code: window._resetCode, password: newPassword })
         });
 
         const data = await response.json();

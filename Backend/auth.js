@@ -314,6 +314,27 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
     }
   });
 
+  router.post('/reset-password', async (req, res) => {
+    try {
+      const { code, token, password } = req.body;
+      const resetToken = token || code;
+      if (!resetToken || !password) {
+        return res.status(400).json({ error: 'Reset token and new password are required' });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+      try {
+        await neonAuth.resetPassword({ token: resetToken, newPassword: password });
+      } catch (_) {
+        return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+      }
+      res.json({ success: true, message: 'Password reset successfully!' });
+    } catch (error) {
+      return clientError(res, 500, 'Password reset failed', error);
+    }
+  });
+
   router.post('/logout', async (req, res) => {
     clearAuthCookieHeader(res);
     res.json({ success: true, message: 'Logged out successfully' });

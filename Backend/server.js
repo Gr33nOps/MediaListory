@@ -150,7 +150,7 @@ const db = knex({
 db.raw('SELECT 1')
   .then(() => {
     dbReady = true;
-    console.log('Supabase PostgreSQL connected');
+    console.log('Neon PostgreSQL connected');
   })
   .catch(err => {
     console.error('Database connection failed:', err.message);
