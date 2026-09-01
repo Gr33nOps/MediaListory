@@ -21,7 +21,7 @@
   <text x="240" y="200" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="500" fill="#94a3b8">Track everything you watch and play, in one place</text>
   <g transform="translate(90 330)" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600">
     <g><rect width="230" height="70" rx="35" fill="#1e293b"/><text x="115" y="46" text-anchor="middle" fill="#60a5fa">Movies</text></g>
-    <g transform="translate(260 0)"><rect width="230" height="70" rx="35" fill="#1e293b"/><text x="115" y="46" text-anchor="middle" fill="#34d399">Series</text></g>
+    <g transform="translate(260 0)"><rect width="230" height="70" rx="35" fill="#1e293b"/><text x="115" y="46" text-anchor="middle" fill="#34d399">Shows</text></g>
     <g transform="translate(520 0)"><rect width="230" height="70" rx="35" fill="#1e293b"/><text x="115" y="46" text-anchor="middle" fill="#f472b6">Anime</text></g>
     <g transform="translate(780 0)"><rect width="230" height="70" rx="35" fill="#1e293b"/><text x="115" y="46" text-anchor="middle" fill="#fbbf24">Games</text></g>
   </g>

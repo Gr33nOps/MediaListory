@@ -61,12 +61,13 @@
     --cat-game-dim:      rgba(245, 158, 11, 0.14);
     --cat-game-border:   rgba(245, 158, 11, 0.40);
 
-    /* Active page accent (overridden per-page below). Defaults to brand blue. */
-    --accent:            var(--blue);
-    --accent-light:      var(--blue-light);
-    --accent-dim:        var(--blue-dim);
-    --accent-border:     rgba(59, 130, 246, 0.40);
-    --accent-glow:       rgba(59, 130, 246, 0.20);
+    /* Active page accent. Neutral by default — only the four category pages
+       (Movies / Shows / Anime / Games) get a real color, set per-page below. */
+    --accent:            #94a3b8;
+    --accent-light:      #cbd5e1;
+    --accent-dim:        rgba(148, 163, 184, 0.12);
+    --accent-border:     rgba(148, 163, 184, 0.35);
+    --accent-glow:       transparent;
 
     --radius-sm:         6px;
     --radius-md:         8px;
@@ -3589,9 +3590,8 @@ body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --a
 body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.28); }
 body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.30); }
 body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.28); }
-body[data-page="list"]    { --accent: var(--purple);      --accent-light: var(--purple-light); --accent-dim: var(--purple-dim);      --accent-border: rgba(139,92,246,0.4); --accent-glow: rgba(139,92,246,0.28); }
-body[data-page="friends"] { --accent: #06b6d4;            --accent-light: #22d3ee;             --accent-dim: rgba(6,182,212,0.14);   --accent-border: rgba(6,182,212,0.4); --accent-glow: rgba(6,182,212,0.26); }
-body[data-page="profile"] { --accent: var(--blue);        --accent-light: var(--blue-light);   --accent-dim: var(--blue-dim);        --accent-border: rgba(59,130,246,0.4); --accent-glow: rgba(59,130,246,0.26); }
+/* My Library, Following, and Profile stay neutral (inherit :root) and only
+   pick up a category color when a category filter is chosen inside the page. */
 
 /* ── Page header (every primary page) — clean, no icons, no bars ───────── */
 .page-header {

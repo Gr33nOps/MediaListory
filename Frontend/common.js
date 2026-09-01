@@ -469,10 +469,10 @@
   };
 
   function mediaTypeLabel(mediaType, plural) {
-    var map = { game: 'Game', movie: 'Movie', series: 'Series', anime: 'Anime' };
+    var map = { game: 'Game', movie: 'Movie', series: 'Show', anime: 'Anime' };
     var base = map[mediaType] || 'Game';
     if (!plural) return base;
-    if (mediaType === 'series' || mediaType === 'anime') return base; // uncountable
+    if (mediaType === 'anime') return base; // uncountable
     return base + 's';
   }
 
@@ -509,7 +509,7 @@
 
     var actions =
       link('movies.html', 'movies', 'Movies', 'movies') +
-      link('series.html', 'series', 'Series', 'series') +
+      link('series.html', 'series', 'Shows', 'series') +
       link('anime.html', 'anime', 'Anime', 'anime') +
       link('home.html', 'games', 'Games', 'games');
 

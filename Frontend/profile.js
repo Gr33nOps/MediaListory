@@ -142,7 +142,7 @@ function displayStats(games, followers, following) {
     });
     var el = document.getElementById('mediaBreakdown');
     if (el) {
-        var order = [['movie', 'Movies', 'movies.html'], ['series', 'Series', 'series.html'], ['anime', 'Anime', 'anime.html'], ['game', 'Games', 'home.html']];
+        var order = [['movie', 'Movies', 'movies.html'], ['series', 'Shows', 'series.html'], ['anime', 'Anime', 'anime.html'], ['game', 'Games', 'home.html']];
         el.className = 'cat-breakdown';
         el.removeAttribute('style');
         el.innerHTML = order.map(function(o) {

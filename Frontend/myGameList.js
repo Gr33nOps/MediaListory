@@ -189,7 +189,7 @@ async function loadMyGames() {
 }
 
 var MEDIA_PAGE_KEY = { all: 'list', movie: 'movies', series: 'series', anime: 'anime', game: 'games' };
-var MEDIA_TAB_LABEL = { all: 'All', movie: 'Movies', series: 'Series', anime: 'Anime', game: 'Games' };
+var MEDIA_TAB_LABEL = { all: 'All', movie: 'Movies', series: 'Shows', anime: 'Anime', game: 'Games' };
 
 // Populate the per-category count badges on the collection tabs.
 function updateMediaTabCounts() {
@@ -223,8 +223,46 @@ function updateStatistics(games) {
         on_hold:      pct('on_hold'),
         dropped:      pct('dropped')
     }, stats);
-    updatePieChart(stats);
+
+    // Pie + legend: on "All" show how the library splits across the four
+    // categories (each treated individually); inside a category show its
+    // own status breakdown.
+    var segments;
+    if (currentMediaFilter === 'all') {
+        var all = myGamesCache || [];
+        segments = CAT_META.map(function(c) {
+            return { label: c.label, color: c.color,
+                count: all.filter(function(g) { return (g.media_type || 'game') === c.key; }).length };
+        });
+    } else {
+        segments = STATUS_META.map(function(s) {
+            return { label: s.label, color: s.color, count: stats[s.key] };
+        });
+    }
+    drawPie(segments);
+    drawPieLegend(segments);
+
+    var titleEl = document.querySelector('.stats-title');
+    if (titleEl) {
+        titleEl.textContent = currentMediaFilter === 'all'
+            ? 'Your library at a glance'
+            : MEDIA_TAB_LABEL[currentMediaFilter] + ' status breakdown';
+    }
 }
+
+var CAT_META = [
+    { key: 'movie',  label: 'Movies', color: '#60a5fa' },
+    { key: 'series', label: 'Shows',  color: '#34d399' },
+    { key: 'anime',  label: 'Anime',  color: '#f472b6' },
+    { key: 'game',   label: 'Games',  color: '#fbbf24' }
+];
+var STATUS_META = [
+    { key: 'playing',      label: 'Watching / Playing', color: '#3498db' },
+    { key: 'completed',    label: 'Completed',          color: '#2ecc71' },
+    { key: 'plan_to_play', label: 'Planned',            color: '#9b59b6' },
+    { key: 'on_hold',      label: 'On Hold',            color: '#f39c12' },
+    { key: 'dropped',      label: 'Dropped',            color: '#e74c3c' }
+];
 
 function updateBarChart(percentages, stats) {
     [
@@ -243,32 +281,45 @@ function updateBarChart(percentages, stats) {
     });
 }
 
-function updatePieChart(stats) {
-    var total = stats.total;
+function drawPie(segments) {
+    var svg = document.getElementById('pieChartSvg');
+    if (!svg) return;
+    var total = segments.reduce(function(s, x) { return s + x.count; }, 0);
     if (total === 0) {
-        document.getElementById('pieChartSvg').innerHTML = '<circle cx="100" cy="100" r="90" fill="#1e2a38" />';
+        svg.innerHTML = '<circle cx="100" cy="100" r="90" fill="#1e2a38" />';
         return;
     }
-    var statuses = [
-        { count: stats.playing,      color: '#3498db' },
-        { count: stats.completed,    color: '#2ecc71' },
-        { count: stats.plan_to_play, color: '#9b59b6' },
-        { count: stats.on_hold,      color: '#f39c12' },
-        { count: stats.dropped,      color: '#e74c3c' }
-    ];
-    var currentAngle = -90;
-    var cx = 100, cy = 100, r = 90;
-    var svgPaths = '';
-    statuses.filter(function(s) { return s.count > 0; }).forEach(function(s) {
+    var active = segments.filter(function(s) { return s.count > 0; });
+    // A single non-zero slice is a full circle; a 360-degree arc renders as
+    // nothing, so draw an actual circle instead.
+    if (active.length === 1) {
+        svg.innerHTML = '<circle cx="100" cy="100" r="90" fill="' + active[0].color + '" />';
+        return;
+    }
+    var cur = -90, cx = 100, cy = 100, r = 90, paths = '';
+    active.forEach(function(s) {
         var angle = (s.count / total) * 360;
-        var sa = currentAngle * (Math.PI / 180);
-        var ea = (currentAngle + angle) * (Math.PI / 180);
+        var sa = cur * Math.PI / 180, ea = (cur + angle) * Math.PI / 180;
         var x1 = cx + r * Math.cos(sa), y1 = cy + r * Math.sin(sa);
         var x2 = cx + r * Math.cos(ea), y2 = cy + r * Math.sin(ea);
-        svgPaths += '<path d="M ' + cx + ' ' + cy + ' L ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + (angle > 180 ? 1 : 0) + ' 1 ' + x2 + ' ' + y2 + ' Z" fill="' + s.color + '" />';
-        currentAngle += angle;
+        paths += '<path d="M ' + cx + ' ' + cy + ' L ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + (angle > 180 ? 1 : 0) + ' 1 ' + x2 + ' ' + y2 + ' Z" fill="' + s.color + '" />';
+        cur += angle;
     });
-    document.getElementById('pieChartSvg').innerHTML = svgPaths;
+    svg.innerHTML = paths;
+}
+
+function drawPieLegend(segments) {
+    var el = document.getElementById('pieLegend');
+    if (!el) return;
+    var total = segments.reduce(function(s, x) { return s + x.count; }, 0);
+    el.innerHTML = segments.map(function(s) {
+        var pctNum = total > 0 ? Math.round(s.count / total * 100) : 0;
+        return '<div class="legend-item">' +
+            '<span style="width:14px;height:14px;border-radius:4px;flex-shrink:0;background:' + s.color + ';"></span>' +
+            '<span style="flex:1;color:var(--text-secondary);">' + s.label + '</span>' +
+            '<span style="font-weight:700;color:var(--text-primary);">' + s.count + (total > 0 ? ' (' + pctNum + '%)' : '') + '</span>' +
+            '</div>';
+    }).join('');
 }
 
 function filterByMedia(games) {
@@ -319,7 +370,7 @@ function displayMyGames(games) {
             var browseLabel = currentMediaFilter === 'movie' ? 'Browse movies'
                 : currentMediaFilter === 'series' ? 'Browse series'
                 : currentMediaFilter === 'anime' ? 'Browse anime'
-                : currentMediaFilter === 'game' ? 'Browse games' : 'Browse movies, series, anime & games';
+                : currentMediaFilter === 'game' ? 'Browse games' : 'Browse movies, shows, anime & games';
             container.innerHTML = '<div class="coll-empty-state">' +
                 '<div class="coll-empty-icon">Your library is empty</div>' +
                 '<p>Start building your library by browsing and adding games, movies, and series you have enjoyed or want to explore.</p>' +

@@ -191,7 +191,7 @@ function displayUserProfile(user) {
         var line = document.createElement('div');
         line.id = 'mediaBreakdownLine';
         line.className = 'cat-breakdown';
-        var order = [['movie', 'Movies'], ['series', 'Series'], ['anime', 'Anime'], ['game', 'Games']];
+        var order = [['movie', 'Movies'], ['series', 'Shows'], ['anime', 'Anime'], ['game', 'Games']];
         line.innerHTML = order.map(function(o) {
             return '<span class="cat-stat" data-cat="' + o[0] + '">' +
                 '<span class="cs-num">' + (bd[o[0]] || 0) + '</span>' +

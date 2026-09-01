@@ -6,7 +6,7 @@
 (function () {
   var TYPES = {
     movie:  { endpoint: '/tmdb/movies', genres: '/tmdb/genres', genresBody: { media_type: 'movie' },  noun: 'movies' },
-    series: { endpoint: '/tmdb/series', genres: '/tmdb/genres', genresBody: { media_type: 'series' }, noun: 'series' },
+    series: { endpoint: '/tmdb/series', genres: '/tmdb/genres', genresBody: { media_type: 'series' }, noun: 'shows' },
     anime:  { endpoint: '/kitsu/anime', genres: '/kitsu/genres', genresBody: {},                      noun: 'anime' }
   };
   var MEDIA_TYPE = TYPES[window.MEDIA_TYPE] ? window.MEDIA_TYPE : 'movie';
@@ -289,7 +289,7 @@
       }
     }
 
-    var defaultLabel = MEDIA_TYPE === 'series' ? 'My Series Library (Default)'
+    var defaultLabel = MEDIA_TYPE === 'series' ? 'My Shows Library (Default)'
       : MEDIA_TYPE === 'anime' ? 'My Anime Library (Default)'
       : 'My Movie Library (Default)';
 
