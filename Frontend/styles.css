@@ -2189,6 +2189,17 @@ select.update-status-select option,
     color: #ffffff;
 }
 
+.oauth-github {
+    background: #24292f;
+    color: #ffffff;
+    border: 1px solid #1b1f24;
+}
+
+.oauth-github:hover:not(:disabled) {
+    background: #1b1f24;
+    color: #ffffff;
+}
+
 .oauth-divider {
     display: flex;
     align-items: center;

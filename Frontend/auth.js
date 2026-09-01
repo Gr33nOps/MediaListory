@@ -52,7 +52,7 @@ function showOAuthError(message) {
 async function syncOAuthButtons() {
     try {
         var cfg = await getAuthConfig();
-        var map = { google: 'oauthGoogleBtn', discord: 'oauthDiscordBtn' };
+        var map = { google: 'oauthGoogleBtn', github: 'oauthGithubBtn' };
         Object.keys(map).forEach(function (p) {
             var btn = document.getElementById(map[p]);
             if (btn && cfg.providers.indexOf(p) === -1) btn.style.display = 'none';
@@ -312,9 +312,9 @@ function initializeAuthUI() {
     }
 
     var googleBtn = document.getElementById('oauthGoogleBtn');
-    var discordBtn = document.getElementById('oauthDiscordBtn');
+    var githubBtn = document.getElementById('oauthGithubBtn');
     if (googleBtn) googleBtn.addEventListener('click', function() { startOAuth('google'); });
-    if (discordBtn) discordBtn.addEventListener('click', function() { startOAuth('discord'); });
+    if (githubBtn) githubBtn.addEventListener('click', function() { startOAuth('github'); });
     syncOAuthButtons();
 
     var oauthUsernameForm = document.getElementById('oauthUsernameForm');

@@ -56,7 +56,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
   router.get('/public-config', (req, res) => {
     res.json({
       authBaseUrl: neonAuth.base(),
-      providers: ['google']
+      providers: ['google', 'github']
     });
   });
 
