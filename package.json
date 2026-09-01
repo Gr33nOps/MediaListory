@@ -28,7 +28,7 @@
   "bugs": {
     "url": "https://github.com/Gr33nOps/MediaListory/issues"
   },
-  "homepage": "https://my-game-list-live.vercel.app",
+  "homepage": "https://mygamelist-ffyl.onrender.com",
   "type": "commonjs",
   "engines": {
     "node": ">=18"

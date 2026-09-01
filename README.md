@@ -4,12 +4,12 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 > Formerly "My Game List" — now expanded from games-only to games + movies + series.
 
-[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://my-game-list-live.vercel.app)
+[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://mygamelist-ffyl.onrender.com)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
 [![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/MediaListory/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/MediaListory/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**Live:** [my-game-list-live.vercel.app](https://my-game-list-live.vercel.app)
+**Live:** [mygamelist-ffyl.onrender.com](https://mygamelist-ffyl.onrender.com)
 
 ## Features
 
@@ -17,13 +17,14 @@ Track what you play and watch, rate your library, and discover with friends — 
 - Browse and search each category (genre + sort; platform/publisher/developer for games)
 - Track status (game "play" / movie & series "watch"), score 1–10, and notes; mixed-media custom lists; JSON export
 - Library and profiles filter and break down by category
-- Email auth plus Google and Discord OAuth
+- **Guest mode:** browse, search, and view details without an account; sign in to save
+- Email/password auth (Neon Auth) plus Google & GitHub social sign-in
 - Follow users and public profiles
 - Admin and moderator dashboards
 
 ## Stack
 
-Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres** + **Neon Auth** (Better Auth: email/password + Google OAuth), IGDB (games) + TMDB (movies/series). Hosted on Vercel (frontend) and Render (API).
+Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres** + **Neon Auth** (Better Auth: email/password + Google/GitHub OAuth), IGDB (games) + TMDB (movies/series). Deployed on **Render** (serves the full app — frontend + API).
 
 > Migrated off Supabase to Neon. The app mints its own session JWT after verifying identity with Neon Auth, so all data/features are unchanged; only the identity provider swapped.
 
@@ -62,7 +63,7 @@ Do not set `ALLOW_DEGRADED=1` in production.
 
 ## Deploy
 
-1. **Render:** Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB. Set `FRONTEND_URL=https://my-game-list-live.vercel.app` (include `https://`).
+1. **Render:** Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB. Set `FRONTEND_URL=https://mygamelist-ffyl.onrender.com` (include `https://`).
 2. **Vercel:** Import the repo. [`vercel.json`](vercel.json) rewrites `/api`, `/health`, `/ready` to Render and serves `Frontend/`.
 3. **Neon Auth:** add your Vercel and Render origins as trusted domains (`neon neon-auth domain add <url>`), and enable the Google (and optionally Discord) OAuth providers in the Neon Console.
 
