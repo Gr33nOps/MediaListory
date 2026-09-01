@@ -1,5 +1,9 @@
 /** Shared frontend helpers: escaping, auth token, API, a11y modals/cards */
 (function (global) {
+  // ── Site config ────────────────────────────────────────────────────
+  // To enable Google Analytics 4, put your measurement ID here (e.g. 'G-ABC123').
+  // Leave empty to disable analytics entirely. Honors Do Not Track.
+  global.MGL_GA_ID = global.MGL_GA_ID || '';
   // Default same-origin `/api` (local + Vercel rewrite). Override with window.MGL_API_BASE
   // only if calling Render directly (e.g. https://xxx.onrender.com/api).
   var API_BASE = (typeof global.MGL_API_BASE === 'string' && global.MGL_API_BASE)
