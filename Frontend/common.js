@@ -4,9 +4,10 @@
   // To enable Google Analytics 4, put your measurement ID here (e.g. 'G-ABC123').
   // Leave empty to disable analytics entirely. Honors Do Not Track.
   global.MGL_GA_ID = global.MGL_GA_ID || '';
-  // To enable Sentry error tracking, paste your project's DSN here (or set a
-  // <meta name="sentry-dsn" content="..."> tag). Leave empty to disable.
-  global.MGL_SENTRY_DSN = global.MGL_SENTRY_DSN || '';
+  // Sentry error tracking. This is the frontend DSN, which is public by design
+  // (it ships to every browser). Set to '' to disable.
+  global.MGL_SENTRY_DSN = global.MGL_SENTRY_DSN ||
+    'https://a031d4f07ac27ac8fd0107e89d564f9a@o4511927699439616.ingest.de.sentry.io/4512013714128976';
   // Default same-origin `/api` (local + Vercel rewrite). Override with window.MGL_API_BASE
   // only if calling Render directly (e.g. https://xxx.onrender.com/api).
   var API_BASE = (typeof global.MGL_API_BASE === 'string' && global.MGL_API_BASE)
@@ -49,23 +50,41 @@
       if (m) dsn = m.getAttribute('content');
     }
     if (!dsn || !/^https:\/\/[^@\s]+@[^/\s]+\/\d+/.test(dsn)) return; // not configured / malformed
-    var publicKey;
-    try { publicKey = dsn.split('//')[1].split('@')[0]; } catch (_) { return; }
+    var publicKey, ingestHost;
+    try {
+      publicKey = dsn.split('//')[1].split('@')[0];
+      ingestHost = dsn.split('@')[1].split('/')[0];
+    } catch (_) { return; }
     if (!publicKey) return;
+
+    // Region-aware loader host (e.g. an ...ingest.de.sentry.io DSN loads from
+    // js-de.sentry-cdn.com, not the US default).
+    var regionMatch = /\.ingest\.([a-z0-9-]+)\.sentry\.io$/i.exec(ingestHost || '');
+    var region = regionMatch ? regionMatch[1] : '';
+    var cdnHost = (region && region !== 'us') ? ('js-' + region + '.sentry-cdn.com') : 'js.sentry-cdn.com';
 
     var isLocal = /^(localhost$|127\.|0\.0\.0\.0$|\[?::1)/.test(location.hostname);
 
     // Configure BEFORE the SDK loads; the loader calls sentryOnLoad instead of
     // auto-init, so this init is the single source of truth.
     global.sentryOnLoad = function () {
-      if (!global.Sentry || typeof global.Sentry.init !== 'function') return;
+      var S = global.Sentry;
+      if (!S || typeof S.init !== 'function') return;
       var user = (typeof getStoredUser === 'function') ? getStoredUser() : null;
-      global.Sentry.init({
+      // Session Replay masks all text/inputs/media so nothing sensitive is recorded.
+      var integrations = [];
+      try { if (S.replayIntegration) integrations.push(S.replayIntegration({ maskAllText: true, maskAllInputs: true, blockAllMedia: true })); } catch (_) {}
+      try { if (S.browserTracingIntegration) integrations.push(S.browserTracingIntegration()); } catch (_) {}
+      S.init({
         dsn: dsn,
         environment: isLocal ? 'development' : 'production',
         release: 'medialistory@' + (document.documentElement.getAttribute('data-build') || 'web'),
         sendDefaultPii: false,
-        tracesSampleRate: isLocal ? 0 : 0.05,
+        integrations: integrations,
+        tracesSampleRate: isLocal ? 0 : 0.1,
+        tracePropagationTargets: [location.origin, /\/api\//],
+        replaysSessionSampleRate: isLocal ? 0 : 0.1,
+        replaysOnErrorSampleRate: isLocal ? 0 : 1.0,
         // Benign / expected noise we never want to page on.
         ignoreErrors: [
           'ResizeObserver loop', 'Non-Error promise rejection captured',
@@ -93,14 +112,14 @@
         }
       });
       var pageTag = (document.body && document.body.getAttribute('data-page')) || location.pathname;
-      global.Sentry.setTag('page', pageTag);
-      if (user && user.id) global.Sentry.setUser({ id: String(user.id) }); // id only — no email/PII
+      S.setTag('page', pageTag);
+      if (user && user.id) S.setUser({ id: String(user.id) }); // id only — no email/PII
     };
 
     var s = document.createElement('script');
     s.async = true;
     s.crossOrigin = 'anonymous';
-    s.src = 'https://js.sentry-cdn.com/' + encodeURIComponent(publicKey) + '.min.js';
+    s.src = 'https://' + cdnHost + '/' + encodeURIComponent(publicKey) + '.min.js';
     s.setAttribute('data-lazy', 'no'); // load the SDK eagerly, not on first error
     document.head.appendChild(s);
   }

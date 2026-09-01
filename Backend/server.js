@@ -109,7 +109,7 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       "default-src": ["'self'"],
-      "script-src": ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.googletagmanager.com', 'https://js.sentry-cdn.com', 'https://browser.sentry-cdn.com'],
+      "script-src": ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.googletagmanager.com', 'https://*.sentry-cdn.com'],
       "style-src": ["'self'", "'unsafe-inline'"],
       "img-src": ["'self'", 'data:', 'https:'],
       "font-src": ["'self'", 'data:'],
