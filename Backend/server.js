@@ -1,3 +1,4 @@
+require('./instrument'); // MUST run before express is required (Sentry init)
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -16,34 +17,13 @@ require('dotenv').config({
   override: false
 });
 
-// Error tracking (opt-in via SENTRY_DSN). Loaded defensively: a missing package
-// or an unset DSN is a silent no-op, never a boot failure.
+// Sentry was initialized in ./instrument (before Express). Grab the same
+// instance so we can attach the Express error handler below; null if disabled.
 let Sentry = null;
 try {
-  if (process.env.SENTRY_DSN) {
-    Sentry = require('@sentry/node');
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      environment: process.env.NODE_ENV || 'development',
-      release: process.env.RENDER_GIT_COMMIT || undefined,
-      tracesSampleRate: 0.05,
-      sendDefaultPii: false,
-      beforeSend(event) {
-        try {
-          if (event.request && event.request.headers) {
-            ['authorization', 'Authorization', 'cookie', 'Cookie'].forEach((h) => {
-              delete event.request.headers[h];
-            });
-          }
-        } catch (_) {}
-        return event;
-      }
-    });
-    console.log('Sentry error tracking enabled');
-  }
-} catch (err) {
-  console.warn('Sentry not initialized:', err.message);
-}
+  const S = require('@sentry/node');
+  if (S.getClient && S.getClient()) Sentry = S;
+} catch (_) {}
 
 const REQUIRED_ENV = [
   'DATABASE_URL',
