@@ -1,6 +1,7 @@
 const express = require('express');
 const { clientError } = require('./errors');
 const { parseIgdbClientId, slugify } = require('./igdbUtils');
+const { parseMediaRef, externalRef, isValidMediaType } = require('./tmdbUtils');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
@@ -9,67 +10,98 @@ module.exports = (db, verifyToken, checkBanned) => {
     return slugify(name);
   }
 
-  function resolveIgdbId(gameData) {
-    const fromField = parseIgdbClientId(gameData?.igdb_id);
-    if (fromField) return fromField;
-    return parseIgdbClientId(gameData?.game_id);
+  function parseJsonArray(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try { return JSON.parse(value || '[]'); } catch (_) { return []; }
+    }
+    return value || [];
+  }
+
+  // Resolve the media identity from an add/list payload. Supports games (IGDB)
+  // and movies/series (TMDB). Returns { media_type, external_id, ref } or null.
+  function resolveMedia(data) {
+    if (!data) return null;
+
+    // Explicit TMDB media (movies/series).
+    if (data.media_type && isValidMediaType(data.media_type) && data.media_type !== 'game') {
+      const tmdbId = parseInt(data.tmdb_id, 10);
+      if (tmdbId > 0) {
+        return { media_type: data.media_type, external_id: tmdbId, ref: externalRef(data.media_type, tmdbId) };
+      }
+    }
+
+    // Games via IGDB (default / backward compatible).
+    const igdbId = parseIgdbClientId(data.igdb_id) || parseIgdbClientId(data.game_id);
+    if (igdbId) {
+      return { media_type: 'game', external_id: igdbId, ref: `igdb_${igdbId}` };
+    }
+
+    // Fallback: parse a universal ref string (igdb_/tmdb_movie_/tmdb_series_).
+    const parsed = parseMediaRef(data.game_id);
+    if (parsed) {
+      return { media_type: parsed.media_type, external_id: parsed.id, ref: externalRef(parsed.media_type, parsed.id) };
+    }
+    return null;
   }
 
   // JSON columns on `games` are the source of truth for metadata.
-  // Junction tables are not written here (avoids dual-write drift).
-  async function ensureGameExists(gameData) {
+  // The `games` table holds every media kind, discriminated by `media_type`.
+  // `game_id` (text) is the universal external ref and the upsert key.
+  async function ensureMediaExists(mediaData) {
     try {
-      const igdbId = resolveIgdbId(gameData);
-      if (!igdbId) {
-        const err = new Error('igdb_id is required to add a game');
+      const media = resolveMedia(mediaData);
+      if (!media) {
+        const err = new Error('A valid igdb_id (game) or media_type + tmdb_id (movie/series) is required');
         err.status = 400;
         throw err;
       }
-      if (!gameData?.name) {
-        const err = new Error('Game name is required');
+      if (!mediaData?.name) {
+        const err = new Error('Title is required');
         err.status = 400;
         throw err;
       }
 
-      const existing = await db('games').where({ igdb_id: igdbId }).first();
+      const existing = await db('games').where({ game_id: media.ref }).first();
       if (existing) return existing.id;
 
-      const gameTextId = `igdb_${igdbId}`;
-      const slug = generateSlug(gameData.name) || gameTextId;
+      const slug = generateSlug(mediaData.name) || media.ref;
       const payload = {
-        game_id:          gameTextId,
-        igdb_id:          igdbId,
-        name:             gameData.name,
+        game_id:          media.ref,
+        igdb_id:          media.media_type === 'game'  ? media.external_id : null,
+        tmdb_id:          media.media_type === 'game'  ? null : media.external_id,
+        media_type:       media.media_type,
+        name:             mediaData.name,
         slug,
-        description:      gameData.description       || null,
-        background_image: gameData.background_image  || null,
-        rating:           gameData.rating            || null,
-        metacritic_score: gameData.metacritic_score  || null,
-        released:         gameData.released          || null,
-        playtime:         gameData.playtime          || 0,
-        genres:           JSON.stringify(gameData.genres     || []),
-        platforms:        JSON.stringify(gameData.platforms  || []),
-        publishers:       JSON.stringify(gameData.publishers || []),
-        developers:       JSON.stringify(gameData.developers || []),
+        description:      mediaData.description       || null,
+        background_image: mediaData.background_image  || null,
+        rating:           mediaData.rating            || null,
+        metacritic_score: mediaData.metacritic_score  || null,
+        released:         mediaData.released          || null,
+        playtime:         mediaData.playtime          || 0,
+        genres:           JSON.stringify(mediaData.genres     || []),
+        platforms:        JSON.stringify(mediaData.platforms  || []),
+        publishers:       JSON.stringify(mediaData.publishers || []),
+        developers:       JSON.stringify(mediaData.developers || []),
       };
 
       try {
-        const [row] = await db('games').insert(payload).onConflict('igdb_id').ignore().returning('id');
+        const [row] = await db('games').insert(payload).onConflict('game_id').ignore().returning('id');
         if (row) return row.id ?? row;
-        const raced = await db('games').where({ igdb_id: igdbId }).first();
-        if (!raced) throw new Error('Failed to persist game');
+        const raced = await db('games').where({ game_id: media.ref }).first();
+        if (!raced) throw new Error('Failed to persist media');
         return raced.id;
       } catch (insertErr) {
-        const raced = await db('games').where({ igdb_id: igdbId }).first();
+        const raced = await db('games').where({ game_id: media.ref }).first();
         if (raced) return raced.id;
         const [row] = await db('games').insert({
           ...payload,
-          slug: `${slug}-${igdbId}`
+          slug: `${slug}-${media.external_id}`
         }).returning('id');
         return row.id ?? row;
       }
     } catch (error) {
-      console.error('Error ensuring game exists:', error);
+      console.error('Error ensuring media exists:', error);
       throw error;
     }
   }
@@ -93,9 +125,9 @@ module.exports = (db, verifyToken, checkBanned) => {
       let dbGameId;
 
       if (game_data) {
-        dbGameId = await ensureGameExists(game_data);
-      } else if (game_id && game_id.toString().startsWith('igdb_')) {
-        return res.status(400).json({ error: 'Game data required for IGDB games' });
+        dbGameId = await ensureMediaExists(game_data);
+      } else if (game_id && /^(igdb_|tmdb_)/.test(game_id.toString())) {
+        return res.status(400).json({ error: 'Media data required for catalog items' });
       } else {
         dbGameId = game_id;
       }
@@ -121,7 +153,7 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   router.get('/games', verifyToken, checkBanned, async (req, res) => {
     try {
-      const { status, sort = 'added_date', order = 'desc' } = req.query;
+      const { status, sort = 'added_date', order = 'desc', media_type } = req.query;
       const sortOrder = order.toLowerCase() === 'asc' ? 'asc' : 'desc';
 
       let query = db('user_game_lists')
@@ -135,10 +167,21 @@ module.exports = (db, verifyToken, checkBanned) => {
           'games.description',
           'games.released',
           'games.metacritic_score',
-          'games.playtime'
+          'games.playtime',
+          'games.media_type',
+          'games.igdb_id',
+          'games.tmdb_id',
+          'games.game_id as media_ref',
+          'games.genres as genres_json',
+          'games.platforms as platforms_json',
+          'games.publishers as publishers_json',
+          'games.developers as developers_json'
         );
 
       if (status) query = query.where('user_game_lists.status', status);
+      if (media_type && isValidMediaType(media_type)) {
+        query = query.where('games.media_type', media_type);
+      }
 
       switch (sort) {
         case 'name':   query = query.orderBy('games.name', sortOrder); break;
@@ -148,22 +191,19 @@ module.exports = (db, verifyToken, checkBanned) => {
       }
 
       const userGames = await query;
-      const gameIds   = userGames.map(ug => ug.game_id);
+      if (userGames.length === 0) return res.json({ games: [] });
 
-      if (gameIds.length === 0) return res.json({ games: [] });
-
-      const [genres, platforms, publishers, developers] = await Promise.all([
-        db('game_genres').join('genres','game_genres.genre_id','genres.id').whereIn('game_genres.game_id', gameIds).select('game_genres.game_id','genres.id','genres.name'),
-        db('game_platforms').join('platforms','game_platforms.platform_id','platforms.id').whereIn('game_platforms.game_id', gameIds).select('game_platforms.game_id','platforms.id','platforms.name'),
-        db('game_publishers').join('publishers','game_publishers.publisher_id','publishers.id').whereIn('game_publishers.game_id', gameIds).select('game_publishers.game_id','publishers.id','publishers.name'),
-        db('game_developers').join('developers','game_developers.developer_id','developers.id').whereIn('game_developers.game_id', gameIds).select('game_developers.game_id','developers.id','developers.name')
-      ]);
-
+      // Metadata lives in JSON columns on `games` (source of truth for every media type).
       userGames.forEach(game => {
-        game.genres     = genres.filter(g => g.game_id === game.game_id).map(g => ({ id: g.id, name: g.name }));
-        game.platforms  = platforms.filter(p => p.game_id === game.game_id).map(p => ({ id: p.id, name: p.name }));
-        game.publishers = publishers.filter(p => p.game_id === game.game_id).map(p => ({ id: p.id, name: p.name }));
-        game.developers = developers.filter(d => d.game_id === game.game_id).map(d => ({ id: d.id, name: d.name }));
+        game.media_type = game.media_type || 'game';
+        game.genres     = parseJsonArray(game.genres_json);
+        game.platforms  = parseJsonArray(game.platforms_json);
+        game.publishers = parseJsonArray(game.publishers_json);
+        game.developers = parseJsonArray(game.developers_json);
+        delete game.genres_json;
+        delete game.platforms_json;
+        delete game.publishers_json;
+        delete game.developers_json;
       });
 
       res.json({ games: userGames });
@@ -309,28 +349,23 @@ module.exports = (db, verifyToken, checkBanned) => {
           'games.rating',
           'games.released',
           'games.metacritic_score',
+          'games.media_type',
+          'games.igdb_id',
+          'games.tmdb_id',
+          'games.game_id as media_ref',
+          'games.genres as genres_json',
           'games.slug as game_slug'
         );
-
-      const gameIds = games.map(g => g.game_id);
-      let genres = [];
-      if (gameIds.length > 0) {
-        genres = await db('game_genres')
-          .join('genres', 'game_genres.genre_id', 'genres.id')
-          .whereIn('game_genres.game_id', gameIds)
-          .select('game_genres.game_id', 'genres.name');
-      }
-
-      const genresByGame = {};
-      genres.forEach(g => {
-        if (!genresByGame[g.game_id]) genresByGame[g.game_id] = [];
-        genresByGame[g.game_id].push(g.name);
-      });
 
       res.json({
         list: {
           ...list,
-          games: games.map(g => ({ ...g, genres: genresByGame[g.game_id] || [] }))
+          games: games.map(g => {
+            const genres = parseJsonArray(g.genres_json).map(x => (x && x.name) ? x.name : x).filter(Boolean);
+            const item = { ...g, media_type: g.media_type || 'game', genres };
+            delete item.genres_json;
+            return item;
+          })
         }
       });
     } catch (error) {
@@ -433,7 +468,7 @@ module.exports = (db, verifyToken, checkBanned) => {
 
       let dbGameId;
       if (game_data) {
-        dbGameId = await ensureGameExists(game_data);
+        dbGameId = await ensureMediaExists(game_data);
       } else {
         dbGameId = game_id;
         const game = await db('games').where({ id: dbGameId }).first();
@@ -530,6 +565,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         .select(
           'games.game_id',
           'games.igdb_id',
+          'games.tmdb_id',
+          'games.media_type',
           'games.name',
           'ugl.status',
           'ugl.score',
@@ -552,6 +589,8 @@ module.exports = (db, verifyToken, checkBanned) => {
               'clg.list_id',
               'games.game_id',
               'games.igdb_id',
+              'games.tmdb_id',
+              'games.media_type',
               'games.name',
               'clg.status',
               'clg.score',
@@ -566,6 +605,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         gamesByList[row.list_id].push({
           game_id: row.game_id,
           igdb_id: row.igdb_id,
+          tmdb_id: row.tmdb_id,
+          media_type: row.media_type || 'game',
           name: row.name,
           status: row.status,
           score: row.score,
@@ -574,11 +615,11 @@ module.exports = (db, verifyToken, checkBanned) => {
         });
       });
 
-      res.setHeader('Content-Disposition', 'attachment; filename="mygamelist-export.json"');
+      res.setHeader('Content-Disposition', 'attachment; filename="medialistory-export.json"');
       res.json({
         exported_at: new Date().toISOString(),
-        product: 'MyGameList',
-        game_api: 'igdb',
+        product: 'MediaListory',
+        catalog_apis: ['igdb', 'tmdb'],
         user: user
           ? {
               id: user.id,

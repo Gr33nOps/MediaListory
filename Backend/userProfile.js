@@ -42,16 +42,29 @@ module.exports = (db, verifyToken, checkBanned) => {
       const user = await getPublicUser(userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
-      const [games, followers, following] = await Promise.all([
+      const [games, followers, following, breakdownRows] = await Promise.all([
         db('user_game_lists').where('user_id', userId).count('id as count').first(),
         db('user_follows').where('following_id', userId).count('* as count').first(),
-        db('user_follows').where('follower_id',  userId).count('* as count').first()
+        db('user_follows').where('follower_id',  userId).count('* as count').first(),
+        db('user_game_lists')
+          .leftJoin('games', 'games.id', 'user_game_lists.game_id')
+          .where('user_game_lists.user_id', userId)
+          .groupBy('games.media_type')
+          .select('games.media_type', db.raw('COUNT(*) as count'))
       ]);
+
+      const mediaBreakdown = { game: 0, movie: 0, series: 0 };
+      (breakdownRows || []).forEach(r => {
+        const key = r.media_type || 'game';
+        if (mediaBreakdown[key] === undefined) mediaBreakdown[key] = 0;
+        mediaBreakdown[key] += parseInt(r.count) || 0;
+      });
 
       res.json({
         user: {
           ...user,
           totalGames:     parseInt(games?.count)     || 0,
+          mediaBreakdown,
           followersCount: parseInt(followers?.count) || 0,
           followingCount: parseInt(following?.count) || 0
         }
@@ -74,6 +87,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         .where('user_game_lists.user_id', userId)
         .select(
           db.raw(`COALESCE(games.game_id, user_game_lists.game_id::text) as id`),
+          db.raw(`COALESCE(games.media_type, 'game') as media_type`),
           'user_game_lists.game_name as name',
           db.raw(`COALESCE(
             NULLIF(user_game_lists.background_image, ''),

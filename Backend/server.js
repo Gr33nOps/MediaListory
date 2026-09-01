@@ -379,6 +379,15 @@ try {
   process.exit(1);
 }
 
+try {
+  const tmdbRoutes = require('./tmdb');
+  app.use('/api/tmdb', igdbLimiter, tmdbRoutes(verifyToken, checkBanned, db));
+  console.log('  TMDB proxy routes loaded');
+} catch (error) {
+  console.error('  Error loading TMDB proxy routes:', error.message);
+  process.exit(1);
+}
+
 // Compatibility aliases for external clients (/api remains for this app).
 try {
   const authRoutes = require('./auth');
@@ -390,6 +399,7 @@ try {
   const adminRoutes = require('./admin');
   const moderatorRoutes = require('./moderator');
   const igdbRoutes = require('./igdb');
+  const tmdbRoutes = require('./tmdb');
 
   app.use('/api/v1/auth', authLimiter, authRoutes(db, jwt, JWT_SECRET, verifyToken, checkBanned));
   app.use('/api/v1', homeRoutes(db));
@@ -400,6 +410,7 @@ try {
   app.use('/api/v1/admin', adminRoutes(db, verifyToken, verifyModerator, verifyAdmin, logModeratorActivity));
   app.use('/api/v1/moderator', moderatorRoutes(db, verifyToken, verifyModerator, logModeratorActivity));
   app.use('/api/v1/igdb', igdbLimiter, igdbRoutes(verifyToken, checkBanned, db));
+  app.use('/api/v1/tmdb', igdbLimiter, tmdbRoutes(verifyToken, checkBanned, db));
   console.log('  /api/v1 aliases loaded');
 } catch (error) {
   console.error('  Error loading /api/v1 aliases:', error.message);
@@ -427,6 +438,8 @@ app.get('/', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
 app.get('/auth.html', (req, res) => res.sendFile(path.join(frontendPath, 'auth.html')));
 app.get('/home.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
+app.get('/movies.html', (req, res) => res.sendFile(path.join(frontendPath, 'movies.html')));
+app.get('/series.html', (req, res) => res.sendFile(path.join(frontendPath, 'series.html')));
 app.get('/profile.html', (req, res) => res.sendFile(path.join(frontendPath, 'profile.html')));
 app.get('/myGameList.html', (req, res) => res.sendFile(path.join(frontendPath, 'myGameList.html')));
 app.get('/friends.html', (req, res) => res.sendFile(path.join(frontendPath, 'friends.html')));
