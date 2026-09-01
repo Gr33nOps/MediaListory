@@ -11,14 +11,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     await handleUrlParams();
 });
 
-// Neon Auth (Better Auth) config from the server: { base, providers }.
+// Server tells us which social providers are enabled.
 async function getAuthConfig() {
     if (!_authConfigPromise) {
         _authConfigPromise = (async function() {
-            var res = await fetch(API_BASE + '/auth/public-config');
-            var cfg = await res.json();
-            if (!cfg.authBaseUrl) throw new Error('Sign-in is not configured on the server');
-            return { base: String(cfg.authBaseUrl).replace(/\/$/, ''), providers: cfg.providers || [] };
+            try {
+                var res = await fetch(API_BASE + '/auth/public-config');
+                var cfg = await res.json();
+                return { providers: cfg.providers || [] };
+            } catch (_) {
+                return { providers: [] };
+            }
         })();
     }
     return _authConfigPromise;
@@ -67,33 +70,13 @@ async function startOAuth(provider) {
         errEl.classList.add('hidden');
         errEl.textContent = '';
     }
-    try {
-        var remember = document.getElementById('rememberMe');
-        // Default on when the box is missing or checked so OAuth stays signed in.
-        localStorage.setItem('oauthRememberMe', (!remember || remember.checked) ? '1' : '0');
-        var nextParam = new URLSearchParams(window.location.search).get('next');
-        if (nextParam) sessionStorage.setItem('oauthNext', nextParam);
-        else sessionStorage.removeItem('oauthNext');
-
-        var cfg = await getAuthConfig();
-        if (cfg.providers.length && cfg.providers.indexOf(provider) === -1) {
-            throw new Error(provider.charAt(0).toUpperCase() + provider.slice(1) + ' sign-in is not enabled yet.');
-        }
-        var callbackURL = window.location.origin + '/auth.html?oauth=1';
-        // Ask Neon Auth for the provider authorization URL, then redirect the browser.
-        var res = await fetch(cfg.base + '/sign-in/social', {
-            method: 'POST',
-            credentials: 'include',
-            cache: 'no-store',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider: provider, callbackURL: callbackURL, errorCallbackURL: callbackURL })
-        });
-        var data = await res.json().catch(function () { return {}; });
-        if (!res.ok || !data.url) throw new Error((data && data.message) || 'Could not start social sign-in.');
-        window.location.href = data.url;
-    } catch (e) {
-        showOAuthError((e && e.message) || 'Could not start social sign-in.');
-    }
+    var remember = document.getElementById('rememberMe');
+    var rememberVal = (!remember || remember.checked) ? '1' : '0';
+    var nextParam = new URLSearchParams(window.location.search).get('next');
+    if (nextParam) sessionStorage.setItem('oauthNext', nextParam);
+    else sessionStorage.removeItem('oauthNext');
+    // Same-origin OAuth: hand off to our own server, which owns the provider callback.
+    window.location.href = API_BASE + '/auth/oauth/' + encodeURIComponent(provider) + '/start?remember=' + rememberVal;
 }
 
 async function handleOAuthReturn() {
@@ -102,44 +85,28 @@ async function handleOAuthReturn() {
 
     // Email verify / recovery use similar query params - leave those to handleUrlParams.
     if (type === 'signup' || type === 'email' || type === 'recovery') return false;
-    if (!urlParams.has('oauth')) return false;
 
-    var error = urlParams.get('error') || urlParams.get('error_description');
-    if (error) {
-        showOAuthError(decodeURIComponent(error));
+    var oauthErr = urlParams.get('oauth_error');
+    if (oauthErr) {
+        showOAuthError(decodeURIComponent(oauthErr));
         window.history.replaceState({}, document.title, '/auth.html');
         return true;
     }
+    if (urlParams.get('oauth') !== 'done') return false;
 
     showOAuthWorking();
     try {
-        // The Neon Auth session cookie was set during the provider callback; exchange it
-        // for a signed JWT, then hand that to our backend to establish an app session.
-        var cfg = await getAuthConfig();
-        var tokRes = await fetch(cfg.base + '/token', { credentials: 'include', cache: 'no-store' });
-        var tok = await tokRes.json().catch(function () { return {}; });
-        var jwt = tok && tok.token;
-        if (!tokRes.ok || !jwt) {
-            // Cross-domain third-party-cookie restriction blocks reading the provider
-            // session from a different domain. Guide the user to email sign-in.
-            throw new Error('Social sign-in could not be completed in this browser (third-party cookies are blocked). Please sign in with your email and password instead.');
+        // Our server already set the httpOnly session cookie; hydrate from it (same-origin).
+        var restored = null;
+        if (typeof ensureSession === 'function') restored = await ensureSession();
+        if (!restored || !restored.token) {
+            var r = await fetch(API_BASE + '/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+            if (r.ok) restored = await r.json();
         }
+        if (!restored || !restored.token) throw new Error('Sign-in could not be completed. Please try again.');
 
-        var rememberMe = localStorage.getItem('oauthRememberMe') !== '0';
-        localStorage.removeItem('oauthRememberMe');
-
-        var response = await fetch(API_BASE + '/auth/oauth/complete', {
-            method: 'POST',
-            credentials: 'include',
-            cache: 'no-store',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: jwt, rememberMe: rememberMe })
-        });
-        var data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'OAuth sign-in failed');
-
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        localStorage.setItem('authToken', restored.token);
+        if (restored.user) localStorage.setItem('currentUser', JSON.stringify(restored.user));
         localStorage.setItem('lastActivity', Date.now().toString());
         window.history.replaceState({}, document.title, '/auth.html');
 

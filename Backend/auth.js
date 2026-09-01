@@ -1,4 +1,6 @@
 const express = require('express');
+const crypto = require('crypto');
+const fetch = require('node-fetch');
 const neonAuth = require('./neonAuth');
 const { clientError } = require('./errors');
 const {
@@ -10,8 +12,55 @@ const {
 const {
   attachAuthCookie,
   clearAuthCookieHeader,
-  getTokenFromRequest
+  getTokenFromRequest,
+  parseCookies
 } = require('./sessionCookies');
+
+// Direct OAuth2 (authorization-code) providers. Same-origin: the callback lives on
+// our own domain, so the session cookie is first-party (no cross-domain cookie issues).
+const OAUTH_PROVIDERS = {
+  google: {
+    authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    scope: 'openid email profile',
+    clientId: () => process.env.GOOGLE_CLIENT_ID,
+    clientSecret: () => process.env.GOOGLE_CLIENT_SECRET,
+    extraAuthParams: { access_type: 'online', prompt: 'select_account' },
+    async fetchIdentity(accessToken) {
+      const r = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const u = await r.json().catch(() => ({}));
+      if (!r.ok || !u.email || u.email_verified === false) return null;
+      return { sub: String(u.sub), email: u.email, name: u.name || null, image: u.picture || null };
+    }
+  },
+  github: {
+    authorizeUrl: 'https://github.com/login/oauth/authorize',
+    tokenUrl: 'https://github.com/login/oauth/access_token',
+    scope: 'read:user user:email',
+    clientId: () => process.env.GITHUB_CLIENT_ID,
+    clientSecret: () => process.env.GITHUB_CLIENT_SECRET,
+    extraAuthParams: {},
+    async fetchIdentity(accessToken) {
+      const headers = { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'MediaListory', Accept: 'application/vnd.github+json' };
+      const ur = await fetch('https://api.github.com/user', { headers });
+      const u = await ur.json().catch(() => ({}));
+      if (!ur.ok || !u.id) return null;
+      let email = u.email;
+      if (!email) {
+        const er = await fetch('https://api.github.com/user/emails', { headers });
+        const emails = await er.json().catch(() => []);
+        const primary = Array.isArray(emails)
+          ? (emails.find((e) => e.primary && e.verified) || emails.find((e) => e.verified))
+          : null;
+        email = primary && primary.email;
+      }
+      if (!email) return null;
+      return { sub: String(u.id), email, name: u.name || u.login || null, image: u.avatar_url || null };
+    }
+  }
+};
 
 module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
   const router = express.Router();
@@ -52,12 +101,128 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
     return jwt.sign({ userId, tv }, JWT_SECRET, { expiresIn });
   }
 
-  /** Public values the browser needs to start Neon Auth social sign-in. */
+  function enabledProviders() {
+    return Object.keys(OAUTH_PROVIDERS).filter((p) => OAUTH_PROVIDERS[p].clientId() && OAUTH_PROVIDERS[p].clientSecret());
+  }
+
+  function publicOrigin(req) {
+    let url = String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
+    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+    if (!url) url = `${req.protocol}://${req.get('host')}`;
+    return url;
+  }
+  function oauthCallbackUrl(req, provider) {
+    return `${publicOrigin(req)}/api/auth/oauth/${provider}/callback`;
+  }
+
+  /** Which social providers the browser should offer (those actually configured). */
   router.get('/public-config', (req, res) => {
-    res.json({
-      authBaseUrl: neonAuth.base(),
-      providers: ['google', 'github']
+    res.json({ providers: enabledProviders() });
+  });
+
+  // ---- Direct OAuth2 (same-origin) --------------------------------------------
+  // Step 1: redirect the browser to the provider with a CSRF state bound to a cookie.
+  router.get('/oauth/:provider/start', (req, res) => {
+    const provider = String(req.params.provider || '').toLowerCase();
+    const P = OAUTH_PROVIDERS[provider];
+    if (!P || !P.clientId() || !P.clientSecret()) {
+      return res.status(404).send('This sign-in method is not available.');
+    }
+    const state = crypto.randomBytes(20).toString('hex');
+    const remember = req.query.remember === '0' ? '0' : '1';
+    const payload = encodeURIComponent(JSON.stringify({ state, provider, remember }));
+    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    // nosemgrep: javascript.express.session-fixation.session-fixation -- value is a server-generated CSRF state (crypto.randomBytes), never user input
+    res.setHeader('Set-Cookie', `mgl_oauth=${payload}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600${secure}`);
+
+    const params = new URLSearchParams({
+      client_id: P.clientId(),
+      redirect_uri: oauthCallbackUrl(req, provider),
+      response_type: 'code',
+      scope: P.scope,
+      state
     });
+    Object.entries(P.extraAuthParams || {}).forEach(([k, v]) => params.set(k, v));
+    // nosemgrep: javascript.express.web.tainted-redirect-express.tainted-redirect-express -- P.authorizeUrl is a hardcoded provider endpoint; provider is validated against the OAUTH_PROVIDERS allowlist
+    res.redirect(`${P.authorizeUrl}?${params.toString()}`);
+  });
+
+  // Step 2: provider redirects back here (same-origin). Exchange the code, map the
+  // user, mint the app JWT, set the httpOnly cookie, and bounce to the app.
+  router.get('/oauth/:provider/callback', async (req, res) => {
+    const provider = String(req.params.provider || '').toLowerCase();
+    const P = OAUTH_PROVIDERS[provider];
+    const frontend = publicOrigin(req);
+    const fail = (msg) => res.redirect(`${frontend}/auth.html?oauth_error=${encodeURIComponent(msg || 'Sign-in failed')}`);
+    try {
+      if (!P) return fail('Unknown sign-in provider');
+      const { code, state, error } = req.query;
+      if (error) return fail('Sign-in was cancelled');
+
+      let stored = {};
+      try { stored = JSON.parse(parseCookies(req).mgl_oauth || '{}'); } catch (_) {}
+      const clearState = `mgl_oauth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+
+      if (!code || !state || state !== stored.state || stored.provider !== provider) {
+        res.setHeader('Set-Cookie', clearState);
+        return fail('Your sign-in session expired. Please try again.');
+      }
+
+      const tokenRes = await fetch(P.tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: new URLSearchParams({
+          client_id: P.clientId(),
+          client_secret: P.clientSecret(),
+          code: String(code),
+          redirect_uri: oauthCallbackUrl(req, provider),
+          grant_type: 'authorization_code'
+        }).toString()
+      });
+      const tokenData = await tokenRes.json().catch(() => ({}));
+      const accessToken = tokenData.access_token;
+      if (!accessToken) { res.setHeader('Set-Cookie', clearState); return fail('Could not complete sign-in'); }
+
+      const identity = await P.fetchIdentity(accessToken);
+      if (!identity || !identity.email) { res.setHeader('Set-Cookie', clearState); return fail('Could not read a verified email from your account'); }
+
+      const authId = `${provider}:${identity.sub}`;
+      let dbUser = await db('users').where({ auth_id: authId }).first();
+      if (!dbUser) dbUser = await db('users').whereRaw('LOWER(email) = LOWER(?)', [identity.email]).first();
+      if (!dbUser) {
+        const username = await allocateUsername(db, identity.name || identity.email.split('@')[0]);
+        try {
+          const [row] = await db('users').insert({
+            auth_id: authId,
+            username,
+            email: identity.email,
+            display_name: String(identity.name || username).slice(0, 100),
+            avatar_url: identity.image || null
+          }).returning('id');
+          dbUser = await db('users').where({ id: row.id ?? row }).first();
+        } catch (_) {
+          dbUser = await db('users').whereRaw('LOWER(email) = LOWER(?)', [identity.email]).first();
+        }
+      } else if (!dbUser.auth_id) {
+        await db('users').where({ id: dbUser.id }).update({ auth_id: authId });
+      }
+      if (!dbUser) { res.setHeader('Set-Cookie', clearState); return fail('Could not create your profile'); }
+      if (dbUser.is_banned) { res.setHeader('Set-Cookie', clearState); return fail('Your account has been banned'); }
+
+      const rememberMe = stored.remember !== '0';
+      const appToken = await issueJwt(dbUser.id, rememberMe);
+      const maxAgeSec = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+      const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+      // nosemgrep: javascript.express.session-fixation.session-fixation -- appToken is a server-signed JWT (jwt.sign), not user-controlled
+      res.setHeader('Set-Cookie', [
+        clearState,
+        `mgl_token=${encodeURIComponent(appToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}${secure}`
+      ]);
+      return res.redirect(`${frontend}/auth.html?oauth=done`);
+    } catch (error) {
+      console.error('OAuth callback error:', error.message);
+      return fail('Sign-in failed. Please try again.');
+    }
   });
 
   /**
