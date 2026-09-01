@@ -62,10 +62,12 @@
     --cat-game-border:   rgba(245, 158, 11, 0.40);
 
     /* Active page accent. Neutral by default — only the four category pages
-       (Movies / Shows / Anime / Games) get a real color, set per-page below. */
-    --accent:            #94a3b8;
-    --accent-light:      #cbd5e1;
-    --accent-dim:        rgba(148, 163, 184, 0.12);
+       (Movies / Shows / Anime / Games) get a real color, set per-page below.
+       --accent is dark enough to carry white text on button/tab fills;
+       --accent-light stays light enough to read as text on the dark page. */
+    --accent:            #475569;
+    --accent-light:      #94a3b8;
+    --accent-dim:        rgba(148, 163, 184, 0.14);
     --accent-border:     rgba(148, 163, 184, 0.35);
     --accent-glow:       transparent;
 
@@ -205,14 +207,15 @@ img, video, canvas, svg {
 
 .page-tab:hover {
     color: var(--text-primary);
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--accent-dim);
 }
 
 .page-tab.active {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    background: var(--accent);
     color: #ffffff;
-    box-shadow: 0 2px 10px var(--blue-glow);
+    box-shadow: 0 2px 10px var(--accent-dim);
 }
+body[data-page="games"] .page-tab.active { color: #1a1206; }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
@@ -245,7 +248,7 @@ img, video, canvas, svg {
     font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    background: linear-gradient(45deg, var(--accent), var(--accent-light));
+    background: linear-gradient(45deg, var(--accent-light), var(--text-primary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -322,13 +325,13 @@ img, video, canvas, svg {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    background: var(--accent);
     color: #ffffff;
-    box-shadow: var(--shadow-btn) var(--blue-glow);
+    box-shadow: var(--shadow-btn) var(--accent-dim);
 }
 .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue) 100%);
-    box-shadow: var(--shadow-btn-hover) rgba(59, 130, 246, 0.4);
+    filter: brightness(1.12);
+    box-shadow: var(--shadow-btn-hover) var(--accent-dim);
     transform: translateY(-2px);
 }
 
@@ -345,7 +348,7 @@ img, video, canvas, svg {
     transform: translateY(-1px);
 }
 .nav-actions .btn.active {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    background: var(--accent);
     box-shadow: var(--shadow-btn) var(--accent-dim);
     color: #ffffff;
     border-color: transparent;
@@ -3689,8 +3692,14 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 }
 .search-container .btn-primary,
 .search-bar .btn-primary {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    background: var(--accent);
     box-shadow: var(--shadow-btn) var(--accent-dim);
+}
+/* Amber (Games) needs dark text for legible contrast on its fills. */
+body[data-page="games"] .btn-primary,
+body[data-page="games"] .search-container .btn-primary,
+body[data-page="games"] .nav-actions .btn.active {
+    color: #1a1206;
 }
 
 /* ── Mobile navigation drawer polish ──────────────────────────────────── */
