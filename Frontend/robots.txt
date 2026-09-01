@@ -1,13 +1,17 @@
-# App entry and legal pages may be indexed.
-# Auth-walled surfaces are disallowed.
+# Public browse and legal pages may be indexed.
+# Auth-walled and personal surfaces are disallowed.
 
 User-agent: *
-Allow: /
+Allow: /$
 Allow: /home.html
-Allow: /auth.html
+Allow: /movies.html
+Allow: /series.html
+Allow: /anime.html
+Allow: /about.html
 Allow: /terms.html
 Allow: /privacy.html
 
+Disallow: /auth.html
 Disallow: /myGameList.html
 Disallow: /profile.html
 Disallow: /friends.html
@@ -15,3 +19,5 @@ Disallow: /userProfile.html
 Disallow: /admin.html
 Disallow: /moderator.html
 Disallow: /api/
+
+Sitemap: https://medialistory.onrender.com/sitemap.xml

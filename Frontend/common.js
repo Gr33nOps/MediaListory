@@ -7,6 +7,29 @@
     : '/api';
   var modalState = null;
 
+  // ── Analytics (opt-in) ─────────────────────────────────────────────
+  // No-op until a Google Analytics 4 measurement ID is provided, either via
+  // `window.MGL_GA_ID = 'G-XXXXXXXXXX'` before this script, or a
+  // <meta name="ga-id" content="G-XXXXXXXXXX"> tag. Honors Do Not Track.
+  function initAnalytics() {
+    var id = global.MGL_GA_ID;
+    if (!id) {
+      var m = document.querySelector('meta[name="ga-id"]');
+      if (m) id = m.getAttribute('content');
+    }
+    if (!id || !/^G-[A-Z0-9]+$/i.test(id)) return; // not configured
+    if (navigator.doNotTrack === '1' || global.doNotTrack === '1') return;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+    document.head.appendChild(s);
+    global.dataLayer = global.dataLayer || [];
+    function gtag() { global.dataLayer.push(arguments); }
+    global.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', id, { anonymize_ip: true });
+  }
+
   function apiIsCrossOrigin() {
     if (!API_BASE || API_BASE.charAt(0) === '/') return false;
     try {
@@ -545,10 +568,12 @@
       document.addEventListener('DOMContentLoaded', function () {
         initDensity();
         mountAppNav();
+        initAnalytics();
       });
     } else {
       initDensity();
       mountAppNav();
+      initAnalytics();
     }
   }
 

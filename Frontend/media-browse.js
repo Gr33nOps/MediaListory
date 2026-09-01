@@ -211,7 +211,7 @@
       var label = 'View details for ' + (m.name || NOUN);
       return '<div class="game-card" data-game-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="' + esc(label) + '">' +
         '<div class="game-image-wrapper">' +
-          '<img src="' + esc(imgSrc) + '" alt="" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+          '<img src="' + esc(imgSrc) + '" alt="' + esc((m.name || NOUN) + ' cover') + '" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
         '</div>' +
         '<div class="game-info">' +
           '<div class="game-title">' + esc(m.name) + '</div>' +

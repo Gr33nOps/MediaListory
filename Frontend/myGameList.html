@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>My Library - MediaListory</title>
-    <meta name="description" content="Track, rate, and share your games, movies, and series with MediaListory.">
-    <meta name="robots" content="noindex,nofollow">
+    <meta name="description" content="Track, rate, and share the movies, series, anime, and games you love with MediaListory.">
+    <meta name="robots" content="noindex,follow">
     <link rel="stylesheet" href="styles.css">
     <style>
         .media-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
@@ -19,11 +19,17 @@
         .media-type-anime { background: rgba(244,114,182,0.15); color: #f472b6; border-color: rgba(244,114,182,0.35); }
         .coll-item-progress { font-size: 0.72rem; color: #94a3b8; margin-left: 8px; }
     </style>
+    <!-- seo:start -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/favicon.svg" color="#3b82f6">
+    <meta name="theme-color" content="#0b1220">
+    <!-- seo:end -->
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div id="main-content" tabindex="-1" class="container">
         <nav class="navbar" id="appNav" data-active="list" data-brand="MediaListory"></nav>
+        <h1 class="sr-only">My library</h1>
 
         <div class="page-tabs" role="tablist" aria-label="My list sections">
             <button type="button" class="page-tab active" role="tab" id="tabBtnCollection" data-tab="collection" aria-controls="tab-collection" aria-selected="true">My Collection</button>

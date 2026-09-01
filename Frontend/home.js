@@ -548,7 +548,7 @@ function displaySearchResults(games, replace) {
         var cardLabel = 'View details for ' + (game.name || 'game');
         return '<div class="game-card" data-game-id="' + esc(game.id) + '" role="button" tabindex="0" aria-label="' + esc(cardLabel) + '">' +
             '<div class="game-image-wrapper">' +
-                '<img src="' + esc(imgSrc) + '" alt="" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+                '<img src="' + esc(imgSrc) + '" alt="' + esc(game.name || 'Game') + ' cover" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
             '</div>' +
             '<div class="game-info">' +
                 '<div class="game-title">' + esc(game.name) + '</div>' +
