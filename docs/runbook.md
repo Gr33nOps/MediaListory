@@ -30,7 +30,7 @@ App buttons ask Neon Auth for the provider URL (`POST {NEON_AUTH_BASE_URL}/sign-
 
 1. **Trusted domains** (CSRF): add every app origin, or Neon Auth rejects the calls.
    - `neon neon-auth domain add https://my-game-list-live.vercel.app`
-   - `neon neon-auth domain add https://mygamelist-ffyl.onrender.com`
+   - `neon neon-auth domain add https://medialistory.onrender.com`
    - `neon neon-auth domain allow-localhost enable` (local dev)
 2. **Enable Google:** Neon Console → Auth → providers (a shared dev key is on by default and shows Neon branding; add your own Google OAuth client for production).
 3. **Enable Discord:** add it via `neon neon-auth oauth-provider` / the Console with a Discord app's client id + secret (not enabled by default).

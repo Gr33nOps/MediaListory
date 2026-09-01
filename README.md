@@ -4,12 +4,12 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 > Formerly "My Game List" — now expanded from games-only to movies + series + anime + games.
 
-[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://mygamelist-ffyl.onrender.com)
+[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://medialistory.onrender.com)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
 [![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/MediaListory/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/MediaListory/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**Live:** [mygamelist-ffyl.onrender.com](https://mygamelist-ffyl.onrender.com)
+**Live:** [medialistory.onrender.com](https://medialistory.onrender.com)
 
 ## Features
 
@@ -63,8 +63,8 @@ Do not set `ALLOW_DEGRADED=1` in production.
 
 ## Deploy
 
-1. **Render** (canonical — serves frontend + API): Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB (Kitsu needs no key), and — for social sign-in — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://mygamelist-ffyl.onrender.com` (include `https://`).
-2. **OAuth apps:** register the redirect URIs on each provider — Google: `https://mygamelist-ffyl.onrender.com/api/auth/oauth/google/callback`; GitHub: `https://mygamelist-ffyl.onrender.com/api/auth/oauth/github/callback`. The flow is same-origin (no external auth domain), so cookies stay first-party.
+1. **Render** (canonical — serves frontend + API): Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB (Kitsu needs no key), and — for social sign-in — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://medialistory.onrender.com` (include `https://`).
+2. **OAuth apps:** register the redirect URIs on each provider — Google: `https://medialistory.onrender.com/api/auth/oauth/google/callback`; GitHub: `https://medialistory.onrender.com/api/auth/oauth/github/callback`. The flow is same-origin (no external auth domain), so cookies stay first-party.
 
 Details: [`docs/runbook.md`](docs/runbook.md). Probes: `/health` (up), `/ready` (DB + IGDB).
 

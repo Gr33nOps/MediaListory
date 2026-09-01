@@ -25,7 +25,7 @@ jobs:
       - name: Hit the readiness probe (exercises Neon Postgres)
         env:
           # Override in repo variables if the API host changes.
-          READY_URL: ${{ vars.READY_URL || 'https://mygamelist-ffyl.onrender.com/ready' }}
+          READY_URL: ${{ vars.READY_URL || 'https://medialistory.onrender.com/ready' }}
         run: |
           set -euo pipefail
           echo "Pinging $READY_URL"

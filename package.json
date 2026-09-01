@@ -28,7 +28,7 @@
   "bugs": {
     "url": "https://github.com/Gr33nOps/MediaListory/issues"
   },
-  "homepage": "https://mygamelist-ffyl.onrender.com",
+  "homepage": "https://medialistory.onrender.com",
   "type": "commonjs",
   "engines": {
     "node": ">=18"

@@ -6,15 +6,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://mygamelist-ffyl.onrender.com/api/:path*"
+      "destination": "https://medialistory.onrender.com/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://mygamelist-ffyl.onrender.com/health"
+      "destination": "https://medialistory.onrender.com/health"
     },
     {
       "source": "/ready",
-      "destination": "https://mygamelist-ffyl.onrender.com/ready"
+      "destination": "https://medialistory.onrender.com/ready"
     },
     {
       "source": "/",
