@@ -1,8 +1,8 @@
 # MediaListory
 
-Track what you play and watch, rate your library, and discover with friends — across **Games**, **Movies**, and **Series** in one app. Game data from [IGDB](https://www.igdb.com/) (Twitch); movie and series data from [TMDB](https://www.themoviedb.org/).
+Track what you play and watch, rate your library, and discover with friends — across **Movies**, **Series**, **Anime**, and **Games** in one app. Movie & series data from [TMDB](https://www.themoviedb.org/); anime from [Kitsu](https://kitsu.io/); game data from [IGDB](https://www.igdb.com/) (Twitch).
 
-> Formerly "My Game List" — now expanded from games-only to games + movies + series.
+> Formerly "My Game List" — now expanded from games-only to movies + series + anime + games.
 
 [![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://mygamelist-ffyl.onrender.com)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
@@ -13,24 +13,24 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 ## Features
 
-- Three categories in one app — **Games** (IGDB), **Movies** and **Series** (TMDB) — sharing the same browse, search, detail, tracking, rating, notes, lists, and profile UI
+- Four separate tabs in one app — **Movies** and **Series** (TMDB), **Anime** (Kitsu), **Games** (IGDB) — each with its own discovery, search, and detail, sharing the same tracking, rating, notes, lists, and profile UI
 - Browse and search each category (genre + sort; platform/publisher/developer for games)
-- Track status (game "play" / movie & series "watch"), score 1–10, and notes; mixed-media custom lists; JSON export
+- Track status (game "play" / movie, series & anime "watch"), score 1–10, and notes; per-type metadata (episode progress for series & anime); mixed-media custom lists; JSON export
 - Library and profiles filter and break down by category
 - **Guest mode:** browse, search, and view details without an account; sign in to save
-- Email/password auth (Neon Auth) plus Google & GitHub social sign-in
+- Email/password auth plus Google & GitHub social sign-in (direct, same-origin OAuth2)
 - Follow users and public profiles
 - Admin and moderator dashboards
 
 ## Stack
 
-Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres** + **Neon Auth** (Better Auth: email/password + Google/GitHub OAuth), IGDB (games) + TMDB (movies/series). Deployed on **Render** (serves the full app — frontend + API).
+Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres**. Email/password identity via Neon Auth; social sign-in via direct same-origin OAuth2 (Google/GitHub). Content from TMDB (movies/series), Kitsu (anime — no key), and IGDB (games). Deployed on **Render** (serves the full app — frontend + API).
 
-> Migrated off Supabase to Neon. The app mints its own session JWT after verifying identity with Neon Auth, so all data/features are unchanged; only the identity provider swapped.
+> Migrated off Supabase to Neon. The app mints its own session JWT (httpOnly cookie), so all data/features are unchanged. Social sign-in uses a self-hosted OAuth2 code flow on our own origin, so cookies are first-party.
 
 ### Media model
 
-All media lives in one `games` catalog table, discriminated by `media_type` (`game` | `movie` | `series`). `game_id` is the universal external ref (`igdb_<id>`, `tmdb_movie_<id>`, `tmdb_series_<id>`). Tracking (`user_game_lists`) and custom lists (`custom_list_games`) reference that catalog, so they work for every media type unchanged. Future categories (e.g. anime, books, music) slot in as new `media_type` values without schema churn.
+All media lives in one `games` catalog table, discriminated by `media_type` (`movie` | `series` | `anime` | `game`). Every row also records its `provider` (`tmdb` | `kitsu` | `igdb`) and `provider_id`, and `game_id` is the universal external ref (`tmdb_movie_<id>`, `tmdb_series_<id>`, `kitsu_<id>`, `igdb_<id>`). A unique index on `(provider, media_type, provider_id)` guarantees IDs from different providers can never collide. Tracking (`user_game_lists`, incl. `progress` for episodes watched) and custom lists (`custom_list_games`) reference that catalog, so they work for every media type unchanged. Further categories (e.g. books, music) slot in as new `media_type` values without schema churn.
 
 ## Quick start
 
@@ -43,8 +43,8 @@ cp .env.example .env
 npm install
 ```
 
-1. Fill `.env` from [`.env.example`](.env.example) (Neon `DATABASE_URL`, Neon Auth, JWT, Twitch/IGDB, and TMDB for movies/series). Get the DB string from the Neon Console → Connect; get the auth values from `neon neon-auth status --project-id <id> --branch production`.
-2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql) + [`DB/migrations/add-media-types.sql`](DB/migrations/add-media-types.sql) + [`DB/migrations/add-auth-id.sql`](DB/migrations/add-auth-id.sql) (run via `neon psql` or the Neon SQL editor; see [`DB/README.md`](DB/README.md)).
+1. Fill `.env` from [`.env.example`](.env.example) (Neon `DATABASE_URL`, Neon Auth, JWT, Twitch/IGDB, TMDB for movies/series; Kitsu needs no key; optional Google/GitHub OAuth). Get the DB string from the Neon Console → Connect; get the auth values from `neon neon-auth status --project-id <id> --branch production`.
+2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql) + [`DB/migrations/add-media-types.sql`](DB/migrations/add-media-types.sql) + [`DB/migrations/add-auth-id.sql`](DB/migrations/add-auth-id.sql) + [`DB/migrations/add-anime-and-provider.sql`](DB/migrations/add-anime-and-provider.sql) (run via `neon psql` or the Neon SQL editor; see [`DB/README.md`](DB/README.md)).
 3. Run:
 
 ```bash
@@ -63,9 +63,8 @@ Do not set `ALLOW_DEGRADED=1` in production.
 
 ## Deploy
 
-1. **Render:** Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB. Set `FRONTEND_URL=https://mygamelist-ffyl.onrender.com` (include `https://`).
-2. **Vercel:** Import the repo. [`vercel.json`](vercel.json) rewrites `/api`, `/health`, `/ready` to Render and serves `Frontend/`.
-3. **Neon Auth:** add your Vercel and Render origins as trusted domains (`neon neon-auth domain add <url>`), and enable the Google (and optionally Discord) OAuth providers in the Neon Console.
+1. **Render** (canonical — serves frontend + API): Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB (Kitsu needs no key), and — for social sign-in — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://mygamelist-ffyl.onrender.com` (include `https://`).
+2. **OAuth apps:** register the redirect URIs on each provider — Google: `https://mygamelist-ffyl.onrender.com/api/auth/oauth/google/callback`; GitHub: `https://mygamelist-ffyl.onrender.com/api/auth/oauth/github/callback`. The flow is same-origin (no external auth domain), so cookies stay first-party.
 
 Details: [`docs/runbook.md`](docs/runbook.md). Probes: `/health` (up), `/ready` (DB + IGDB).
 
