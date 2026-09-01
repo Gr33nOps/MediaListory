@@ -66,6 +66,7 @@
     --accent-light:      var(--blue-light);
     --accent-dim:        var(--blue-dim);
     --accent-border:     rgba(59, 130, 246, 0.40);
+    --accent-glow:       rgba(59, 130, 246, 0.20);
 
     --radius-sm:         6px;
     --radius-md:         8px;
@@ -94,10 +95,16 @@ html {
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, var(--bg-base) 0%, #1a1a2e 50%, #16213e 100%);
+    /* Category-themed backdrop: an accent glow at the top that recolors per page
+       (and when switching category tabs), over a deep base gradient. */
+    background:
+        radial-gradient(1600px 1000px at 50% -80px, var(--accent-glow) 0%, transparent 58%),
+        linear-gradient(180deg, var(--bg-base) 0%, #0c1224 55%, #0a0f1f 100%);
+    background-attachment: fixed;
     min-height: 100vh;
     color: var(--text-primary);
     overflow-x: hidden;
+    transition: background 0.45s ease;
     padding-left: env(safe-area-inset-left, 0);
     padding-right: env(safe-area-inset-right, 0);
 }
@@ -235,8 +242,9 @@ img, video, canvas, svg {
 
 .nav-brand {
     font-size: 1.35rem;
-    font-weight: 700;
-    background: linear-gradient(45deg, var(--blue), var(--blue-light));
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(45deg, var(--accent), var(--accent-light));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -244,6 +252,7 @@ img, video, canvas, svg {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.3s ease;
 }
 
 .nav-toggle {
@@ -323,19 +332,22 @@ img, video, canvas, svg {
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, var(--purple-dark) 0%, #4c1d95 100%);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-btn) var(--purple-dim);
+    background: var(--bg-deep);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    box-shadow: none;
 }
 .btn-secondary:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
-    box-shadow: var(--shadow-btn-hover) rgba(139, 92, 246, 0.4);
-    transform: translateY(-2px);
+    background: var(--bg-card);
+    border-color: var(--accent-border);
+    color: var(--text-primary);
+    transform: translateY(-1px);
 }
 .nav-actions .btn.active {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-    box-shadow: var(--shadow-btn) var(--blue-glow);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    box-shadow: var(--shadow-btn) var(--accent-dim);
     color: #ffffff;
+    border-color: transparent;
 }
 
 .btn-danger {
@@ -3573,62 +3585,38 @@ a:focus-visible {
 
 /* Per-page accent — drives page headers, nav active state, focus rings.
    body[data-page] / [data-cat] is set by common.js from the nav's data-active. */
-body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); }
-body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); }
-body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); }
-body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); }
-body[data-page="list"]    { --accent: var(--purple);      --accent-light: var(--purple-light); --accent-dim: var(--purple-dim);      --accent-border: rgba(139,92,246,0.4); }
-body[data-page="friends"] { --accent: #06b6d4;            --accent-light: #22d3ee;             --accent-dim: rgba(6,182,212,0.14);   --accent-border: rgba(6,182,212,0.4); }
-body[data-page="profile"] { --accent: var(--blue);        --accent-light: var(--blue-light);   --accent-dim: var(--blue-dim);        --accent-border: rgba(59,130,246,0.4); }
+body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); --accent-glow: rgba(59,130,246,0.32); }
+body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.28); }
+body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.30); }
+body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.28); }
+body[data-page="list"]    { --accent: var(--purple);      --accent-light: var(--purple-light); --accent-dim: var(--purple-dim);      --accent-border: rgba(139,92,246,0.4); --accent-glow: rgba(139,92,246,0.28); }
+body[data-page="friends"] { --accent: #06b6d4;            --accent-light: #22d3ee;             --accent-dim: rgba(6,182,212,0.14);   --accent-border: rgba(6,182,212,0.4); --accent-glow: rgba(6,182,212,0.26); }
+body[data-page="profile"] { --accent: var(--blue);        --accent-light: var(--blue-light);   --accent-dim: var(--blue-dim);        --accent-border: rgba(59,130,246,0.4); --accent-glow: rgba(59,130,246,0.26); }
 
-/* ── Page header (every primary page) ─────────────────────────────────── */
+/* ── Page header (every primary page) — clean, no icons, no bars ───────── */
 .page-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin: 2px 0 24px;
-    padding: 18px 22px;
-    background:
-        linear-gradient(135deg, var(--accent-dim) 0%, rgba(15,23,42,0) 60%),
-        linear-gradient(135deg, var(--bg-card) 0%, var(--bg-deep) 100%);
-    border: 1px solid var(--border-subtle);
-    border-left: 4px solid var(--accent);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
+    margin: 6px 0 28px;
 }
-.page-header-icon {
-    flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    display: grid;
-    place-items: center;
-    border-radius: var(--radius-md);
-    background: var(--accent-dim);
-    color: var(--accent-light);
-    border: 1px solid var(--accent-border);
-}
-.page-header-icon svg { width: 26px; height: 26px; display: block; }
 .page-header-main { min-width: 0; }
 .page-header-title {
     margin: 0;
-    font-size: 1.55rem;
+    font-size: 2.15rem;
     font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
     color: var(--text-primary);
 }
 .page-header-sub {
-    margin: 4px 0 0;
+    margin: 9px 0 0;
     color: var(--text-muted);
-    font-size: 0.92rem;
-    line-height: 1.5;
+    font-size: 1rem;
+    line-height: 1.55;
+    max-width: 62ch;
 }
 @media (max-width: 600px) {
-    .page-header { padding: 14px 16px; gap: 12px; margin-bottom: 18px; }
-    .page-header-icon { width: 40px; height: 40px; }
-    .page-header-icon svg { width: 22px; height: 22px; }
-    .page-header-title { font-size: 1.25rem; }
-    .page-header-sub { font-size: 0.85rem; }
+    .page-header { margin: 2px 0 20px; }
+    .page-header-title { font-size: 1.55rem; }
+    .page-header-sub { font-size: 0.9rem; margin-top: 6px; }
 }
 
 /* ── Nav: category color-coding ───────────────────────────────────────── */

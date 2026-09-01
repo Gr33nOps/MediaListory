@@ -568,19 +568,8 @@
     }
   }
 
-  // ── Shared page header (title + subtitle + category-colored icon) ──────
+  // ── Shared page header (title + subtitle; color comes from page theming) ─
   // Driven by the nav element's data-page-title / data-page-sub / data-active.
-  var PAGE_ICONS = {
-    movies: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16M17 4v16M2 9h5M2 15h5M17 9h5M17 15h5"/></svg>',
-    series: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M8 3l4 4 4-4"/></svg>',
-    anime:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.5L20 9l-4 3.8L17 19l-5-2.8L7 19l1-6.2L4 9l5.8-.5z"/></svg>',
-    games:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="4"/><path d="M7 11v2M6 12h2"/><circle cx="16" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>',
-    list:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
-    friends:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.5a3 3 0 010 5.8M21 20c0-2.5-1.5-4.6-3.7-5.5"/></svg>',
-    profile:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
-    admin:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>',
-    moderator:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>'
-  };
   function mountPageHeader() {
     var el = document.getElementById('appNav');
     if (!el) return;
@@ -593,12 +582,10 @@
     var main = document.getElementById('main-content') || document.body;
     var srH1 = main.querySelector('h1.sr-only');
     if (srH1) srH1.parentNode.removeChild(srH1);
-    var icon = PAGE_ICONS[active] || '';
     var header = document.createElement('header');
     header.className = 'page-header';
     header.setAttribute('data-cat', active);
     header.innerHTML =
-      (icon ? '<div class="page-header-icon" aria-hidden="true">' + icon + '</div>' : '') +
       '<div class="page-header-main">' +
         '<h1 class="page-header-title">' + esc(title) + '</h1>' +
         (sub ? '<p class="page-header-sub">' + esc(sub) + '</p>' : '') +
