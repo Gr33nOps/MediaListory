@@ -3740,3 +3740,20 @@ body[data-page="profile"] { --accent: var(--blue);        --accent-light: var(--
     .media-tabs { gap: 6px; }
     .media-tab { padding: 6px 12px; font-size: 0.8rem; }
 }
+
+/* ── Category breakdown chips (profiles) ──────────────────────────────── */
+.cat-breakdown { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 8px; }
+.cat-stat {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 13px; border-radius: 999px;
+    background: var(--bg-deep); border: 1px solid var(--cs-border, var(--border-subtle));
+    text-decoration: none;
+}
+.cat-stat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cs-color, var(--text-dim)); flex-shrink: 0; }
+.cat-stat[data-cat="movie"]  { --cs-color: var(--cat-movie-light);  --cs-border: var(--cat-movie-border); }
+.cat-stat[data-cat="series"] { --cs-color: var(--cat-series-light); --cs-border: var(--cat-series-border); }
+.cat-stat[data-cat="anime"]  { --cs-color: var(--cat-anime-light);  --cs-border: var(--cat-anime-border); }
+.cat-stat[data-cat="game"]   { --cs-color: var(--cat-game-light);   --cs-border: var(--cat-game-border); }
+.cat-stat .cs-num { font-weight: 800; color: var(--cs-color); font-size: 1rem; }
+.cat-stat .cs-label { font-size: 0.82rem; color: var(--text-secondary); }
+a.cat-stat:hover { border-color: var(--cs-color); }

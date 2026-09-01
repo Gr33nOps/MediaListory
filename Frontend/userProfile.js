@@ -190,8 +190,13 @@ function displayUserProfile(user) {
         if (existing) existing.remove();
         var line = document.createElement('div');
         line.id = 'mediaBreakdownLine';
-        line.style.cssText = 'font-size:0.82rem;color:#94a3b8;margin-top:4px;';
-        line.textContent = (bd.movie || 0) + ' movies · ' + (bd.series || 0) + ' series · ' + (bd.anime || 0) + ' anime · ' + (bd.game || 0) + ' games';
+        line.className = 'cat-breakdown';
+        var order = [['movie', 'Movies'], ['series', 'Series'], ['anime', 'Anime'], ['game', 'Games']];
+        line.innerHTML = order.map(function(o) {
+            return '<span class="cat-stat" data-cat="' + o[0] + '">' +
+                '<span class="cs-num">' + (bd[o[0]] || 0) + '</span>' +
+                '<span class="cs-label">' + o[1] + '</span></span>';
+        }).join('');
         if (titleEl && titleEl.parentNode) titleEl.parentNode.insertBefore(line, titleEl.nextSibling);
     }
     document.getElementById('customListsTitle').textContent = (user.display_name || user.username) + "'s Lists";

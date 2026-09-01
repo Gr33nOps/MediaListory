@@ -141,7 +141,16 @@ function displayStats(games, followers, following) {
         breakdown[t]++;
     });
     var el = document.getElementById('mediaBreakdown');
-    if (el) el.textContent = breakdown.movie + ' movies · ' + breakdown.series + ' series · ' + breakdown.anime + ' anime · ' + breakdown.game + ' games';
+    if (el) {
+        var order = [['movie', 'Movies', 'movies.html'], ['series', 'Series', 'series.html'], ['anime', 'Anime', 'anime.html'], ['game', 'Games', 'home.html']];
+        el.className = 'cat-breakdown';
+        el.removeAttribute('style');
+        el.innerHTML = order.map(function(o) {
+            return '<a class="cat-stat" data-cat="' + o[0] + '" href="myGameList.html" title="View your ' + o[1] + '">' +
+                '<span class="cs-num">' + (breakdown[o[0]] || 0) + '</span>' +
+                '<span class="cs-label">' + o[1] + '</span></a>';
+        }).join('');
+    }
 }
 
 function formatDate(dateString) {
