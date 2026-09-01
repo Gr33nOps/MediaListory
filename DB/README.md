@@ -1,6 +1,8 @@
 # Database
 
-Canonical schema and incremental migrations for Supabase Postgres (IGDB / Twitch).
+Canonical schema and incremental migrations for Supabase Postgres. One `games`
+catalog table holds all media, discriminated by `media_type` (`game`/`movie`/`series`);
+games come from IGDB, movies/series from TMDB.
 
 ## Layout
 
@@ -23,6 +25,7 @@ DB/
 | `migrations/add-username-lower-unique.sql` | Case-insensitive unique username |
 | `migrations/add-scale-indexes.sql` | Follow / activity indexes |
 | `migrations/add-notes-column.sql` | `user_game_lists.notes` for export |
+| `migrations/add-media-types.sql` | `games.media_type` + `games.tmdb_id` for movies/series (**required** for MediaListory; additive, existing rows become `media_type='game'`) |
 | `legacy/legacy-mysql-igdb.dump.sql` | Archive only. Do not apply to Postgres |
 | `legacy/migrate_data.js` | One-time MySQL to Supabase data copy |
 

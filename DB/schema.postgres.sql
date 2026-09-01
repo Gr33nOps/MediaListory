@@ -24,10 +24,14 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_uidx
   ON users (LOWER(username));
 
+-- `games` is a generic media catalog. media_type discriminates game/movie/series.
+-- game_id is the universal external ref: igdb_<id> / tmdb_movie_<id> / tmdb_series_<id>.
 CREATE TABLE IF NOT EXISTS games (
   id BIGSERIAL PRIMARY KEY,
   game_id TEXT UNIQUE,
   igdb_id INTEGER UNIQUE,
+  tmdb_id INTEGER,
+  media_type VARCHAR(16) NOT NULL DEFAULT 'game',
   name VARCHAR(255) NOT NULL,
   slug VARCHAR(255),
   description TEXT,
@@ -46,6 +50,10 @@ CREATE TABLE IF NOT EXISTS games (
 
 CREATE INDEX IF NOT EXISTS idx_games_igdb_id ON games (igdb_id);
 CREATE INDEX IF NOT EXISTS idx_games_name ON games (name);
+CREATE INDEX IF NOT EXISTS idx_games_media_type ON games (media_type);
+-- Movies and series share TMDB's numeric id space, so uniqueness is per media type.
+CREATE UNIQUE INDEX IF NOT EXISTS games_media_tmdb_uidx
+  ON games (media_type, tmdb_id) WHERE tmdb_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS user_game_lists (
   id BIGSERIAL PRIMARY KEY,
