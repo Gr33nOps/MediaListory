@@ -1,7 +1,7 @@
 {
   "name": "my-game-list",
   "version": "1.0.0",
-  "description": "MediaListory - track games, movies, and series in one app. Games from IGDB (Twitch), movies/series from TMDB. Node/Express backend on Supabase Postgres with a static vanilla-JS frontend.",
+  "description": "MediaListory - track games, movies, and series in one app. Games from IGDB (Twitch), movies/series from TMDB. Node/Express backend on Neon Postgres + Neon Auth with a static vanilla-JS frontend.",
   "main": "Backend/server.js",
   "scripts": {
     "start": "node Backend/server.js",
@@ -9,7 +9,6 @@
     "test": "node --test ./test/unit/*.test.js ./test/smoke/*.test.js",
     "test:e2e": "playwright test"
   },
-
   "keywords": [
     "games",
     "movies",
@@ -17,7 +16,7 @@
     "igdb",
     "tmdb",
     "twitch",
-    "supabase",
+    "neon",
     "express"
   ],
   "author": "Gr33nOps",
@@ -35,13 +34,13 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.95.3",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
+    "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.3",
     "knex": "^3.1.0",
     "morgan": "^1.10.0",

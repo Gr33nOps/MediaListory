@@ -1,10 +1,9 @@
-name: Supabase Keep-Alive
+name: Keep-Alive
 
-# Supabase pauses free-tier projects after ~7 days of inactivity.
-# This makes a tiny read three times a week so the database stays warm.
-# Secrets required (Settings -> Secrets and variables -> Actions):
-#   SUPABASE_URL       e.g. https://xxxxxxxx.supabase.co
-#   SUPABASE_ANON_KEY  the public anon key (safe to store; already shipped to the browser)
+# Neon auto-suspends an idle project and auto-resumes on the next connection, so a
+# manual "unpause" is not needed. This lightweight check hits the app's /ready probe
+# (which runs a query against Neon Postgres) a few times a week to keep the deployed
+# service and database warm and to catch outages early.
 
 on:
   schedule:
@@ -15,44 +14,31 @@ permissions:
   contents: read
 
 concurrency:
-  group: supabase-keepalive
+  group: keepalive
   cancel-in-progress: false
 
 jobs:
   ping:
-    name: Tiny read against Supabase
+    name: Ping /ready
     runs-on: ubuntu-latest
     steps:
-      - name: Query one row via PostgREST
+      - name: Hit the readiness probe (exercises Neon Postgres)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Override in repo variables if the API host changes.
+          READY_URL: ${{ vars.READY_URL || 'https://mygamelist-ffyl.onrender.com/ready' }}
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
-            echo "::error::Missing SUPABASE_URL or SUPABASE_ANON_KEY repo secret."
-            exit 1
-          fi
-          url="${SUPABASE_URL%/}/rest/v1/games?select=id&limit=1"
-          echo "Pinging $url"
+          echo "Pinging $READY_URL"
           set +e
-          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-            --max-time 30 "$url")
-          curl_rc=$?
+          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' --max-time 40 "$READY_URL")
+          rc=$?
           set -e
-          echo "curl exit: ${curl_rc}"
-          echo "HTTP status: ${code}"
+          echo "curl exit: ${rc} | HTTP: ${code}"
           echo "Body: $(cat /tmp/body.txt 2>/dev/null || true)"
-          # Any HTTP response (even 401/404 from RLS/grants) means the DB answered and is awake.
-          # A curl transport failure or "000" means no response - the project is paused/unreachable.
-          if [ "${curl_rc}" -ne 0 ] || [ "${code}" = "000" ]; then
-            echo "::error::No response from Supabase - project is likely paused. Restore it once from the dashboard; this workflow keeps an active project awake but cannot wake a paused one."
-            exit 1
+          if [ "${rc}" -ne 0 ] || [ "${code}" = "000" ]; then
+            echo "::error::No response from the app (deploy may be down)."; exit 1
           fi
           if [ "${code}" -ge 500 ]; then
-            echo "::error::Supabase returned ${code}."
-            exit 1
+            echo "::error::App returned ${code}."; exit 1
           fi
-          echo "Supabase responded (${code}) - project is awake."
+          echo "App responded (${code}) - service and database are awake."

@@ -24,7 +24,7 @@ Every catalog item has a `media_type`: `game` | `movie` | `series`. All three li
 | Postgres `games` | `igdb_id` | integer UNIQUE | Join key for games |
 | Postgres `games` | `tmdb_id` | integer | Join key for movies/series (unique per media_type) |
 | Postgres `games` | `game_id` | text UNIQUE | Universal external ref |
-| Users | `id` | UUID | Supabase Auth user id = `public.users.id` |
+| Users | `id` | UUID | Neon Auth user id = `public.users.id` (also stored as `auth_id`) |
 
 ### Rules for clients
 

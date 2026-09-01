@@ -69,7 +69,7 @@ jobs:
 
       - name: Require resolution (Linux case-sensitive)
         run: |
-          node -e "['./auth','./admin','./moderator','./myGameList','./igdb','./tmdb','./tmdbUtils','./localUser','./userRoles','./errors','./supabaseAdmin'].forEach(m=>require(m)); console.log('requires ok')"
+          node -e "['./auth','./admin','./moderator','./myGameList','./igdb','./tmdb','./tmdbUtils','./localUser','./userRoles','./errors','./neonAuth','./profile','./userProfile'].forEach(m=>require(m)); console.log('requires ok')"
         working-directory: Backend
 
       - name: Unit + smoke tests

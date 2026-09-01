@@ -13,6 +13,7 @@ test('required entry files exist with Linux casing', () => {
     'Backend/igdbUtils.js',
     'Backend/tmdb.js',
     'Backend/tmdbUtils.js',
+    'Backend/neonAuth.js',
     'Backend/myGameList.js',
     'Backend/localUser.js',
     'Backend/sessionCookies.js',

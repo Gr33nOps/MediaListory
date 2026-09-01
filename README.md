@@ -23,7 +23,9 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 ## Stack
 
-Vanilla HTML/CSS/JS frontend, Node/Express API, Supabase Postgres + Auth, IGDB (games) + TMDB (movies/series). Hosted on Vercel (frontend) and Render (API).
+Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres** + **Neon Auth** (Better Auth: email/password + Google OAuth), IGDB (games) + TMDB (movies/series). Hosted on Vercel (frontend) and Render (API).
+
+> Migrated off Supabase to Neon. The app mints its own session JWT after verifying identity with Neon Auth, so all data/features are unchanged; only the identity provider swapped.
 
 ### Media model
 
@@ -40,8 +42,8 @@ cp .env.example .env
 npm install
 ```
 
-1. Fill `.env` from [`.env.example`](.env.example) (Supabase, JWT, Twitch/IGDB, and TMDB for movies/series).
-2. Apply [`DB/schema.postgres.sql`](DB/schema.postgres.sql) in the Supabase SQL editor (see [`DB/README.md`](DB/README.md)). **Existing databases:** also apply [`DB/migrations/add-media-types.sql`](DB/migrations/add-media-types.sql) to add the `media_type`/`tmdb_id` columns (additive, data-preserving — existing rows become `media_type = 'game'`).
+1. Fill `.env` from [`.env.example`](.env.example) (Neon `DATABASE_URL`, Neon Auth, JWT, Twitch/IGDB, and TMDB for movies/series). Get the DB string from the Neon Console → Connect; get the auth values from `neon neon-auth status --project-id <id> --branch production`.
+2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql) + [`DB/migrations/add-media-types.sql`](DB/migrations/add-media-types.sql) + [`DB/migrations/add-auth-id.sql`](DB/migrations/add-auth-id.sql) (run via `neon psql` or the Neon SQL editor; see [`DB/README.md`](DB/README.md)).
 3. Run:
 
 ```bash
@@ -60,26 +62,17 @@ Do not set `ALLOW_DEGRADED=1` in production.
 
 ## Deploy
 
-1. **Render:** Web service, `npm start`, env from `.env.example`. Use the Supabase Session pooler `DATABASE_URL` (exact host from the dashboard, e.g. `aws-1-...`). Set `FRONTEND_URL=https://my-game-list-live.vercel.app` (include `https://`).
+1. **Render:** Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB. Set `FRONTEND_URL=https://my-game-list-live.vercel.app` (include `https://`).
 2. **Vercel:** Import the repo. [`vercel.json`](vercel.json) rewrites `/api`, `/health`, `/ready` to Render and serves `Frontend/`.
-3. **Supabase Auth:** Site URL and redirect URLs for your Vercel origin and `/auth.html`.
+3. **Neon Auth:** add your Vercel and Render origins as trusted domains (`neon neon-auth domain add <url>`), and enable the Google (and optionally Discord) OAuth providers in the Neon Console.
 
 Details: [`docs/runbook.md`](docs/runbook.md). Probes: `/health` (up), `/ready` (DB + IGDB).
 
 ## Maintenance
 
-### Supabase keep-alive
+### Keep-alive
 
-Supabase pauses free-tier projects after ~7 days of inactivity. [`.github/workflows/keepalive.yml`](.github/workflows/keepalive.yml) runs **Mon/Wed/Fri at 12:00 UTC** (and on demand) and makes a tiny PostgREST read (`GET /rest/v1/games?select=id&limit=1`) so the database stays warm.
-
-Required repo secrets (**Settings → Secrets and variables → Actions**):
-
-| Secret | Value |
-|--------|-------|
-| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-| `SUPABASE_ANON_KEY` | Public anon key (safe to store; already shipped to the browser) |
-
-Run it manually any time from **Actions → Supabase Keep-Alive → Run workflow**. If a project has already been paused, restore it once from the Supabase dashboard — the workflow keeps it awake but cannot wake a paused project.
+Neon auto-suspends an idle project and **auto-resumes on the next connection**, so no manual "unpause" is needed. [`.github/workflows/keepalive.yml`](.github/workflows/keepalive.yml) runs **Mon/Wed/Fri at 12:00 UTC** (and on demand) and pings the app's `/ready` probe (which runs a query against Neon) to keep the deployed service warm and catch outages early. Override the target with a `READY_URL` repo variable if the API host changes.
 
 ### Security scanning (Semgrep)
 

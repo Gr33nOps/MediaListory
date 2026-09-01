@@ -1,6 +1,6 @@
 # MyGameList operations runbook
 
-Product stack: **IGDB (Twitch) only** - not RAWG. Schema column is `igdb_id`.
+Product stack: **Neon Postgres** + **Neon Auth** (Better Auth). Catalog: **IGDB** (games) + **TMDB** (movies/series). Media discriminated by `games.media_type`.
 
 ## Health
 
@@ -9,56 +9,37 @@ Product stack: **IGDB (Twitch) only** - not RAWG. Schema column is `igdb_id`.
 | `GET /health` | Process alive |
 | `GET /ready` | Postgres reachable; also reports IGDB env + rate-limit store mode |
 
-If `/ready` is 503, fix `DATABASE_URL` / network / Supabase status before debugging app logic.
+If `/ready` is 503, fix `DATABASE_URL` / network / Neon project status before debugging app logic. Neon auto-resumes a suspended project on the next connection.
 
-## Supabase backups / PITR
+## Neon backups / branching
 
-1. Supabase Dashboard → Project → **Database** → Backups.
-2. Enable **Point-in-time recovery** on paid plans when you care about production data.
-3. Practice a restore into a **staging** project before you need it.
-4. Schema source of truth: `DB/schema.postgres.sql` + ordered files in `DB/README.md`.
-5. Do **not** restore `DB/legacy/legacy-mysql-igdb.dump.sql` into Postgres.
+1. Neon Console → Project → **Backups / Restore** (point-in-time within the plan's history window).
+2. Neon **branches** are cheap copy-on-write clones — branch `production` for a staging/test copy before risky changes.
+3. Schema source of truth: `DB/schema.postgres.sql` + ordered files in `DB/README.md` (apply via `neon psql` or the Neon SQL editor).
+4. Do **not** restore `DB/legacy/legacy-mysql-igdb.dump.sql` into Postgres.
 
 ## Auth notes
 
-- **Leaked password protection** (Have I Been Pwned) is a Supabase **Pro Plan and above** Auth setting. On Free, the security advisor warning is expected and can be ignored until you upgrade: [password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+Identity is **Neon Auth** (Better Auth). The backend verifies credentials with Neon Auth (email/password via `/sign-in/email`, OAuth via a JWKS-verified JWT) and then mints the app's own JWT (`{ userId, tv }`, HS256) — also set as the httpOnly `mgl_token` cookie. `public.users` (keyed by the Neon Auth user id, also stored in `auth_id`) is the source of truth for username, roles, and ban state. Email/password sign-in is configured with **verification not required**, so register signs the user in immediately.
 
-### Google + Discord OAuth (Continue with…)
+Manage with the CLI: `neon neon-auth status|config|oauth-provider|domain|user --project-id <id> --branch production`.
 
-App buttons call Supabase Auth, then `POST /api/auth/oauth/complete` mints the app JWT (also sets httpOnly `mgl_token` cookie; Bearer in `localStorage` remains supported).
+### Google (+ Discord) OAuth (Continue with…)
 
-1. **Supabase → Authentication → URL configuration** (production first)
-   - **Site URL:** `https://my-game-list-live.vercel.app`  
-     (If this stays `http://localhost:3000`, Google/Discord login sends users to localhost after auth.)
-   - **Redirect URLs** (add all of these):
-     - `https://my-game-list-live.vercel.app/auth.html`
-     - `https://my-game-list-live.vercel.app/**`
-     - `http://localhost:3000/auth.html` (local dev only)
-     - `http://localhost:3000/**`
-2. **Enable Google**
-   - [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client (Web)
-   - Authorized redirect URI: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
-   - Supabase → Authentication → Providers → Google → Client ID + Secret
-3. **Enable Discord**
-   - [Discord Developer Portal](https://discord.com/developers/applications) → OAuth2
-   - Redirects: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
-   - Supabase → Authentication → Providers → Discord → Client ID + Secret
-4. Restart the Node server after env is set; no extra env vars are required beyond existing Supabase keys.
-5. **First OAuth login** may show an optional username picker (`PUT /api/auth/username`). Skipping keeps the auto-generated username.
-6. **Google consent → Production** (when non-test users should sign in):
-   - [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **OAuth consent screen**
-   - Click **Publish app** (moves from Testing → Production)
-   - If Google asks for verification, you can still use the app with an unverified warning until you complete verification (fine for demos/small audiences)
-   - Until published, only **test users** listed on that screen can complete Google sign-in
+App buttons ask Neon Auth for the provider URL (`POST {NEON_AUTH_BASE_URL}/sign-in/social`), redirect the browser, and on return exchange the Neon Auth session for a JWT (`GET {NEON_AUTH_BASE_URL}/token`) which is posted to `POST /api/auth/oauth/complete`.
+
+1. **Trusted domains** (CSRF): add every app origin, or Neon Auth rejects the calls.
+   - `neon neon-auth domain add https://my-game-list-live.vercel.app`
+   - `neon neon-auth domain add https://mygamelist-ffyl.onrender.com`
+   - `neon neon-auth domain allow-localhost enable` (local dev)
+2. **Enable Google:** Neon Console → Auth → providers (a shared dev key is on by default and shows Neon branding; add your own Google OAuth client for production).
+3. **Enable Discord:** add it via `neon neon-auth oauth-provider` / the Console with a Discord app's client id + secret (not enabled by default).
+4. First OAuth login may show an optional username picker (`PUT /api/auth/username`).
+5. **Cross-origin note:** the browser calls the Neon Auth origin with credentials for the token exchange; this relies on the trusted-domain CORS config and third-party cookies. Test the flow in the target browser.
 
 ### Account linking (same email, different providers)
 
-Supabase Auth treats Google, Discord, and email/password as separate identities unless they are linked on the same Auth user.
-
-- Signing in with Google using `you@gmail.com` and later registering password auth with the same email can create **two users** (or fail with “already registered”), depending on Supabase provider settings.
-- Prefer one path per person: OAuth **or** password. If a user already has password auth, use that; do not assume Google/Discord auto-merges collections.
-- To merge manually today: export data (`GET /api/user/export`), pick a canonical account, re-add games / re-follow as needed. Automatic identity merge is not implemented.
-- Operators: check Supabase → Authentication → Users for duplicate emails / identities before promoting admins.
+Neon Auth (Better Auth) treats each provider identity separately unless linked. Email/password and Google with the same address are distinct users unless account-linking is enabled in the Neon Auth config. Prefer one path per person; to merge manually, export (`GET /api/user/export`), pick a canonical account, re-add. Password reset needs a configured Neon Auth email provider (`neon neon-auth config email-provider`); until then `/api/auth/forgot-password` returns the generic message but sends nothing.
 
 ### Sessions (httpOnly cookie + Bearer)
 
@@ -70,10 +51,8 @@ Supabase Auth treats Google, Discord, and email/password as separate identities 
 ### Production deploy checklist
 
 1. Host Node (`npm start`) behind HTTPS; set `NODE_ENV=production`. For **Render API + Vercel Frontend**, see [Split deploy](#split-deploy-render-api--vercel-frontend) below.
-2. Add production Site URL + redirect URLs in Supabase Auth:
-   - Site URL = `https://my-game-list-live.vercel.app`
-   - Redirect URLs include `https://my-game-list-live.vercel.app/auth.html`
-3. Add the same origin to Google OAuth client authorized JavaScript origins / Discord redirects as needed (Supabase callback URL stays `https://<PROJECT_REF>.supabase.co/auth/v1/callback`).
+2. Add production origins as Neon Auth trusted domains (`neon neon-auth domain add https://my-game-list-live.vercel.app` and the Render origin).
+3. Enable the Google (and optionally Discord) OAuth provider in the Neon Console with your own OAuth client for production (the default shared key shows Neon branding).
 4. Multi-instance: set `REDIS_URL` so rate limits are shared (in-memory store is single-process only).
 5. Smoke: `/health`, `/ready`, register/login, add game, follow.
 
@@ -84,9 +63,8 @@ Rotate immediately if a key was pasted into chat, logs, or a public repo:
 | Secret | Where | Action |
 |--------|-------|--------|
 | `JWT_SECRET` | `.env` | Generate new value; all users must re-login |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API | Roll key; update `.env` / host secrets |
-| `SUPABASE_ANON_KEY` | same | Roll if leaked |
-| `DATABASE_URL` password | Supabase → Database | Reset DB password; update URL |
+| `NEON_AUTH_*` | Neon Console → Auth | Rotate/reconfigure via `neon neon-auth`; re-verify sign-in |
+| `DATABASE_URL` password | Neon Console → Roles (reset password) | Reset the role password; update the pooled URL |
 | `IGDB_CLIENT_SECRET` | Twitch developer console | Rotate secret; clear `IGDB_ACCESS_TOKEN` so app refreshes |
 
 After JWT rotation, bump is automatic (new signatures). After password change for a user, `token_version` invalidates old app JWTs.
@@ -121,7 +99,7 @@ Authenticated users can download their data:
 ## Incident checklist
 
 1. Check `/health` and `/ready`.
-2. Check Supabase status + Twitch/IGDB status.
+2. Check Neon project status + Twitch/IGDB + TMDB status.
 3. Tail host logs (morgan `combined` in production).
 4. Confirm rate-limit store (`memory` vs Redis) if multi-instance.
 5. If auth mass-fails after deploy, verify `JWT_SECRET` was not changed unintentionally.
@@ -137,12 +115,8 @@ Free-tier layout: **Express API on Render**, **static `Frontend/` on Vercel**. V
    - Root directory: repo root (`.`)  
    - Build: `npm install` (default)  
    - Start: `npm start`  
-   - Env vars from [`.env.example`](../.env.example): `JWT_SECRET`, `SUPABASE_*`, `DATABASE_URL`, `IGDB_*`, `NODE_ENV=production`  
-   - **Important - IPv4:** Render cannot reach Supabase’s direct `db.*.supabase.co` host (IPv6 → `ENETUNREACH`).  
-     Set `DATABASE_URL` to the **Session pooler** string from Supabase → **Connect** → **Connection pooling**  
-     (host like `aws-0-` / `aws-1-<region>.pooler.supabase.com` - copy exact host from the dashboard;
-     user `postgres.<project-ref>`, port `5432`). Wrong cluster → `tenant/user not found`.  
-     Also set `DB_SSL_INSECURE=1` if TLS verify fails.  
+   - Env vars from [`.env.example`](../.env.example): `JWT_SECRET`, `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `IGDB_*`, `TMDB_*`, `NODE_ENV=production`  
+   - Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`) from the Neon Console → Connect. Keep `DB_SSL_INSECURE=0` (Neon presents a valid cert).  
    - Set `FRONTEND_URL` after Vercel exists (step 3), e.g. `https://your-app.vercel.app`  
    - Note the service URL: `https://YOUR-RENDER-SERVICE.onrender.com`
 
@@ -156,10 +130,10 @@ Free-tier layout: **Express API on Render**, **static `Frontend/` on Vercel**. V
    - Deploy → note `https://your-app.vercel.app`  
    - On Render, set `FRONTEND_URL=https://your-app.vercel.app` and restart
 
-4. **Supabase Auth URLs**  
-   - Site URL: `https://your-app.vercel.app`  
-   - Redirect URLs include: `https://your-app.vercel.app/auth.html`  
-   - Google/Discord provider callback stays `https://<PROJECT_REF>.supabase.co/auth/v1/callback` (unchanged)
+4. **Neon Auth trusted domains**  
+   - `neon neon-auth domain add https://your-app.vercel.app`  
+   - `neon neon-auth domain add https://YOUR-RENDER-SERVICE.onrender.com`  
+   - Enable Google/Discord providers in the Neon Console
 
 ### Optional: call Render directly (no rewrite)
 
