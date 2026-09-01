@@ -1,6 +1,8 @@
-# My Game List
+# MediaListory
 
-Track what you play, rate your collection, and discover games with friends. Catalog data from [IGDB](https://www.igdb.com/) (Twitch).
+Track what you play and watch, rate your library, and discover with friends — across **Games**, **Movies**, and **Series** in one app. Game data from [IGDB](https://www.igdb.com/) (Twitch); movie and series data from [TMDB](https://www.themoviedb.org/).
+
+> Formerly "My Game List" — now expanded from games-only to games + movies + series.
 
 [![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://my-game-list-live.vercel.app)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
@@ -11,15 +13,21 @@ Track what you play, rate your collection, and discover games with friends. Cata
 
 ## Features
 
-- Browse and search games (genre, platform, sort)
+- Three categories in one app — **Games** (IGDB), **Movies** and **Series** (TMDB) — sharing the same browse, search, detail, tracking, rating, notes, lists, and profile UI
+- Browse and search each category (genre + sort; platform/publisher/developer for games)
+- Track status (game "play" / movie & series "watch"), score 1–10, and notes; mixed-media custom lists; JSON export
+- Library and profiles filter and break down by category
 - Email auth plus Google and Discord OAuth
-- Personal list: status, score, notes, custom lists, JSON export
 - Follow users and public profiles
 - Admin and moderator dashboards
 
 ## Stack
 
-Vanilla HTML/CSS/JS frontend, Node/Express API, Supabase Postgres + Auth, IGDB. Hosted on Vercel (frontend) and Render (API).
+Vanilla HTML/CSS/JS frontend, Node/Express API, Supabase Postgres + Auth, IGDB (games) + TMDB (movies/series). Hosted on Vercel (frontend) and Render (API).
+
+### Media model
+
+All media lives in one `games` catalog table, discriminated by `media_type` (`game` | `movie` | `series`). `game_id` is the universal external ref (`igdb_<id>`, `tmdb_movie_<id>`, `tmdb_series_<id>`). Tracking (`user_game_lists`) and custom lists (`custom_list_games`) reference that catalog, so they work for every media type unchanged. Future categories (e.g. anime, books, music) slot in as new `media_type` values without schema churn.
 
 ## Quick start
 
@@ -32,8 +40,8 @@ cp .env.example .env
 npm install
 ```
 
-1. Fill `.env` from [`.env.example`](.env.example) (Supabase, JWT, Twitch/IGDB).
-2. Apply [`DB/schema.postgres.sql`](DB/schema.postgres.sql) in the Supabase SQL editor (see [`DB/README.md`](DB/README.md)).
+1. Fill `.env` from [`.env.example`](.env.example) (Supabase, JWT, Twitch/IGDB, and TMDB for movies/series).
+2. Apply [`DB/schema.postgres.sql`](DB/schema.postgres.sql) in the Supabase SQL editor (see [`DB/README.md`](DB/README.md)). **Existing databases:** also apply [`DB/migrations/add-media-types.sql`](DB/migrations/add-media-types.sql) to add the `media_type`/`tmdb_id` columns (additive, data-preserving — existing rows become `media_type = 'game'`).
 3. Run:
 
 ```bash

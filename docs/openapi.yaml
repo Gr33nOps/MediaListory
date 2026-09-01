@@ -1,16 +1,18 @@
 openapi: 3.0.3
 info:
-  title: MyGameList API
-  version: 1.0.0
+  title: MediaListory API
+  version: 1.1.0
   description: |
-    IGDB-backed game list API. Product is IGDB-only (not RAWG).
-    Client game ids use the form `igdb_<number>`.
+    Multi-media list API: games (IGDB), movies and series (TMDB).
+    Client media ids use the forms `igdb_<n>`, `tmdb_movie_<n>`, `tmdb_series_<n>`.
+    Every catalog item carries a `media_type` of `game` | `movie` | `series`.
 servers:
   - url: /api
   - url: /api/v1
 tags:
   - name: auth
   - name: igdb
+  - name: tmdb
   - name: user
 paths:
   /auth/login:
@@ -68,10 +70,82 @@ paths:
           description: Missing/invalid JWT
         '429':
           description: Rate limited
+  /tmdb/movies:
+    post:
+      tags: [tmdb]
+      summary: Browse, search, or detail movies (server-built TMDB query)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: { type: integer, description: TMDB numeric id for detail }
+                search: { type: string }
+                genre: { type: string, description: Genre name from /tmdb/genres }
+                sort:
+                  type: string
+                  enum: [release, rating, name, popularity, coming]
+                sortOrder: { type: string, enum: [asc, desc] }
+                comingSoon: { type: boolean }
+                limit: { type: integer, minimum: 1, maximum: 50, default: 20 }
+                offset: { type: integer, minimum: 0 }
+              description: Raw TMDB query strings are rejected.
+      responses:
+        '200':
+          description: MediaListory-normalized movie array
+        '401':
+          description: Missing/invalid JWT
+        '500':
+          description: TMDB not configured
+  /tmdb/series:
+    post:
+      tags: [tmdb]
+      summary: Browse, search, or detail series (server-built TMDB query)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: { type: integer, description: TMDB numeric id for detail }
+                search: { type: string }
+                genre: { type: string }
+                sort:
+                  type: string
+                  enum: [release, rating, name, popularity, coming]
+                sortOrder: { type: string, enum: [asc, desc] }
+                comingSoon: { type: boolean }
+                limit: { type: integer, minimum: 1, maximum: 50, default: 20 }
+                offset: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: MediaListory-normalized series array
+        '401':
+          description: Missing/invalid JWT
+        '500':
+          description: TMDB not configured
+  /tmdb/genres:
+    post:
+      tags: [tmdb]
+      summary: List TMDB genres for a media type
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                media_type: { type: string, enum: [movie, series], default: movie }
+      responses:
+        '200':
+          description: Array of { id, name }
   /user/export:
     get:
       tags: [user]
-      summary: Export the authenticated user's lists and games as JSON
+      summary: Export the authenticated user's lists and media as JSON
       security: [{ bearerAuth: [] }]
       responses:
         '200':

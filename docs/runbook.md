@@ -99,10 +99,18 @@ After JWT rotation, bump is automatic (new signatures). After password change fo
 4. Optional: set `IGDB_ACCESS_TOKEN` temporarily; prefer secret-based refresh.
 5. On 401 from IGDB, restart after rotating the secret; check Twitch app is not disabled.
 
+## TMDB credentials (Movies + Series)
+
+1. [TMDB → Settings → API](https://www.themoviedb.org/settings/api).
+2. Set **either** `TMDB_ACCESS_TOKEN` (v4 Read Access Token, preferred) **or** `TMDB_API_KEY` (v3) in `.env`.
+3. Movies/series proxies live in `Backend/tmdb.js`; genre lists are cached 24h.
+4. If TMDB is unset, `/api/tmdb/*` returns `503`/`500` and the Movies/Series pages show an error — **games are unaffected**.
+5. Requires the `add-media-types` DB migration (adds `media_type` + `tmdb_id`); without it, movie/series writes fail.
+
 ## Degraded mode
 
-- `ALLOW_DEGRADED=1` - process stays up without DB (local IGDB-only checks). **Never in production.**
-- IGDB outage - list endpoints may return local `games` rows with `X-Cache: DEGRADED`.
+- `ALLOW_DEGRADED=1` - process stays up without DB (local catalog-only checks). **Never in production.**
+- IGDB/TMDB outage - list endpoints may return locally cached `games` rows with `X-Cache: DEGRADED`.
 
 ## User data export
 
