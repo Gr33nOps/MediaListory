@@ -197,6 +197,26 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+// Guest-friendly auth: attach req.userId when a valid token is present, otherwise
+// continue as an anonymous visitor. Banned users are still blocked. Used for
+// read-only catalog browse so guests can explore before creating an account.
+const optionalAuth = async (req, res, next) => {
+  const token = getTokenFromRequest(req);
+  if (!token) return next();
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    try {
+      const row = await db('users').where({ id: req.userId }).first('is_banned');
+      if (row && row.is_banned) return res.status(403).json({ error: 'Your account has been banned' });
+    } catch (_) {}
+    return next();
+  } catch (_) {
+    return next();
+  }
+};
+const passThrough = (req, res, next) => next();
+
 const checkBanned = async (req, res, next) => {
   try {
     const dbUser = await db('users').where({ id: req.userId }).first();
@@ -370,7 +390,7 @@ try {
 
 try {
   const igdbRoutes = require('./igdb');
-  app.use('/api/igdb', igdbLimiter, igdbRoutes(verifyToken, checkBanned, db));
+  app.use('/api/igdb', igdbLimiter, igdbRoutes(optionalAuth, passThrough, db));
   console.log('  IGDB proxy routes loaded');
 } catch (error) {
   console.error('  Error loading IGDB proxy routes:', error.message);
@@ -379,7 +399,7 @@ try {
 
 try {
   const tmdbRoutes = require('./tmdb');
-  app.use('/api/tmdb', igdbLimiter, tmdbRoutes(verifyToken, checkBanned, db));
+  app.use('/api/tmdb', igdbLimiter, tmdbRoutes(optionalAuth, passThrough, db));
   console.log('  TMDB proxy routes loaded');
 } catch (error) {
   console.error('  Error loading TMDB proxy routes:', error.message);
@@ -407,8 +427,8 @@ try {
   app.use('/api/v1/users', userProfileRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/admin', adminRoutes(db, verifyToken, verifyModerator, verifyAdmin, logModeratorActivity));
   app.use('/api/v1/moderator', moderatorRoutes(db, verifyToken, verifyModerator, logModeratorActivity));
-  app.use('/api/v1/igdb', igdbLimiter, igdbRoutes(verifyToken, checkBanned, db));
-  app.use('/api/v1/tmdb', igdbLimiter, tmdbRoutes(verifyToken, checkBanned, db));
+  app.use('/api/v1/igdb', igdbLimiter, igdbRoutes(optionalAuth, passThrough, db));
+  app.use('/api/v1/tmdb', igdbLimiter, tmdbRoutes(optionalAuth, passThrough, db));
   console.log('  /api/v1 aliases loaded');
 } catch (error) {
   console.error('  Error loading /api/v1 aliases:', error.message);

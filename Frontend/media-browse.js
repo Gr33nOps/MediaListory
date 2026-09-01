@@ -20,16 +20,24 @@
 
   function byId(id) { return document.getElementById(id); }
 
+  function guest() { return typeof getToken === 'function' ? !getToken() : true; }
+
+  function promptSignIn(message) {
+    if (typeof toast === 'function') toast(message || 'Create a free account to save this.', 'info');
+    setTimeout(function () {
+      window.location.href = (typeof authUrlWithNext === 'function' ? authUrlWithNext() : 'auth.html');
+    }, 900);
+  }
+
   (async function boot() {
     if (typeof ensureSession === 'function') { try { await ensureSession(); } catch (_) {} }
-    if (typeof getToken === 'function' && !getToken()) {
-      window.location.href = (typeof authUrlWithNext === 'function' ? authUrlWithNext() : 'auth.html');
-      return;
+    // Guest mode: browse movies/series without an account. Saving prompts sign-in.
+    if (!guest()) {
+      try {
+        var res = await apiFetch('/auth/me', { cache: 'no-store' });
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+      } catch (_) {}
     }
-    try {
-      var res = await apiFetch('/auth/me', { cache: 'no-store' });
-      if (res.status === 401 || res.status === 403) { logout(); return; }
-    } catch (_) {}
     initPage();
   })();
 
@@ -92,6 +100,7 @@
   function onClick(id, fn) { var el = byId(id); if (el) el.addEventListener('click', fn); }
 
   async function loadUserCustomLists() {
+    if (guest()) { userCustomLists = []; return; }
     try {
       var r = await apiFetch('/user/lists');
       if (r.ok) { var d = await r.json(); userCustomLists = d.lists || []; }
@@ -334,6 +343,7 @@
   }
 
   async function addToLibrary(ref) {
+    if (guest()) { promptSignIn('Create a free account to build your library.'); return; }
     var media = lastResults[ref];
     if (!media) { if (typeof toast === 'function') toast('Please reopen this title and try again.', 'error'); return; }
 

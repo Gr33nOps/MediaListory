@@ -475,22 +475,31 @@
     }
 
     // Three categories of one app: Games (IGDB), Movies + Series (TMDB).
+    var isGuest = !getToken();
+
     var actions =
       link('home.html', 'games', 'Games') +
       link('movies.html', 'movies', 'Movies') +
-      link('series.html', 'series', 'Series') +
-      link('myGameList.html', 'list', 'My Library') +
-      link('friends.html', 'friends', 'Following') +
-      link('profile.html', 'profile', 'Profile');
+      link('series.html', 'series', 'Series');
 
-    if (user && (user.is_moderator || user.is_admin)) {
-      actions += link('moderator.html', 'moderator', 'Modify');
-    }
-    if (user && user.is_admin) {
-      actions += link('admin.html', 'admin', 'Manage');
-    }
+    if (isGuest) {
+      // Guests can browse everything; account features prompt sign-in.
+      actions += '<a href="auth.html" class="btn btn-primary' + (active === 'auth' ? ' active' : '') + '">Sign in</a>';
+    } else {
+      actions +=
+        link('myGameList.html', 'list', 'My Library') +
+        link('friends.html', 'friends', 'Following') +
+        link('profile.html', 'profile', 'Profile');
 
-    actions += '<button type="button" class="btn btn-danger" id="navLogoutBtn">Logout</button>';
+      if (user && (user.is_moderator || user.is_admin)) {
+        actions += link('moderator.html', 'moderator', 'Modify');
+      }
+      if (user && user.is_admin) {
+        actions += link('admin.html', 'admin', 'Manage');
+      }
+
+      actions += '<button type="button" class="btn btn-danger" id="navLogoutBtn">Logout</button>';
+    }
 
     el.innerHTML =
       '<div class="nav-bar-top">' +

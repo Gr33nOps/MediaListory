@@ -119,7 +119,11 @@ async function handleOAuthReturn() {
         var tokRes = await fetch(cfg.base + '/token', { credentials: 'include', cache: 'no-store' });
         var tok = await tokRes.json().catch(function () { return {}; });
         var jwt = tok && tok.token;
-        if (!tokRes.ok || !jwt) throw new Error('Could not complete sign-in. Please try again.');
+        if (!tokRes.ok || !jwt) {
+            // Cross-domain third-party-cookie restriction blocks reading the provider
+            // session from a different domain. Guide the user to email sign-in.
+            throw new Error('Social sign-in could not be completed in this browser (third-party cookies are blocked). Please sign in with your email and password instead.');
+        }
 
         var rememberMe = localStorage.getItem('oauthRememberMe') !== '0';
         localStorage.removeItem('oauthRememberMe');
@@ -470,7 +474,7 @@ function switchTab(tab) {
 function showLogin() {
     hideAllViews();
     switchTab('login');
-    document.getElementById('authSubtitle').textContent = 'Track and discover your favorite games';
+    document.getElementById('authSubtitle').textContent = 'Track and discover games, movies, and series';
 }
 
 function showResetPasswordForm() {

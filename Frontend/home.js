@@ -71,11 +71,21 @@ function esc(str) {
 }
 
 function authHeaders(extra) {
-    var headers = { 'Authorization': 'Bearer ' + authToken };
+    var headers = {};
+    if (authToken) headers.Authorization = 'Bearer ' + authToken;
     if (extra) {
         Object.keys(extra).forEach(function(key) { headers[key] = extra[key]; });
     }
     return headers;
+}
+
+function isGuest() { return !authToken; }
+
+function promptSignIn(message) {
+    if (typeof toast === 'function') toast(message || 'Create a free account to save this.', 'info');
+    setTimeout(function () {
+        window.location.href = (typeof authUrlWithNext === 'function' ? authUrlWithNext() : 'auth.html');
+    }, 900);
 }
 
 (async function bootHome() {
@@ -85,7 +95,8 @@ function authHeaders(extra) {
     authToken = localStorage.getItem('authToken');
     currentUser = readStoredUser();
     if (!authToken) {
-        window.location.href = (typeof authUrlWithNext === 'function' ? authUrlWithNext() : 'auth.html');
+        // Guest mode: browse without an account. Saving prompts sign-in.
+        initPage();
         return;
     }
     verifyToken();
@@ -279,6 +290,7 @@ function initPage() {
 }
 
 async function loadUserCustomLists() {
+    if (isGuest()) { userCustomLists = []; return; }
     try {
         var r = await fetch(`${API_BASE}/user/lists`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
@@ -784,6 +796,7 @@ function handleListSelectChange() {
 }
 
 async function addToList(gameId, gameData) {
+    if (isGuest()) { promptSignIn('Create a free account to build your library.'); return; }
     var statusSelect = document.getElementById('gameStatus');
     var scoreInput   = document.getElementById('gameScore');
     var listSelect   = document.getElementById('gameListSelect');
