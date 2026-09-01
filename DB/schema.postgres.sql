@@ -1,4 +1,4 @@
--- MyGameList canonical Postgres schema (IGDB / Twitch)
+-- MediaListory canonical Postgres schema (Neon; IGDB games + TMDB movies/series)
 -- Use this for new environments. Do not use the legacy MySQL dumps.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

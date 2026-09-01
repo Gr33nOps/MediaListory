@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something is broken in My Game List
+about: Something is broken in MediaListory
 title: "[Bug] "
 labels: bug
 ---

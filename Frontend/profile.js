@@ -262,7 +262,7 @@ async function exportMyData() {
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'mygamelist-export.json';
+        a.download = 'medialistory-export.json';
         document.body.appendChild(a);
         a.click();
         a.remove();

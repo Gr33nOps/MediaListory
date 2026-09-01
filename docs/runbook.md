@@ -1,4 +1,4 @@
-# MyGameList operations runbook
+# MediaListory operations runbook
 
 Product stack: **Neon Postgres** + **Neon Auth** (Better Auth). Catalog: **IGDB** (games) + **TMDB** (movies/series). Media discriminated by `games.media_type`.
 

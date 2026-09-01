@@ -6,7 +6,7 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 [![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://my-game-list-live.vercel.app)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
-[![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/MyGameList/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/MyGameList/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/MediaListory/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/MediaListory/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
 **Live:** [my-game-list-live.vercel.app](https://my-game-list-live.vercel.app)
@@ -36,8 +36,8 @@ All media lives in one `games` catalog table, discriminated by `media_type` (`ga
 Node.js 18+ required (20 LTS recommended).
 
 ```bash
-git clone https://github.com/Gr33nOps/MyGameList.git
-cd MyGameList
+git clone https://github.com/Gr33nOps/MediaListory.git
+cd MediaListory
 cp .env.example .env
 npm install
 ```
@@ -85,7 +85,7 @@ semgrep scan --config p/security-audit --config p/secrets --config p/javascript 
 ## Layout
 
 ```text
-MyGameList/
+MediaListory/
 ├── Backend/          Express API (routes + IGDB)
 ├── Frontend/         Static pages, CSS, JS
 ├── DB/
