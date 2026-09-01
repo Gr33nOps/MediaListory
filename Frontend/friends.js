@@ -83,8 +83,8 @@ function displayFollowing(following) {
     if (following.length === 0) {
         container.innerHTML = '<div class="empty-state">' +
             '<p>You are not following anyone yet.</p>' +
-            '<p>Find other players and follow them to see their profiles and game lists.</p>' +
-            '<button type="button" class="btn btn-primary" style="margin-top:14px;" data-action="focus-search">Find users</button>' +
+            '<p>Search for someone below and follow them to see their profile and library here.</p>' +
+            '<button type="button" class="btn btn-primary" style="margin-top:14px;" data-action="focus-search">Find people</button>' +
             '</div>';
         return;
     }
