@@ -49,6 +49,9 @@ function mapIgdbToRow(game) {
   return {
     game_id: `igdb_${game.id}`,
     igdb_id: game.id,
+    media_type: 'game',
+    provider: 'igdb',
+    provider_id: String(game.id),
     name: game.name,
     slug: slugify(game.name),
     description: game.summary || null,

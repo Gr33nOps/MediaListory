@@ -263,7 +263,10 @@ module.exports = (verifyToken, checkBanned, db) => {
             platforms: row.platforms,
             publishers: row.publishers,
             developers: row.developers,
-            game_id: row.game_id
+            game_id: row.game_id,
+            media_type: row.media_type,
+            provider: row.provider,
+            provider_id: row.provider_id
           });
       } catch (err) {
         // Ignore schema/constraint issues so browse never fails on cache write.
