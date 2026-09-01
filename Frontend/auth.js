@@ -18,9 +18,12 @@ async function getAuthConfig() {
             try {
                 var res = await fetch(API_BASE + '/auth/public-config');
                 var cfg = await res.json();
-                return { providers: cfg.providers || [] };
+                // Only trust an explicit providers array; on any error (e.g. a
+                // transient 429) return null so we leave the buttons as-is.
+                if (res.ok && Array.isArray(cfg.providers)) return { providers: cfg.providers };
+                return { providers: null };
             } catch (_) {
-                return { providers: [] };
+                return { providers: null };
             }
         })();
     }
@@ -55,6 +58,8 @@ function showOAuthError(message) {
 async function syncOAuthButtons() {
     try {
         var cfg = await getAuthConfig();
+        // Unknown config (fetch failed / rate-limited): leave buttons visible.
+        if (!Array.isArray(cfg.providers)) return;
         var map = { google: 'oauthGoogleBtn', github: 'oauthGithubBtn' };
         Object.keys(map).forEach(function (p) {
             var btn = document.getElementById(map[p]);

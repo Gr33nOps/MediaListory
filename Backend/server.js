@@ -126,6 +126,9 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many auth requests, please try again later' },
+  // Safe read-only endpoints called on normal page loads must not count toward
+  // the login/brute-force budget (otherwise navigating hides OAuth buttons etc.).
+  skip: (req) => req.method === 'GET' && ['/public-config', '/session', '/me'].includes(req.path),
   ...(authStore ? { store: authStore } : {})
 });
 

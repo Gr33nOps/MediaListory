@@ -51,7 +51,12 @@ function initPage() {
         var btn = e.target.closest('[data-action="focus-search"]');
         if (!btn) return;
         var input = document.getElementById('userSearchInput');
-        if (input) input.focus();
+        if (input) {
+            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            input.focus({ preventScroll: true });
+            input.classList.add('input-flash');
+            setTimeout(function () { input.classList.remove('input-flash'); }, 1000);
+        }
     });
 
     loadFollowing();

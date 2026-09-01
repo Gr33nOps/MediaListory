@@ -91,7 +91,7 @@
                         <input type="checkbox" id="rememberMe" checked>
                         <span style="font-weight:normal;color:var(--text-secondary);white-space:nowrap;">Remember me</span>
                     </label>
-                    <a href="#" class="forgot-password" id="forgotPasswordLink" style="color:var(--blue);text-decoration:none;font-size:14px;">Forgot password?</a>
+                    <a href="#" class="forgot-password" id="forgotPasswordLink" style="color:var(--accent-light);text-decoration:none;font-size:14px;">Forgot password?</a>
                 </div>
                 <button type="submit" class="btn btn-primary" id="loginBtn" style="width:100%;">
                     <span class="btn-text">Login</span>
@@ -137,9 +137,9 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-weight:normal;">
-                        <input type="checkbox" id="agreeTerms" required style="margin-top:2px;">
-                        <span style="color:var(--text-secondary);">I agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--blue);">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--blue);">Privacy Policy</a></span>
+                    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-weight:normal;line-height:1.5;text-align:left;">
+                        <input type="checkbox" id="agreeTerms" required style="width:18px;height:18px;flex-shrink:0;margin:1px 0 0;">
+                        <span style="color:var(--text-secondary);">I agree to the <a href="terms.html" target="_blank" rel="noopener" style="color:var(--accent-light);">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--accent-light);">Privacy Policy</a></span>
                     </label>
                 </div>
                 <button type="submit" class="btn btn-primary" id="registerBtn" style="width:100%;">
@@ -152,11 +152,11 @@
 
             <div id="verificationPending" class="hidden" style="text-align:center;padding:40px 30px;">
                 <h2 style="font-size:24px;margin-bottom:16px;">Verify Your Email</h2>
-                <p style="margin-bottom:12px;color:var(--text-secondary);">We've sent a verification link to <strong id="verificationEmail" style="color:var(--blue);"></strong></p>
+                <p style="margin-bottom:12px;color:var(--text-secondary);">We've sent a verification link to <strong id="verificationEmail" style="color:var(--accent-light);"></strong></p>
                 <p style="margin-bottom:24px;color:var(--text-secondary);">Please check your inbox and click the link to verify your account.</p>
                 <div style="display:flex;flex-direction:column;gap:12px;">
                     <button id="resendVerification" class="btn btn-secondary">Resend Email</button>
-                    <button id="changeEmail" class="btn" style="background:transparent;color:var(--blue);">Change Email</button>
+                    <button id="changeEmail" class="btn" style="background:transparent;color:var(--accent-light);">Change Email</button>
                 </div>
                 <small style="display:block;margin-top:16px;color:var(--text-muted);">Didn't receive the email? Check your spam folder.</small>
             </div>
@@ -181,7 +181,7 @@
             </div>
 
             <form id="resetPasswordForm" class="auth-form hidden">
-                <button type="button" class="back-btn" id="backToLogin" style="background:none;border:none;color:var(--blue);font-size:14px;cursor:pointer;padding:8px 0;margin-bottom:16px;display:flex;align-items:center;gap:4px;">Back to Login</button>
+                <button type="button" class="back-btn" id="backToLogin" style="background:none;border:none;color:var(--accent-light);font-size:14px;cursor:pointer;padding:8px 0;margin-bottom:16px;display:flex;align-items:center;gap:4px;">Back to Login</button>
                 <h2 style="font-size:24px;margin-bottom:12px;">Reset Password</h2>
                 <p style="margin-bottom:24px;color:var(--text-muted);">Enter your email address and we'll send you a link to reset your password.</p>
                 <div class="form-group">

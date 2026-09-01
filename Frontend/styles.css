@@ -248,10 +248,7 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    background: linear-gradient(45deg, var(--accent-light), var(--text-primary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent-light);
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
@@ -457,8 +454,8 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 .form-group input:focus,
 .form-input:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .form-group input::placeholder,
@@ -487,8 +484,8 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 
 .form-textarea:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .form-textarea::placeholder { color: rgba(226, 232, 240, 0.5); }
@@ -534,8 +531,8 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 
 .search-input:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .search-input::placeholder { color: rgba(226, 232, 240, 0.5); }
@@ -556,8 +553,8 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 
 .filter-select:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 /* Custom select chevron - hide OS native arrow button */
@@ -582,7 +579,7 @@ select.form-input:hover,
 select.search-input:hover,
 select.update-status-select:hover,
 .form-group select:hover {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
 select.filter-select:focus,
@@ -590,7 +587,7 @@ select.form-input:focus,
 select.search-input:focus,
 select.update-status-select:focus,
 .form-group select:focus {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
 select.filter-select::-ms-expand,
@@ -670,13 +667,13 @@ select.update-status-select option,
 .game-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-card-hover);
-    border-color: var(--blue);
+    border-color: var(--accent);
 }
 
 .game-card:focus-visible {
-    outline: 2px solid var(--blue-light);
+    outline: 2px solid var(--accent-light);
     outline-offset: 3px;
-    border-color: var(--blue);
+    border-color: var(--accent);
 }
 
 .game-card-meta {
@@ -1394,9 +1391,9 @@ select.update-status-select option,
     font-weight: 600;
     padding: 4px 11px;
     border-radius: 20px;
-    background: rgba(59,130,246,0.12);
-    color: var(--blue-light);
-    border: 1px solid rgba(59,130,246,0.25);
+    background: var(--accent-dim);
+    color: var(--accent-light);
+    border: 1px solid var(--accent-border);
 }
 
 .game-detail-info-grid {
@@ -1784,8 +1781,8 @@ select.update-status-select option,
     height: 150px;
     border-radius: var(--radius-circle);
     overflow: hidden;
-    border: 3px solid var(--blue);
-    box-shadow: 0 8px 24px var(--blue-glow);
+    border: 3px solid var(--accent-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     flex-shrink: 0;
 }
 
@@ -1806,7 +1803,7 @@ select.update-status-select option,
 .stat-item .stat-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--blue-light);
+    color: var(--text-primary);
     margin-bottom: 5px;
 }
 
@@ -2157,10 +2154,9 @@ select.update-status-select option,
 .auth-header h1 {
     font-size: 2.5rem;
     margin-bottom: 10px;
-    background: linear-gradient(45deg, var(--blue), var(--blue-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--accent-light);
 }
 
 .auth-header p { color: var(--text-muted); font-size: 1rem; }
@@ -2186,7 +2182,7 @@ select.update-status-select option,
 }
 
 .tab-btn:hover { background: var(--border); }
-.tab-btn.active { background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%); color: #ffffff; }
+.tab-btn.active { background: var(--accent); color: #ffffff; }
 
 .auth-form { display: none; }
 .auth-form.active { display: block; }
@@ -3527,7 +3523,7 @@ html[data-density="compact"] .page-tab { padding: 8px 14px; }
 }
 
 :focus-visible {
-    outline: 2px solid var(--blue-light);
+    outline: 2px solid var(--accent-light);
     outline-offset: 2px;
 }
 
@@ -3538,7 +3534,7 @@ html[data-density="compact"] .page-tab { padding: 8px 14px; }
 .tab-btn:focus-visible,
 .close-btn:focus-visible,
 a:focus-visible {
-    outline: 2px solid var(--blue-light);
+    outline: 2px solid var(--accent-light);
     outline-offset: 2px;
 }
 
@@ -3596,9 +3592,10 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 /* My Library, Following, and Profile stay neutral (inherit :root) and only
    pick up a category color when a category filter is chosen inside the page. */
 
-/* ── Page header (every primary page) — clean, no icons, no bars ───────── */
+/* ── Page header (every primary page) — clean, centered, no icons/bars ──── */
 .page-header {
     margin: 6px 0 28px;
+    text-align: center;
 }
 .page-header-main { min-width: 0; }
 .page-header-title {
@@ -3610,7 +3607,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
     color: var(--text-primary);
 }
 .page-header-sub {
-    margin: 9px 0 0;
+    margin: 9px auto 0;
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1.55;
@@ -3695,11 +3692,24 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
     background: var(--accent);
     box-shadow: var(--shadow-btn) var(--accent-dim);
 }
+/* Brief highlight when "Find people" jumps focus to the search box. */
+.input-flash {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim) !important;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
 /* Amber (Games) needs dark text for legible contrast on its fills. */
 body[data-page="games"] .btn-primary,
 body[data-page="games"] .search-container .btn-primary,
 body[data-page="games"] .nav-actions .btn.active {
     color: #1a1206;
+}
+
+/* ── Desktop: center the whole nav (brand + tabs) as one tidy group ────── */
+@media (min-width: 901px) {
+    .navbar { justify-content: center; gap: 22px; }
+    .nav-bar-top { flex: 0 0 auto; }
+    .nav-actions { flex: 0 1 auto; justify-content: center; }
 }
 
 /* ── Mobile navigation drawer polish ──────────────────────────────────── */
