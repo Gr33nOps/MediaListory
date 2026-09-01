@@ -1,9 +1,7 @@
 const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
-const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
 
 let pendingEmail = '';
-let supabaseBrowserClient = null;
-let supabaseBrowserReady = null;
+let _authConfigPromise = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
     initializeAuthUI();
@@ -13,51 +11,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     await handleUrlParams();
 });
 
-function loadScriptOnce(src) {
-    return new Promise(function(resolve, reject) {
-        if (document.querySelector('script[data-src="' + src + '"]') || document.querySelector('script[src="' + src + '"]')) {
-            resolve();
-            return;
-        }
-        var s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        s.setAttribute('data-src', src);
-        s.onload = function() { resolve(); };
-        s.onerror = function() { reject(new Error('Failed to load sign-in SDK')); };
-        document.head.appendChild(s);
-    });
-}
-
-async function getSupabaseBrowserClient() {
-    if (supabaseBrowserClient) return supabaseBrowserClient;
-    if (!supabaseBrowserReady) {
-        supabaseBrowserReady = (async function() {
-            var cfgRes = await fetch(API_BASE + '/auth/public-config');
-            var cfg = await cfgRes.json();
-            if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
-                throw new Error('Supabase is not configured on the server');
-            }
-            await loadScriptOnce(SUPABASE_SDK_URL);
-            var lib = window.supabase;
-            if (!lib || typeof lib.createClient !== 'function') {
-                throw new Error('Supabase SDK failed to load');
-            }
-            supabaseBrowserClient = lib.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-                auth: {
-                    detectSessionInUrl: true,
-                    // Must persist to localStorage: with persistSession=false the PKCE
-                    // code verifier lives in memory and is lost on the OAuth redirect,
-                    // causing "PKCE code verifier not found in storage" on return.
-                    persistSession: true,
-                    autoRefreshToken: false,
-                    flowType: 'pkce'
-                }
-            });
-            return supabaseBrowserClient;
+// Neon Auth (Better Auth) config from the server: { base, providers }.
+async function getAuthConfig() {
+    if (!_authConfigPromise) {
+        _authConfigPromise = (async function() {
+            var res = await fetch(API_BASE + '/auth/public-config');
+            var cfg = await res.json();
+            if (!cfg.authBaseUrl) throw new Error('Sign-in is not configured on the server');
+            return { base: String(cfg.authBaseUrl).replace(/\/$/, ''), providers: cfg.providers || [] };
         })();
     }
-    return supabaseBrowserReady;
+    return _authConfigPromise;
 }
 
 function setOAuthSectionVisible(visible) {
@@ -97,61 +61,53 @@ async function startOAuth(provider) {
         var nextParam = new URLSearchParams(window.location.search).get('next');
         if (nextParam) sessionStorage.setItem('oauthNext', nextParam);
         else sessionStorage.removeItem('oauthNext');
-        var client = await getSupabaseBrowserClient();
-        var redirectTo = window.location.origin + '/auth.html';
-        // Do not force prompt=consent: that makes every Google click feel like a new signup.
-        var result = await client.auth.signInWithOAuth({
-            provider: provider,
-            options: {
-                redirectTo: redirectTo,
-                skipBrowserRedirect: false
-            }
+
+        var cfg = await getAuthConfig();
+        if (cfg.providers.length && cfg.providers.indexOf(provider) === -1) {
+            throw new Error(provider.charAt(0).toUpperCase() + provider.slice(1) + ' sign-in is not enabled yet.');
+        }
+        var callbackURL = window.location.origin + '/auth.html?oauth=1';
+        // Ask Neon Auth for the provider authorization URL, then redirect the browser.
+        var res = await fetch(cfg.base + '/sign-in/social', {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: provider, callbackURL: callbackURL, errorCallbackURL: callbackURL })
         });
-        if (result.error) throw result.error;
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.url) throw new Error((data && data.message) || 'Could not start social sign-in.');
+        window.location.href = data.url;
     } catch (e) {
-        showOAuthError((e && e.message) || 'Could not start social sign-in. Is the provider enabled in Supabase?');
+        showOAuthError((e && e.message) || 'Could not start social sign-in.');
     }
 }
 
 async function handleOAuthReturn() {
-    var urlParams  = new URLSearchParams(window.location.search);
-    var hashParams = new URLSearchParams(window.location.hash.substring(1));
-    var type = urlParams.get('type') || hashParams.get('type');
+    var urlParams = new URLSearchParams(window.location.search);
+    var type = urlParams.get('type');
 
     // Email verify / recovery use similar query params - leave those to handleUrlParams.
     if (type === 'signup' || type === 'email' || type === 'recovery') return false;
+    if (!urlParams.has('oauth')) return false;
 
-    var code = urlParams.get('code') || hashParams.get('code');
-    var accessToken = hashParams.get('access_token');
-    var error = urlParams.get('error') || hashParams.get('error');
-    var errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
-
-    if (error && (code || accessToken || urlParams.has('oauth'))) {
-        showOAuthError(errorDescription || error);
+    var error = urlParams.get('error') || urlParams.get('error_description');
+    if (error) {
+        showOAuthError(decodeURIComponent(error));
         window.history.replaceState({}, document.title, '/auth.html');
         return true;
     }
 
-    if (!code && !accessToken) return false;
-
     showOAuthWorking();
     try {
-        var client = await getSupabaseBrowserClient();
-        // detectSessionInUrl may already have exchanged the PKCE code during createClient.
-        // Prefer getSession first so we never burn the code twice.
-        var token = accessToken || null;
-        if (!token) {
-            var sessionRes = await client.auth.getSession();
-            token = sessionRes.data && sessionRes.data.session && sessionRes.data.session.access_token;
-        }
-        if (!token && code) {
-            var exchanged = await client.auth.exchangeCodeForSession(code);
-            if (exchanged.error) throw exchanged.error;
-            token = exchanged.data && exchanged.data.session && exchanged.data.session.access_token;
-        }
-        if (!token) throw new Error('No session returned from provider');
+        // The Neon Auth session cookie was set during the provider callback; exchange it
+        // for a signed JWT, then hand that to our backend to establish an app session.
+        var cfg = await getAuthConfig();
+        var tokRes = await fetch(cfg.base + '/token', { credentials: 'include', cache: 'no-store' });
+        var tok = await tokRes.json().catch(function () { return {}; });
+        var jwt = tok && tok.token;
+        if (!tokRes.ok || !jwt) throw new Error('Could not complete sign-in. Please try again.');
 
-        // Prefer remembered sessions for OAuth (default on); fall back to checked box.
         var rememberMe = localStorage.getItem('oauthRememberMe') !== '0';
         localStorage.removeItem('oauthRememberMe');
 
@@ -160,7 +116,7 @@ async function handleOAuthReturn() {
             credentials: 'include',
             cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ access_token: token, rememberMe: rememberMe })
+            body: JSON.stringify({ token: jwt, rememberMe: rememberMe })
         });
         var data = await response.json();
         if (!response.ok) throw new Error(data.error || 'OAuth sign-in failed');
@@ -170,7 +126,6 @@ async function handleOAuthReturn() {
         localStorage.setItem('lastActivity', Date.now().toString());
         window.history.replaceState({}, document.title, '/auth.html');
 
-        // Always enter the app after one successful provider return.
         finishOAuthLogin();
         return true;
     } catch (e) {
@@ -642,7 +597,15 @@ async function handleRegister(e) {
 
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && data.token) {
+            // Neon Auth doesn't require email verification, so we're signed in immediately.
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            localStorage.setItem('lastActivity', Date.now().toString());
+            if (typeof redirectAfterLogin === 'function') redirectAfterLogin('home.html');
+            else window.location.href = 'home.html';
+            return;
+        } else if (response.ok) {
             showVerificationPending(email);
         } else {
             showError(errorDiv, data.error || 'Registration failed. Please try again.');
