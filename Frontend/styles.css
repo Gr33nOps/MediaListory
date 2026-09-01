@@ -39,6 +39,34 @@
     --red-dark:          #dc2626;
     --red-dim:           rgba(239, 68, 68, 0.15);
 
+    /* ── Per-category identity colors (used app-wide, consistently) ──
+       Movies = blue · Series = green · Anime = pink · Games = amber */
+    --cat-movie:         #3b82f6;
+    --cat-movie-light:   #60a5fa;
+    --cat-movie-dim:     rgba(59, 130, 246, 0.14);
+    --cat-movie-border:  rgba(59, 130, 246, 0.40);
+
+    --cat-series:        #10b981;
+    --cat-series-light:  #34d399;
+    --cat-series-dim:    rgba(16, 185, 129, 0.14);
+    --cat-series-border: rgba(16, 185, 129, 0.40);
+
+    --cat-anime:         #ec4899;
+    --cat-anime-light:   #f472b6;
+    --cat-anime-dim:     rgba(236, 72, 153, 0.14);
+    --cat-anime-border:  rgba(236, 72, 153, 0.40);
+
+    --cat-game:          #f59e0b;
+    --cat-game-light:    #fbbf24;
+    --cat-game-dim:      rgba(245, 158, 11, 0.14);
+    --cat-game-border:   rgba(245, 158, 11, 0.40);
+
+    /* Active page accent (overridden per-page below). Defaults to brand blue. */
+    --accent:            var(--blue);
+    --accent-light:      var(--blue-light);
+    --accent-dim:        var(--blue-dim);
+    --accent-border:     rgba(59, 130, 246, 0.40);
+
     --radius-sm:         6px;
     --radius-md:         8px;
     --radius-lg:         12px;
@@ -3534,8 +3562,181 @@ a:focus-visible {
 
 /* ── Media-type pills (library + profiles) ─────────────────────────────── */
 .media-type-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 8px; border: 1px solid transparent; }
-.media-type-game { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.35); }
-.media-type-movie { background: rgba(168,85,247,0.15); color: #c084fc; border-color: rgba(168,85,247,0.35); }
-.media-type-series { background: rgba(34,197,94,0.15); color: #4ade80; border-color: rgba(34,197,94,0.35); }
+.media-type-movie  { background: var(--cat-movie-dim);  color: var(--cat-movie-light);  border-color: var(--cat-movie-border); }
+.media-type-series { background: var(--cat-series-dim); color: var(--cat-series-light); border-color: var(--cat-series-border); }
+.media-type-anime  { background: var(--cat-anime-dim);  color: var(--cat-anime-light);  border-color: var(--cat-anime-border); }
+.media-type-game   { background: var(--cat-game-dim);   color: var(--cat-game-light);   border-color: var(--cat-game-border); }
 
-.media-type-anime { background: rgba(244,114,182,0.15); color: #f472b6; border-color: rgba(244,114,182,0.35); }
+/* ══════════════════════════════════════════════════════════════════════
+   CATEGORY THEMING · PAGE IDENTITY · NAV · SEARCH  (redesign layer)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Per-page accent — drives page headers, nav active state, focus rings.
+   body[data-page] / [data-cat] is set by common.js from the nav's data-active. */
+body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); }
+body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); }
+body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); }
+body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); }
+body[data-page="list"]    { --accent: var(--purple);      --accent-light: var(--purple-light); --accent-dim: var(--purple-dim);      --accent-border: rgba(139,92,246,0.4); }
+body[data-page="friends"] { --accent: #06b6d4;            --accent-light: #22d3ee;             --accent-dim: rgba(6,182,212,0.14);   --accent-border: rgba(6,182,212,0.4); }
+body[data-page="profile"] { --accent: var(--blue);        --accent-light: var(--blue-light);   --accent-dim: var(--blue-dim);        --accent-border: rgba(59,130,246,0.4); }
+
+/* ── Page header (every primary page) ─────────────────────────────────── */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 2px 0 24px;
+    padding: 18px 22px;
+    background:
+        linear-gradient(135deg, var(--accent-dim) 0%, rgba(15,23,42,0) 60%),
+        linear-gradient(135deg, var(--bg-card) 0%, var(--bg-deep) 100%);
+    border: 1px solid var(--border-subtle);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+.page-header-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-md);
+    background: var(--accent-dim);
+    color: var(--accent-light);
+    border: 1px solid var(--accent-border);
+}
+.page-header-icon svg { width: 26px; height: 26px; display: block; }
+.page-header-main { min-width: 0; }
+.page-header-title {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--text-primary);
+}
+.page-header-sub {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+@media (max-width: 600px) {
+    .page-header { padding: 14px 16px; gap: 12px; margin-bottom: 18px; }
+    .page-header-icon { width: 40px; height: 40px; }
+    .page-header-icon svg { width: 22px; height: 22px; }
+    .page-header-title { font-size: 1.25rem; }
+    .page-header-sub { font-size: 0.85rem; }
+}
+
+/* ── Nav: category color-coding ───────────────────────────────────────── */
+.nav-actions .btn[data-cat] { position: relative; }
+/* small colored dot to signal each category's color even when inactive */
+.nav-actions .btn[data-cat]::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 7px;
+    background: var(--cat-color, var(--text-dim));
+    box-shadow: 0 0 6px var(--cat-color, transparent);
+    flex-shrink: 0;
+}
+.nav-actions .btn[data-cat="movies"] { --cat-color: var(--cat-movie-light); }
+.nav-actions .btn[data-cat="series"] { --cat-color: var(--cat-series-light); }
+.nav-actions .btn[data-cat="anime"]  { --cat-color: var(--cat-anime-light); }
+.nav-actions .btn[data-cat="games"]  { --cat-color: var(--cat-game-light); }
+/* active category tab glows in its own color (overrides the generic blue active) */
+.nav-actions .btn[data-cat="movies"].active { background: linear-gradient(135deg, var(--cat-movie) 0%, #1d4ed8 100%); box-shadow: var(--shadow-btn) var(--cat-movie-dim); }
+.nav-actions .btn[data-cat="series"].active { background: linear-gradient(135deg, var(--cat-series) 0%, var(--green-dark) 100%); box-shadow: var(--shadow-btn) var(--cat-series-dim); }
+.nav-actions .btn[data-cat="anime"].active  { background: linear-gradient(135deg, var(--cat-anime) 0%, #be185d 100%); box-shadow: var(--shadow-btn) var(--cat-anime-dim); }
+.nav-actions .btn[data-cat="games"].active  { background: linear-gradient(135deg, var(--cat-game) 0%, var(--amber-dark) 100%); color: #1a1206; box-shadow: var(--shadow-btn) var(--cat-game-dim); }
+.nav-actions .btn[data-cat].active::before { background: #fff; box-shadow: none; }
+
+/* ── Collection category tabs (My Library) — colored per category ─────── */
+.media-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.media-tab {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 15px; border-radius: 999px;
+    border: 1px solid var(--border-subtle); background: var(--bg-deep);
+    color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: var(--transition-fast);
+}
+.media-tab::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--mt-color, var(--text-dim)); flex-shrink: 0;
+}
+.media-tab[data-media="movie"]  { --mt-color: var(--cat-movie-light); }
+.media-tab[data-media="series"] { --mt-color: var(--cat-series-light); }
+.media-tab[data-media="anime"]  { --mt-color: var(--cat-anime-light); }
+.media-tab[data-media="game"]   { --mt-color: var(--cat-game-light); }
+.media-tab[data-media="all"]::before { background: linear-gradient(135deg, var(--cat-movie-light), var(--cat-anime-light)); }
+.media-tab .mt-count {
+    font-size: 0.72rem; font-weight: 700; padding: 0 6px; min-width: 18px;
+    text-align: center; border-radius: 999px;
+    background: rgba(148,163,184,0.15); color: var(--text-muted);
+}
+.media-tab:hover { color: var(--text-primary); border-color: var(--mt-color, var(--border)); }
+.media-tab.active {
+    color: #fff; border-color: transparent;
+    background: color-mix(in srgb, var(--mt-color, var(--blue)) 78%, #0b1220);
+}
+.media-tab.active .mt-count { background: rgba(255,255,255,0.22); color: #fff; }
+.media-tab.active::before { background: #fff; }
+
+/* ── Search + filter bar polish ───────────────────────────────────────── */
+.search-container {
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-deep) 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-card);
+}
+.search-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.search-container .btn-primary,
+.search-bar .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    box-shadow: var(--shadow-btn) var(--accent-dim);
+}
+
+/* ── Mobile navigation drawer polish ──────────────────────────────────── */
+@media (max-width: 900px) {
+    .nav-toggle {
+        background: var(--accent-dim);
+        border-color: var(--accent-border);
+    }
+    .nav-toggle-bar { background: var(--accent-light); }
+    .navbar.is-open {
+        border-color: var(--accent-border);
+    }
+    .navbar.is-open .nav-actions {
+        gap: 6px;
+        padding: 12px 4px 4px;
+    }
+    /* Each drawer item reads as a full-width row with its category dot. */
+    .nav-actions .btn {
+        background: var(--bg-deep);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        box-shadow: none;
+        padding: 13px 16px;
+        font-size: 0.95rem;
+        border-radius: var(--radius-md);
+    }
+    .nav-actions .btn:hover:not(:disabled) { transform: none; }
+    .nav-actions .btn[data-cat]::before { width: 9px; height: 9px; margin-right: 10px; }
+    /* Keep the active category's colored fill in the drawer too. */
+    .nav-actions .btn.active { color: #fff; border-color: transparent; }
+    .nav-brand { font-size: 1.2rem; }
+}
+@media (max-width: 480px) {
+    .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .media-tabs { gap: 6px; }
+    .media-tab { padding: 6px 12px; font-size: 0.8rem; }
+}

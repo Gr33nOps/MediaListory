@@ -112,6 +112,8 @@ function initCollectionTab() {
             tab.classList.add('active');
             tab.setAttribute('aria-selected', 'true');
             currentMediaFilter = tab.dataset.media;
+            // Recolor the whole page accent to the selected category.
+            document.body.setAttribute('data-page', MEDIA_PAGE_KEY[currentMediaFilter] || 'list');
             updateStatistics(filterByMedia(myGamesCache));
             displayMyGames(sortMyGames(myGamesCache));
         });
@@ -174,6 +176,7 @@ async function loadMyGames() {
         var data = await response.json();
         if (response.ok) {
             myGamesCache = data.games;
+            updateMediaTabCounts();
             updateStatistics(filterByMedia(data.games));
             displayMyGames(sortMyGames(data.games));
         } else {
@@ -183,6 +186,24 @@ async function loadMyGames() {
         console.error('Load my games error:', error);
         showError(document.getElementById('myGamesGrid'), 'Network error. Please try again.');
     }
+}
+
+var MEDIA_PAGE_KEY = { all: 'list', movie: 'movies', series: 'series', anime: 'anime', game: 'games' };
+var MEDIA_TAB_LABEL = { all: 'All', movie: 'Movies', series: 'Series', anime: 'Anime', game: 'Games' };
+
+// Populate the per-category count badges on the collection tabs.
+function updateMediaTabCounts() {
+    var games = myGamesCache || [];
+    var counts = { all: games.length, movie: 0, series: 0, anime: 0, game: 0 };
+    games.forEach(function(g) {
+        var t = g.media_type || 'game';
+        if (counts[t] != null) counts[t]++;
+    });
+    document.querySelectorAll('.media-tab').forEach(function(tab) {
+        var m = tab.dataset.media;
+        tab.innerHTML = (MEDIA_TAB_LABEL[m] || m) +
+            ' <span class="mt-count">' + (counts[m] || 0) + '</span>';
+    });
 }
 
 function updateStatistics(games) {
