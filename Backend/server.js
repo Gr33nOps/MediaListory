@@ -7,7 +7,6 @@ const rateLimit = require('express-rate-limit');
 const knex = require('knex');
 const jwt = require('jsonwebtoken');
 const path = require('path');
-const { getSupabaseAdmin } = require('./supabaseAdmin');
 const { clientError, IS_PROD } = require('./errors');
 const { createRedisStore } = require('./rateLimitStore');
 
@@ -20,9 +19,7 @@ require('dotenv').config({
 const REQUIRED_ENV = [
   'DATABASE_URL',
   'JWT_SECRET',
-  'SUPABASE_URL',
-  'SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY'
+  'NEON_AUTH_BASE_URL'
 ];
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missing.length > 0) {
@@ -72,6 +69,9 @@ function normalizeFrontendUrl(raw) {
 const FRONTEND_URL = normalizeFrontendUrl(process.env.FRONTEND_URL);
 const ALLOW_DEGRADED = process.env.ALLOW_DEGRADED === '1';
 const DB_SSL_INSECURE = process.env.DB_SSL_INSECURE === '1';
+// Origin of the Neon Auth server (for CSP connect-src so the browser can complete OAuth).
+let NEON_AUTH_ORIGIN = null;
+try { if (process.env.NEON_AUTH_BASE_URL) NEON_AUTH_ORIGIN = new URL(process.env.NEON_AUTH_BASE_URL).origin; } catch (_) {}
 let dbReady = false;
 
 app.use(helmet({
@@ -84,7 +84,7 @@ app.use(helmet({
       "style-src": ["'self'", "'unsafe-inline'"],
       "img-src": ["'self'", 'data:', 'https:'],
       "font-src": ["'self'", 'data:'],
-      "connect-src": ["'self'", FRONTEND_URL, process.env.SUPABASE_URL, 'https://*.supabase.co'].filter(Boolean),
+      "connect-src": ["'self'", FRONTEND_URL, NEON_AUTH_ORIGIN, 'https://*.neon.tech'].filter(Boolean),
       "object-src": ["'none'"],
       "base-uri": ["'self'"],
       "frame-ancestors": ["'none'"]
@@ -169,8 +169,6 @@ db.raw('SELECT 1')
     console.error('Exiting: database is required. Set ALLOW_DEGRADED=1 only for local IGDB-only checks.');
     process.exit(1);
   });
-
-const supabase = getSupabaseAdmin();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const { getTokenFromRequest } = require('./sessionCookies');

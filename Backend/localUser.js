@@ -41,9 +41,14 @@ function pickAvatarUrl(meta = {}, extra = {}) {
 }
 
 async function ensureLocalUser(db, sbUser, extra = {}) {
-  if (!sbUser?.id) throw new Error('ensureLocalUser requires a Supabase user');
+  if (!sbUser?.id) throw new Error('ensureLocalUser requires an auth user');
 
+  // Neon Auth users are flat ({ id, email, name, image }); keep back-compat with
+  // any object that still carries user_metadata.
   const meta = sbUser.user_metadata || {};
+  const identityName = sbUser.name || meta.full_name || meta.name || meta.display_name;
+  const identityAvatar = sbUser.image || meta.avatar_url || meta.picture || meta.avatar || null;
+
   let username =
     (extra.username || meta.username || meta.preferred_username || meta.user_name ||
       (sbUser.email || '').split('@')[0] || 'user')
@@ -53,11 +58,12 @@ async function ensureLocalUser(db, sbUser, extra = {}) {
   const existing = await db('users').where({ id: sbUser.id }).first();
   if (existing) {
     const patch = {};
+    if (!existing.auth_id) patch.auth_id = sbUser.id;
     if (!existing.email && sbUser.email) patch.email = sbUser.email;
-    if (!existing.display_name && (extra.display_name || meta.display_name || meta.full_name || meta.name)) {
-      patch.display_name = extra.display_name || meta.display_name || meta.full_name || meta.name;
+    if (!existing.display_name && (extra.display_name || identityName)) {
+      patch.display_name = extra.display_name || identityName;
     }
-    const avatar = pickAvatarUrl(meta, extra);
+    const avatar = extra.avatar_url || identityAvatar;
     if (!existing.avatar_url && avatar) patch.avatar_url = avatar;
     if (Object.keys(patch).length) {
       await db('users').where({ id: sbUser.id }).update(patch);
@@ -78,10 +84,11 @@ async function ensureLocalUser(db, sbUser, extra = {}) {
 
   const row = {
     id: sbUser.id,
+    auth_id: sbUser.id,
     username,
     email: sbUser.email || null,
-    display_name: (extra.display_name || meta.display_name || meta.full_name || meta.name || username || '').slice(0, 100),
-    avatar_url: pickAvatarUrl(meta, extra),
+    display_name: (extra.display_name || identityName || username || '').slice(0, 100),
+    avatar_url: extra.avatar_url || identityAvatar,
     is_admin: false,
     is_moderator: false,
     is_banned: false,

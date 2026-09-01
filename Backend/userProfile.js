@@ -1,11 +1,8 @@
 const express = require('express');
-const { getSupabaseAdmin } = require('./supabaseAdmin');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
-
-  const supabaseAdmin = getSupabaseAdmin();
 
   async function getPublicUser(userId) {
     try {
@@ -20,18 +17,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         created_at:   dbUser.created_at
       };
     } catch (_) {
-      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-      if (error || !data?.user) return null;
-      const u    = data.user;
-      const meta = u.user_metadata || {};
-      if (meta.is_banned) return null;
-      return {
-        id:           u.id,
-        username:     meta.username     || u.email?.split('@')[0] || 'unknown',
-        display_name: meta.display_name || meta.username          || '',
-        avatar_url:   meta.avatar_url   || null,
-        created_at:   u.created_at
-      };
+      return null;
     }
   }
 

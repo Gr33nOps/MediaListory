@@ -1,11 +1,10 @@
 const express = require('express');
 const { syncUserFlags } = require('./userRoles');
-const { getSupabaseAdmin } = require('./supabaseAdmin');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, verifyModerator, logModeratorActivity) => {
   const router = express.Router();
-  const supabase = getSupabaseAdmin();
+  const supabase = null; // Identity is Neon Auth; roles/bans live in public.users.
 
   router.get('/stats', verifyToken, verifyModerator, async (req, res) => {
     try {

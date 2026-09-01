@@ -1,12 +1,12 @@
 const express = require('express');
 const { syncUserFlags } = require('./userRoles');
-const { getSupabaseAdmin } = require('./supabaseAdmin');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorActivity) => {
   const router = express.Router();
 
-  const supabase = getSupabaseAdmin();
+  // Identity is Neon Auth; role/ban state lives in public.users (source of truth).
+  const supabase = null;
 
   router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
     try {
@@ -60,12 +60,10 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
       }
 
       const dbUser = await db('users').where({ id: userId }).first();
-      const { data: userData, error: fetchError } = await supabase.auth.admin.getUserById(userId);
-      if (fetchError || !userData?.user) return res.status(404).json({ error: 'User not found' });
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
 
-      const meta = userData.user.user_metadata || {};
-      const isBanned = dbUser?.is_banned ?? meta.is_banned ?? false;
-      const isAdmin = dbUser?.is_admin ?? meta.is_admin ?? false;
+      const isBanned = dbUser.is_banned || false;
+      const isAdmin = dbUser.is_admin || false;
 
       if (isBanned) return res.status(400).json({ error: 'User is already banned' });
       if (isAdmin)  return res.status(403).json({ error: 'Cannot ban an admin' });
@@ -100,11 +98,9 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
       const userId = req.params.id;
 
       const dbUser = await db('users').where({ id: userId }).first();
-      const { data: userData, error: fetchError } = await supabase.auth.admin.getUserById(userId);
-      if (fetchError || !userData?.user) return res.status(404).json({ error: 'User not found' });
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
 
-      const meta = userData.user.user_metadata || {};
-      const isBanned = dbUser?.is_banned ?? meta.is_banned ?? false;
+      const isBanned = dbUser.is_banned || false;
       if (!isBanned) return res.status(400).json({ error: 'User is not banned' });
 
       await syncUserFlags(db, supabase, userId, {
@@ -123,7 +119,7 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
 
       await logModeratorActivity(
         req.userId, 'unban_user', 'user', userId,
-        `Unbanned ${dbUser?.username || meta.username || userId}`
+        `Unbanned ${dbUser.username || userId}`
       );
 
       res.json({ message: 'User unbanned successfully' });
@@ -138,18 +134,16 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
       const userId = req.params.id;
 
       const dbUser = await db('users').where({ id: userId }).first();
-      const { data: userData, error: fetchError } = await supabase.auth.admin.getUserById(userId);
-      if (fetchError || !userData?.user) return res.status(404).json({ error: 'User not found' });
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
 
-      const meta = userData.user.user_metadata || {};
-      const isModerator = dbUser?.is_moderator ?? meta.is_moderator ?? false;
+      const isModerator = dbUser.is_moderator || false;
       if (isModerator) return res.status(400).json({ error: 'User is already a moderator' });
 
       await syncUserFlags(db, supabase, userId, { is_moderator: true });
 
       await logModeratorActivity(
         req.userId, 'promote_moderator', 'user', userId,
-        `Promoted ${dbUser?.username || meta.username || userId} to moderator`
+        `Promoted ${dbUser.username || userId} to moderator`
       );
 
       res.json({ message: 'User promoted to moderator successfully' });
@@ -168,12 +162,10 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
       }
 
       const dbUser = await db('users').where({ id: userId }).first();
-      const { data: userData, error: fetchError } = await supabase.auth.admin.getUserById(userId);
-      if (fetchError || !userData?.user) return res.status(404).json({ error: 'User not found' });
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
 
-      const meta = userData.user.user_metadata || {};
-      const isAdmin = dbUser?.is_admin ?? meta.is_admin ?? false;
-      const isModerator = dbUser?.is_moderator ?? meta.is_moderator ?? false;
+      const isAdmin = dbUser.is_admin || false;
+      const isModerator = dbUser.is_moderator || false;
       if (isAdmin)      return res.status(403).json({ error: 'Cannot demote an admin' });
       if (!isModerator) return res.status(400).json({ error: 'User is not a moderator' });
 
@@ -181,7 +173,7 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
 
       await logModeratorActivity(
         req.userId, 'demote_moderator', 'user', userId,
-        `Demoted ${dbUser?.username || meta.username || userId} from moderator`
+        `Demoted ${dbUser.username || userId} from moderator`
       );
 
       res.json({ message: 'Moderator demoted successfully' });
@@ -199,30 +191,18 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
         return res.status(400).json({ error: 'Cannot delete your own account' });
       }
 
-      const { data: userData, error: fetchError } = await supabase.auth.admin.getUserById(userId);
-      if (fetchError || !userData?.user) return res.status(404).json({ error: 'User not found' });
+      const dbUser = await db('users').where({ id: userId }).first();
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
+      if (dbUser.is_admin) return res.status(403).json({ error: 'Cannot delete an admin' });
 
-      const meta = userData.user.user_metadata || {};
-      if (meta.is_admin) return res.status(403).json({ error: 'Cannot delete an admin' });
-
-      try {
-        await db.transaction(async (trx) => {
-          await trx('user_game_lists').where('user_id', userId).delete();
-          await trx('user_follows')
-            .where('follower_id', userId)
-            .orWhere('following_id', userId)
-            .delete();
-          await trx('ban_history').where('user_id', userId).delete();
-          await trx('moderator_activity').where('moderator_id', userId).delete();
-        });
-      } catch (_) {}
-
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
-      if (deleteError) throw new Error(deleteError.message);
+      // Deleting the users row cascades to lists, follows, ban_history, and
+      // moderator_activity (all ON DELETE CASCADE). The identity still exists in
+      // Neon Auth; remove it from the Neon console/CLI to fully revoke sign-in.
+      await db('users').where({ id: userId }).delete();
 
       await logModeratorActivity(
         req.userId, 'delete_user', 'user', userId,
-        `Permanently deleted ${meta.username || userId}`
+        `Permanently deleted ${dbUser.username || userId}`
       );
 
       res.json({ message: 'User permanently deleted successfully' });

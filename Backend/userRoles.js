@@ -1,14 +1,13 @@
 /**
- * Keep public.users and Supabase Auth user_metadata in sync for role/ban flags.
- * Middleware (checkBanned / verifyAdmin / verifyModerator) trusts public.users.
+ * Keep public.users role/ban flags updated. public.users is the source of truth
+ * that middleware (checkBanned / verifyAdmin / verifyModerator) trusts. The identity
+ * provider (Neon Auth) is not consulted here.
+ *
+ * Signature keeps a placeholder second arg for backward compatibility with existing
+ * call sites; it is ignored.
  */
 
-const { ensureLocalUser } = require('./localUser');
-
-async function syncUserFlags(db, supabase, userId, flags) {
-  const dbPatch = {};
-  const metaPatch = {};
-
+async function syncUserFlags(db, _unused, userId, flags) {
   const keys = [
     'is_banned',
     'banned_at',
@@ -18,32 +17,21 @@ async function syncUserFlags(db, supabase, userId, flags) {
     'is_admin'
   ];
 
+  const dbPatch = {};
   for (const key of keys) {
     if (Object.prototype.hasOwnProperty.call(flags, key)) {
       dbPatch[key] = flags[key];
-      metaPatch[key] = flags[key];
     }
   }
 
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-  if (error || !data?.user) {
-    throw new Error(error?.message || 'User not found in Auth');
-  }
-
-  await ensureLocalUser(db, data.user);
+  const user = await db('users').where({ id: userId }).first();
+  if (!user) throw new Error('User not found');
 
   if (Object.keys(dbPatch).length > 0) {
     await db('users').where({ id: userId }).update(dbPatch);
   }
 
-  const meta = data.user.user_metadata || {};
-  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-    user_metadata: { ...meta, ...metaPatch }
-  });
-
-  if (updateError) throw new Error(updateError.message);
-
-  return data.user;
+  return user;
 }
 
 module.exports = { syncUserFlags };
