@@ -4,7 +4,10 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- External identity provider id (Neon Auth / Better Auth user id). Local UUID
+  -- `id` stays the app's primary key so all FKs and existing code are unchanged.
+  auth_id TEXT UNIQUE,
   username VARCHAR(50) UNIQUE,
   email VARCHAR(255),
   display_name VARCHAR(100),
