@@ -35,16 +35,20 @@ jobs:
           fi
           url="${SUPABASE_URL%/}/rest/v1/games?select=id&limit=1"
           echo "Pinging $url"
+          set +e
           code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' \
             -H "apikey: ${SUPABASE_ANON_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-            --max-time 30 "$url" || echo "000")
+            --max-time 30 "$url")
+          curl_rc=$?
+          set -e
+          echo "curl exit: ${curl_rc}"
           echo "HTTP status: ${code}"
           echo "Body: $(cat /tmp/body.txt 2>/dev/null || true)"
           # Any HTTP response (even 401/404 from RLS/grants) means the DB answered and is awake.
-          # Only a dropped connection or a 5xx means the project is paused/unreachable.
-          if [ "${code}" = "000" ]; then
-            echo "::error::No response from Supabase - project is likely paused. Restore it from the dashboard."
+          # A curl transport failure or "000" means no response - the project is paused/unreachable.
+          if [ "${curl_rc}" -ne 0 ] || [ "${code}" = "000" ]; then
+            echo "::error::No response from Supabase - project is likely paused. Restore it once from the dashboard; this workflow keeps an active project awake but cannot wake a paused one."
             exit 1
           fi
           if [ "${code}" -ge 500 ]; then
