@@ -84,3 +84,26 @@ jobs:
           set -e
           grep -q "Missing environment variables" /tmp/boot.log
           test "$code" -ne 0
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fails the job on any WARNING/ERROR finding in first-party code.
+      # Verified false positives are suppressed inline with justified `nosemgrep` comments.
+      - name: Semgrep scan (blocks on WARNING/ERROR)
+        run: |
+          semgrep scan \
+            --config p/security-audit \
+            --config p/secrets \
+            --config p/javascript \
+            --config p/nodejs \
+            --config p/expressjs \
+            --config p/owasp-top-ten \
+            --severity WARNING --severity ERROR \
+            --error --disable-version-check \
+            Backend Frontend

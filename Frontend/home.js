@@ -267,6 +267,7 @@ function initPage() {
                     return o.value === pendingGenre;
                 });
                 if (!exists) {
+                    // nosemgrep: javascript.browser.security.raw-html-concat.raw-html-concat, javascript.browser.xss.xss -- pendingGenre is HTML-escaped via esc() before interpolation
                     genreSelect.innerHTML += '<option value="' + esc(pendingGenre) + '">' + esc(pendingGenre) + '</option>';
                 }
                 genreSelect.value = pendingGenre;
@@ -550,6 +551,7 @@ function displaySearchResults(games, replace) {
     if (replace) {
         container.innerHTML = html;
     } else {
+        // nosemgrep: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method -- html is assembled only from esc()-escaped values above
         container.insertAdjacentHTML('beforeend', html);
     }
 }
