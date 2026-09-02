@@ -95,6 +95,24 @@
       }
       if (e.target.classList.contains('add-to-list-btn')) {
         addToLibrary(e.target.dataset.gameId);
+        return;
+      }
+      // Play trailer inline: swap the thumbnail facade for a lazy YouTube embed.
+      var trailerEl = e.target.closest('.detail-trailer');
+      if (trailerEl && trailerEl.dataset.yt) {
+        var key = trailerEl.dataset.yt;
+        trailerEl.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(key) +
+          '?autoplay=1&rel=0" title="Trailer" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>';
+        trailerEl.classList.add('playing');
+        return;
+      }
+      // "More like this" opens that title's detail.
+      var simEl = e.target.closest('.detail-similar-card');
+      if (simEl && simEl.dataset.similarRef) {
+        var modalBody = document.querySelector('#gameModal .modal-content');
+        if (modalBody) modalBody.scrollTop = 0;
+        showDetails(simEl.dataset.similarRef);
+        return;
       }
     });
 
@@ -209,9 +227,11 @@
         }
       }
       var label = 'View details for ' + (m.name || NOUN);
+      var ratingHtml = m.rating ? '<span class="card-rating">★ ' + esc(Number(m.rating).toFixed(1)) + '</span>' : '';
       return '<div class="game-card" data-game-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="' + esc(label) + '">' +
         '<div class="game-image-wrapper">' +
           '<img src="' + esc(imgSrc) + '" alt="' + esc((m.name || NOUN) + ' cover') + '" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+          ratingHtml +
         '</div>' +
         '<div class="game-info">' +
           '<div class="game-title">' + esc(m.name) + '</div>' +
@@ -248,8 +268,9 @@
 
     var creditLabel = MEDIA_TYPE === 'series' ? 'Creator' : 'Director';
     var studioLabel = MEDIA_TYPE === 'series' ? 'Network' : 'Studio';
+    // Release date is shown as a badge under the title, so it is intentionally
+    // omitted from the info grid below to avoid printing it twice.
     var infoItems = [
-      media.released ? { label: 'Released', value: new Date(media.released).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) } : null,
       (media.developers && media.developers.length) ? { label: creditLabel, value: media.developers.map(function (d) { return d.name || d; }).join(', ') } : null,
       (media.publishers && media.publishers.length) ? { label: studioLabel, value: media.publishers.map(function (p) { return p.name || p; }).join(', ') } : null,
       (MEDIA_TYPE === 'series' && media.number_of_seasons) ? { label: 'Seasons', value: String(media.number_of_seasons) } : null,
@@ -274,6 +295,54 @@
 
     var releasedBadge = media.released
       ? '<span class="game-detail-date">' + esc(new Date(media.released).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })) + '</span>'
+      : '';
+    var ratingBadge = media.rating
+      ? '<span class="detail-rating" title="Average rating">★ ' + esc(Number(media.rating).toFixed(1)) + '<span class="dr-sub">/5</span></span>'
+      : '';
+
+    // ── Detail extras (cast, trailer, where-to-watch, similar) ──────────────
+    function provRow(label, arr) {
+      if (!arr || !arr.length) return '';
+      return '<div class="detail-prov-row"><span class="detail-prov-label">' + label + '</span>' +
+        '<div class="detail-prov-logos">' + arr.map(function (p) {
+          return '<img src="' + esc(p.logo || '/img/no-image.svg') + '" alt="' + esc(p.name) + '" title="' + esc(p.name) + '" loading="lazy">';
+        }).join('') + '</div></div>';
+    }
+    var watchHtml = media.providers
+      ? '<div class="detail-section"><h3 class="detail-h">Where to watch</h3>' +
+          '<div class="detail-providers">' +
+            provRow('Stream', media.providers.flatrate) + provRow('Rent', media.providers.rent) + provRow('Buy', media.providers.buy) +
+          '</div>' +
+          (media.providers.link ? '<a class="link-btn" href="' + esc(media.providers.link) + '" target="_blank" rel="noopener noreferrer">More options ↗</a>' : '') +
+        '</div>'
+      : '';
+    var trailerHtml = (media.trailer && media.trailer.key)
+      ? '<div class="detail-section"><h3 class="detail-h">Trailer</h3>' +
+          '<div class="detail-trailer" data-yt="' + esc(media.trailer.key) + '">' +
+            '<img src="https://i.ytimg.com/vi/' + esc(media.trailer.key) + '/hqdefault.jpg" alt="Play trailer" loading="lazy" onerror="this.style.display=\'none\'">' +
+            '<span class="detail-trailer-play" aria-hidden="true"></span>' +
+          '</div></div>'
+      : '';
+    var castHtml = (media.cast && media.cast.length)
+      ? '<div class="detail-section"><h3 class="detail-h">Cast</h3><div class="detail-cast">' +
+          media.cast.map(function (c) {
+            return '<div class="detail-cast-card">' +
+              '<img src="' + esc(c.image || '/img/no-image.svg') + '" alt="' + esc(c.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+              '<div class="dc-name">' + esc(c.name) + '</div>' +
+              (c.character ? '<div class="dc-char">' + esc(c.character) + '</div>' : '') +
+            '</div>';
+          }).join('') +
+        '</div></div>'
+      : '';
+    var similarHtml = (media.similar && media.similar.length)
+      ? '<div class="detail-section"><h3 class="detail-h">More like this</h3><div class="detail-similar">' +
+          media.similar.map(function (s) {
+            return '<button type="button" class="detail-similar-card" data-similar-ref="' + esc(s.id) + '" title="' + esc(s.name) + '">' +
+              '<img src="' + esc(s.background_image) + '" alt="' + esc(s.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+              '<span class="ds-name">' + esc(s.name) + '</span>' +
+            '</button>';
+          }).join('') +
+        '</div></div>'
       : '';
 
     var descHtml = '';
@@ -302,10 +371,10 @@
           '<img src="' + esc(coverSrc) + '" alt="' + esc(media.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
           '<div class="game-detail-title-meta">' +
             '<div class="game-detail-title">' + esc(media.name) + '</div>' +
-            '<div class="game-detail-badges">' + releasedBadge + '</div>' +
+            '<div class="game-detail-badges">' + releasedBadge + ratingBadge + '</div>' +
           '</div>' +
         '</div>' +
-        genreTagsHtml + infoGridHtml + descHtml +
+        genreTagsHtml + infoGridHtml + descHtml + trailerHtml + watchHtml + castHtml +
         '<div class="add-to-list">' +
           '<h3>Add to My Library</h3>' +
           '<div style="margin-bottom:12px;">' +
@@ -331,6 +400,7 @@
             '<span id="addGameMessage" style="font-size:13px;font-weight:600;"></span>' +
           '</div>' +
         '</div>' +
+        similarHtml +
       '</div>';
 
     if (typeof openModal === 'function') openModal('gameModal');

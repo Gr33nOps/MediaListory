@@ -162,6 +162,11 @@ function initCollectionTab() {
     }
 
     document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('coll-ep-plus')) {
+            e.stopPropagation();
+            incrementEpisode(e.target.dataset.gameId);
+            return;
+        }
         if (e.target.classList.contains('update-btn')) {
             showUpdateModal(e.target.dataset.gameId);
         } else if (e.target.classList.contains('delete-btn')) {
@@ -345,7 +350,7 @@ function sortMyGames(games) {
     return sorted;
 }
 
-var STATUS_LABEL = { playing: 'Playing', completed: 'Completed', plan_to_play: 'Plan to Play', on_hold: 'On Hold', dropped: 'Dropped' };
+var STATUS_LABEL = { playing: 'In progress', completed: 'Completed', plan_to_play: 'Planned', on_hold: 'On Hold', dropped: 'Dropped' };
 var STATUS_COLOR = { playing: '#3498db', completed: '#2ecc71', plan_to_play: '#9b59b6', on_hold: '#f39c12', dropped: '#e74c3c' };
 
 function getRatingColor(score) {
@@ -372,12 +377,12 @@ function displayMyGames(games) {
                 : currentMediaFilter === 'series' ? 'series.html'
                 : currentMediaFilter === 'anime' ? 'anime.html' : 'home.html';
             var browseLabel = currentMediaFilter === 'movie' ? 'Browse movies'
-                : currentMediaFilter === 'series' ? 'Browse series'
+                : currentMediaFilter === 'series' ? 'Browse shows'
                 : currentMediaFilter === 'anime' ? 'Browse anime'
                 : currentMediaFilter === 'game' ? 'Browse games' : 'Browse movies, shows, anime & games';
             container.innerHTML = '<div class="coll-empty-state">' +
                 '<div class="coll-empty-icon">Your library is empty</div>' +
-                '<p>Start building your library by browsing and adding games, movies, and series you have enjoyed or want to explore.</p>' +
+                '<p>Start building your library by browsing and adding the movies, shows, anime, and games you have enjoyed or want to explore.</p>' +
                 '<a href="' + browseHref + '" class="btn btn-primary" style="margin-top:16px;">' + browseLabel + '</a>' +
                 '</div>';
             return;
@@ -385,14 +390,16 @@ function displayMyGames(games) {
         var escFn = typeof esc === 'function' ? esc : function (s) { return String(s || ''); };
         var term = escFn(currentSearchTerm);
         var statusLbl = escFn(STATUS_LABEL[currentStatusFilter] || currentStatusFilter);
-        var msg = 'No games found.';
+        var noun = (typeof MEDIA_TAB_LABEL !== 'undefined' && currentMediaFilter !== 'all')
+            ? MEDIA_TAB_LABEL[currentMediaFilter].toLowerCase() : 'titles';
+        var msg = 'Nothing here yet.';
         if (currentSearchTerm && currentStatusFilter !== 'all')
-            msg = 'No games matching "' + term + '" with status "' + statusLbl + '".';
+            msg = 'No ' + noun + ' matching "' + term + '" with status "' + statusLbl + '".';
         else if (currentSearchTerm)
-            msg = 'No games matching "' + term + '".';
+            msg = 'No ' + noun + ' matching "' + term + '".';
         else if (currentStatusFilter !== 'all')
-            msg = 'No games with status "' + statusLbl + '".';
-        container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No games found</div><p>' + msg + '</p></div>';
+            msg = 'No ' + noun + ' with status "' + statusLbl + '".';
+        container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">Nothing here</div><p>' + msg + '</p></div>';
         return;
     }
     container.innerHTML = filtered.map(function(game) { return renderCollectionRow(game); }).join('');
@@ -406,7 +413,14 @@ function renderCollectionRow(game) {
     var imgSrc      = game.background_image || '/img/no-image.svg';
     var progressHtml = '';
     if ((mediaType === 'series' || mediaType === 'anime') && game.episode_count) {
-        progressHtml = '<span class="coll-item-progress">' + (game.progress || 0) + '/' + game.episode_count + ' eps</span>';
+        var prog = game.progress || 0;
+        var pct = Math.min(100, Math.round(prog / game.episode_count * 100));
+        var done = prog >= game.episode_count;
+        progressHtml = '<span class="coll-progress">' +
+            '<span class="coll-progress-bar"><span class="coll-progress-fill" style="width:' + pct + '%"></span></span>' +
+            '<span class="coll-progress-text">' + prog + ' / ' + game.episode_count + ' eps</span>' +
+            (done ? '' : '<button type="button" class="coll-ep-plus" data-game-id="' + game.game_id + '" title="Watched one more episode" aria-label="Add one episode to ' + esc(game.name) + '">+1</button>') +
+        '</span>';
     }
 
     var editActions = isEditMode
@@ -561,6 +575,39 @@ function closeUpdateModal() {
     if (typeof closeModal === 'function') closeModal('updateModal');
     else document.getElementById('updateModal').style.display = 'none';
     currentUpdateGameId = null;
+}
+
+// One-tap "watched one more episode" from the collection row. Auto-completes at
+// the finale and keeps the stats/cards in sync without a reload.
+async function incrementEpisode(gameId) {
+    var game = (myGamesCache || []).find(function(g) { return String(g.game_id) === String(gameId); });
+    if (!game || !game.episode_count) return;
+    var cur = game.progress || 0;
+    if (cur >= game.episode_count) return;
+    var next = cur + 1;
+    var status = game.status;
+    if (next >= game.episode_count && status === 'playing') status = 'completed';
+    try {
+        var r = await fetch(`${API_BASE}/user/games/${gameId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ status: status, score: game.score || null, progress: next })
+        });
+        if (r.ok) {
+            game.progress = next;
+            game.status = status;
+            updateMediaTabCounts();
+            updateStatistics(filterByMedia(myGamesCache));
+            displayMyGames(sortMyGames(myGamesCache));
+            if (typeof toast === 'function') {
+                toast(next >= game.episode_count ? '“' + game.name + '” completed!' : 'Marked episode ' + next + ' of “' + game.name + '”', 'success');
+            }
+        } else if (typeof toast === 'function') {
+            toast('Could not update progress. Please try again.', 'error');
+        }
+    } catch (_) {
+        if (typeof toast === 'function') toast('Network error. Please try again.', 'error');
+    }
 }
 
 async function confirmUpdate() {

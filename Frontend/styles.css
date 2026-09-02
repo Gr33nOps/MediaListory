@@ -3764,3 +3764,65 @@ body[data-page="games"] .nav-actions .btn.active {
 .cat-stat .cs-num { font-weight: 800; color: var(--cs-color); font-size: 1rem; }
 .cat-stat .cs-label { font-size: 0.82rem; color: var(--text-secondary); }
 a.cat-stat:hover { border-color: var(--cs-color); }
+
+/* ══ Detail page enrichment: rating · trailer · cast · where-to-watch · similar ══ */
+.detail-rating {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-weight: 700; font-size: 0.95rem; color: #fbbf24;
+    background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3);
+    padding: 3px 11px; border-radius: 999px;
+}
+.detail-rating .dr-sub { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-left: 1px; }
+
+.detail-section { margin-top: 26px; }
+.detail-h { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); margin: 0 0 12px; }
+
+.detail-trailer { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; background: #000; cursor: pointer; border: 1px solid var(--border-subtle); }
+.detail-trailer img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.82; transition: opacity 0.2s; }
+.detail-trailer:hover img { opacity: 1; }
+.detail-trailer iframe { width: 100%; height: 100%; border: 0; display: block; }
+.detail-trailer.playing { cursor: default; }
+.detail-trailer-play { position: absolute; inset: 0; margin: auto; width: 66px; height: 66px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.9); pointer-events: none; }
+.detail-trailer-play::after { content: ''; position: absolute; inset: 0; margin: auto; width: 0; height: 0; border-style: solid; border-width: 11px 0 11px 19px; border-color: transparent transparent transparent #fff; transform: translateX(2px); }
+
+.detail-providers { display: flex; flex-direction: column; gap: 12px; }
+.detail-prov-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.detail-prov-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); min-width: 54px; }
+.detail-prov-logos { display: flex; gap: 8px; flex-wrap: wrap; }
+.detail-prov-logos img { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--border-subtle); object-fit: cover; background: var(--bg-deep); }
+
+.detail-cast { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+.detail-cast-card { flex: 0 0 96px; scroll-snap-align: start; text-align: center; }
+.detail-cast-card img { width: 96px; height: 120px; object-fit: cover; border-radius: 10px; background: var(--bg-deep); border: 1px solid var(--border-subtle); }
+.dc-name { font-size: 0.78rem; font-weight: 600; margin-top: 6px; line-height: 1.2; }
+.dc-char { font-size: 0.72rem; color: var(--text-muted); line-height: 1.25; }
+
+.detail-similar { display: grid; grid-auto-flow: column; grid-auto-columns: 118px; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+.detail-similar-card { padding: 0; border: 0; background: none; cursor: pointer; text-align: left; scroll-snap-align: start; }
+.detail-similar-card img { width: 118px; height: 174px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-subtle); transition: transform 0.18s, border-color 0.18s; }
+.detail-similar-card:hover img { transform: translateY(-3px); border-color: var(--accent); }
+.ds-name { font-size: 0.76rem; font-weight: 600; margin-top: 6px; line-height: 1.25; color: var(--text-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+@media (max-width: 600px) {
+    .detail-cast-card { flex-basis: 84px; }
+    .detail-cast-card img { width: 84px; height: 108px; }
+    .detail-similar { grid-auto-columns: 104px; }
+    .detail-similar-card img { width: 104px; height: 154px; }
+}
+
+/* Rating chip on browse cards */
+.game-image-wrapper { position: relative; }
+.card-rating {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 0.74rem; font-weight: 700; color: #fbbf24;
+    background: rgba(8,12,20,0.82); border: 1px solid rgba(251,191,36,0.4);
+    padding: 2px 8px; border-radius: 999px;
+}
+
+/* One-tap episode progress in the library */
+.coll-progress { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.coll-progress-bar { width: 72px; height: 6px; border-radius: 999px; background: rgba(148,163,184,0.25); overflow: hidden; flex-shrink: 0; }
+.coll-progress-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.25s ease; }
+.coll-progress-text { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.coll-ep-plus { font-size: 0.72rem; font-weight: 700; line-height: 1; padding: 4px 9px; border-radius: 7px; cursor: pointer; background: var(--accent-dim); color: var(--accent-light); border: 1px solid var(--accent-border); transition: background 0.15s, color 0.15s; }
+.coll-ep-plus:hover { background: var(--accent); color: #fff; }

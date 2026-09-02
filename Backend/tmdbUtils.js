@@ -103,6 +103,68 @@ function directorsFrom(credits) {
     .map((c) => ({ name: c.name }));
 }
 
+// ── Detail-only extras (present when the TMDB response was fetched with
+// append_to_response=credits,videos,recommendations,watch/providers) ──────────
+function pickTrailer(videos) {
+  const list = videos && Array.isArray(videos.results) ? videos.results : [];
+  const yt = list.filter((v) => v && v.site === 'YouTube' && v.key);
+  const pref =
+    yt.find((v) => v.type === 'Trailer' && v.official) ||
+    yt.find((v) => v.type === 'Trailer') ||
+    yt.find((v) => v.type === 'Teaser') ||
+    yt[0];
+  return pref ? { site: 'YouTube', key: pref.key, name: pref.name || 'Trailer' } : null;
+}
+
+function castFrom(credits, limit) {
+  const cast = credits && Array.isArray(credits.cast) ? credits.cast : [];
+  return cast
+    .slice(0, limit || 12)
+    .map((c) => ({ id: c.id, name: c.name, character: c.character || '', image: tmdbImage(c.profile_path, 'w185') }))
+    .filter((c) => c.name);
+}
+
+function providersFrom(wp) {
+  const results = wp && wp.results ? wp.results : {};
+  const keys = Object.keys(results);
+  const region = results.US || results.GB || results.CA || results.AU || (keys.length ? results[keys[0]] : null);
+  if (!region) return null;
+  const map = (arr) =>
+    Array.isArray(arr) ? arr.slice(0, 8).map((p) => ({ name: p.provider_name, logo: tmdbImage(p.logo_path, 'w45') })) : [];
+  const out = { link: region.link || null, flatrate: map(region.flatrate), rent: map(region.rent), buy: map(region.buy) };
+  if (!out.flatrate.length && !out.rent.length && !out.buy.length) return null;
+  return out;
+}
+
+function similarFrom(mediaType, recs) {
+  const list = recs && Array.isArray(recs.results) ? recs.results : [];
+  return list
+    .slice(0, 12)
+    .map((r) => ({
+      id: externalRef(mediaType, r.id),
+      media_type: mediaType,
+      tmdb_id: r.id,
+      name: r.title || r.name || 'Untitled',
+      background_image: tmdbImage(r.poster_path, 'w342'),
+      released: r.release_date || r.first_air_date || null,
+      rating: ratingFromVote(r.vote_average, r.vote_count).rating
+    }))
+    .filter((r) => r.name && r.background_image);
+}
+
+function detailExtras(mediaType, obj) {
+  const extras = {};
+  const cast = castFrom(obj.credits, 12);
+  if (cast.length) extras.cast = cast;
+  const trailer = pickTrailer(obj.videos);
+  if (trailer) extras.trailer = trailer;
+  const providers = providersFrom(obj['watch/providers']);
+  if (providers) extras.providers = providers;
+  const similar = similarFrom(mediaType, obj.recommendations);
+  if (similar.length) extras.similar = similar;
+  return extras;
+}
+
 /** TMDB movie -> normalized MediaListory media object (client-facing shape). */
 function normalizeTmdbMovie(movie, genreMap) {
   if (!movie || !movie.id) return null;
@@ -125,7 +187,8 @@ function normalizeTmdbMovie(movie, genreMap) {
     runtime: movie.runtime || null,
     genres: resolveGenres(movie, genreMap),
     developers: directorsFrom(credits),               // directors
-    publishers: namesFrom(movie.production_companies) // studios
+    publishers: namesFrom(movie.production_companies), // studios
+    ...detailExtras('movie', movie)
   };
 }
 
@@ -151,7 +214,8 @@ function normalizeTmdbSeries(series, genreMap) {
     number_of_episodes: series.number_of_episodes || null,
     genres: resolveGenres(series, genreMap),
     developers: namesFrom(series.created_by), // creators
-    publishers: namesFrom(series.networks)    // networks
+    publishers: namesFrom(series.networks),   // networks
+    ...detailExtras('series', series)
   };
 }
 

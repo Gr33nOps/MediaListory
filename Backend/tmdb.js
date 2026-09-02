@@ -282,27 +282,31 @@ module.exports = (verifyToken, checkBanned, db) => {
 
     try {
       if (detailId) {
+        // Detail views want the rich extras (cast, trailer, providers, similar),
+        // so fetch TMDB live; only fall back to the stored core row if that fails.
+        try {
+          const response = await tmdbFetch(`/${endpoint}/${detailId}`, {
+            language: 'en-US',
+            append_to_response: 'credits,videos,recommendations,watch/providers'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const normalized = normalizeTmdb(mediaType, data);
+            const payload = normalized ? [normalized] : [];
+            cache.set(cacheKey, payload, TTL.detail);
+            persistMedia(payload).catch(() => {});
+            res.setHeader('X-Cache', 'MISS');
+            return res.json(payload);
+          }
+        } catch (_) { /* fall through to DB */ }
+
         const fromDb = await loadDetailFromDb(mediaType, detailId);
         if (fromDb) {
           cache.set(cacheKey, fromDb, TTL.detail);
           res.setHeader('X-Cache', 'DB');
           return res.json(fromDb);
         }
-
-        const response = await tmdbFetch(`/${endpoint}/${detailId}`, {
-          language: 'en-US',
-          append_to_response: 'credits'
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          return res.status(response.status).json({ error: 'TMDB API error' });
-        }
-        const normalized = normalizeTmdb(mediaType, data);
-        const payload = normalized ? [normalized] : [];
-        cache.set(cacheKey, payload, TTL.detail);
-        persistMedia(payload).catch(() => {});
-        res.setHeader('X-Cache', 'MISS');
-        return res.json(payload);
+        return res.status(502).json({ error: 'TMDB API error' });
       }
 
       // list / search

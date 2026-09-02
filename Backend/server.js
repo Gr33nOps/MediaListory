@@ -96,6 +96,7 @@ app.use(helmet({
       "connect-src": ["'self'", FRONTEND_URL, NEON_AUTH_ORIGIN, 'https://*.neon.tech', 'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.sentry.io'].filter(Boolean),
       "object-src": ["'none'"],
       "base-uri": ["'self'"],
+      "frame-src": ["https://www.youtube-nocookie.com", 'https://www.youtube.com'],
       "frame-ancestors": ["'none'"]
     }
   }

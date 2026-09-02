@@ -46,7 +46,7 @@
                         <div class="progress-bar-item">
                             <div class="bar-label">
                                 <span class="status-dot playing"></span>
-                                <span>Playing</span>
+                                <span>In progress</span>
                             </div>
                             <div class="bar-container">
                                 <div class="bar-fill playing" id="playingBar" style="width:0%"></div>
@@ -66,7 +66,7 @@
                         <div class="progress-bar-item">
                             <div class="bar-label">
                                 <span class="status-dot plan"></span>
-                                <span>Plan to Play</span>
+                                <span>Planned</span>
                             </div>
                             <div class="bar-container">
                                 <div class="bar-fill plan" id="planBar" style="width:0%"></div>
@@ -112,7 +112,7 @@
                     <h2>My Library</h2>
                     <div class="list-header-actions">
                         <label class="sr-only" for="myGamesSearch">Search my games</label>
-                        <input type="text" id="myGamesSearch" class="search-input" placeholder="Search games..." aria-label="Search my games">
+                        <input type="text" id="myGamesSearch" class="search-input" placeholder="Search your library..." aria-label="Search your library">
                         <select id="myGamesSort" class="filter-select">
                             <option value="recently_added">Recently Added</option>
                             <option value="name">Name (A-Z)</option>
@@ -129,9 +129,9 @@
 
                 <div class="status-tabs">
                     <button class="status-tab active" data-status="all">All</button>
-                    <button class="status-tab" data-status="playing">Playing</button>
+                    <button class="status-tab" data-status="playing">In progress</button>
                     <button class="status-tab" data-status="completed">Completed</button>
-                    <button class="status-tab" data-status="plan_to_play">Plan to Play</button>
+                    <button class="status-tab" data-status="plan_to_play">Planned</button>
                     <button class="status-tab" data-status="on_hold">On Hold</button>
                     <button class="status-tab" data-status="dropped">Dropped</button>
                 </div>
