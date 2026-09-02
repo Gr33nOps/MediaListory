@@ -287,6 +287,12 @@ function initPage() {
     });
     loadUserCustomLists();
     fetchGames(true);
+
+    // Deep link from the dashboard: ?open=igdb_<id> opens that game's detail.
+    var openRef = new URLSearchParams(window.location.search).get('open');
+    if (openRef && /^igdb_\d+$/i.test(openRef)) {
+        setTimeout(function () { showGameDetails(openRef); }, 250);
+    }
 }
 
 async function loadUserCustomLists() {

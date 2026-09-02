@@ -4,6 +4,7 @@
 User-agent: *
 Allow: /$
 Allow: /home.html
+Allow: /dashboard.html
 Allow: /movies.html
 Allow: /series.html
 Allow: /anime.html

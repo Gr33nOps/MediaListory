@@ -119,6 +119,12 @@
     loadGenres();
     loadUserCustomLists();
     fetchMedia(true);
+
+    // Deep link from the dashboard / a shared card: ?open=<ref> opens a detail.
+    var openRef = new URLSearchParams(location.search).get('open');
+    if (openRef && /^[a-z]+_[a-z_]*\d+$/i.test(openRef)) {
+      setTimeout(function () { showDetails(openRef); }, 250);
+    }
   }
 
   function onClick(id, fn) { var el = byId(id); if (el) el.addEventListener('click', fn); }

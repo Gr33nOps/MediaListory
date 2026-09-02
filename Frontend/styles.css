@@ -3851,3 +3851,36 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .my-games-list.as-grid .coll-item-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 0; font-size: 0.9rem; }
 .my-games-list.as-grid .coll-item-right { width: 100%; justify-content: space-between; margin-top: 2px; }
 .view-toggle-btn { min-width: 44px; }
+
+/* ══ Home dashboard: hero · Up Next · Trending rows ══════════════════════ */
+.dash-hero-inner { padding: 8px 0 6px; }
+.dash-hero-title { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; margin: 0; color: var(--text-primary); }
+.dash-hero-sub { color: var(--text-muted); font-size: 1.02rem; margin: 10px 0 0; max-width: 60ch; }
+.dash-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+
+.dash-row { margin: 30px 0; }
+.dash-row-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 14px; }
+.dash-row[data-cat] .dash-row-title::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 9px; vertical-align: middle; background: var(--accent-light); }
+.dash-scroller { display: grid; grid-auto-flow: column; grid-auto-columns: 150px; gap: 14px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x proximity; }
+
+.dash-card { display: block; text-decoration: none; scroll-snap-align: start; }
+.dash-card-poster { position: relative; width: 150px; aspect-ratio: 3 / 4; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-deep); border: 1px solid var(--border-subtle); }
+.dash-card-poster img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease; }
+.dash-card:hover .dash-card-poster img { transform: scale(1.04); }
+.dash-card:hover .dash-card-poster { border-color: var(--accent); }
+.dash-card-name { margin-top: 7px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.dash-upnext { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.dash-upnext-card { display: flex; gap: 14px; padding: 12px; border-radius: var(--radius-lg); background: var(--bg-card); border: 1px solid var(--border-subtle); }
+.dash-upnext-poster { flex-shrink: 0; width: 66px; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: var(--bg-deep); }
+.dash-upnext-poster img { width: 100%; height: 100%; object-fit: cover; }
+.dash-upnext-info { display: flex; flex-direction: column; justify-content: center; gap: 9px; min-width: 0; flex: 1; }
+.dash-upnext-name { font-weight: 700; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-upnext-prog { display: flex; align-items: center; gap: 8px; }
+.dash-plus { align-self: flex-start; }
+.dash-empty { color: var(--text-muted); text-align: center; padding: 40px; }
+
+@media (max-width: 600px) {
+    .dash-scroller { grid-auto-columns: 120px; }
+    .dash-card-poster { width: 120px; }
+}

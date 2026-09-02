@@ -624,7 +624,7 @@
 
     el.innerHTML =
       '<div class="nav-bar-top">' +
-        '<a class="nav-brand" href="home.html">' + esc(brand) + '</a>' +
+        '<a class="nav-brand" href="dashboard.html">' + esc(brand) + '</a>' +
         '<button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navActions" aria-label="Open menu">' +
           '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
           '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
