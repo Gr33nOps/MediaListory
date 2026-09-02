@@ -130,7 +130,7 @@ function displayProfile(user) {
 function displayStats(games, followers, following) {
     var totalGames = games.length;
     document.getElementById('userLevel').textContent      = calculateLevel(totalGames);
-    document.getElementById('totalGames').textContent     = totalGames;
+    var tg = document.getElementById('totalGames'); if (tg) tg.textContent = totalGames;
     document.getElementById('followersCount').textContent = followers.length;
     document.getElementById('followingCount').textContent = following.length;
 

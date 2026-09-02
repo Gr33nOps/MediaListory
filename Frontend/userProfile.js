@@ -16,10 +16,10 @@ let upExpandedListId = null;
 let upFilters        = {};
 
 var STATUS_LABEL = {
-    playing:      'Playing',
+    playing:      'In progress',
     completed:    'Completed',
-    plan_to_play: 'Plan to Play',
-    on_hold:      'On Hold',
+    plan_to_play: 'Planned',
+    on_hold:      'On hold',
     dropped:      'Dropped'
 };
 

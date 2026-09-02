@@ -369,7 +369,7 @@ function sortMyGames(games) {
     return sorted;
 }
 
-var STATUS_LABEL = { playing: 'In progress', completed: 'Completed', plan_to_play: 'Planned', on_hold: 'On Hold', dropped: 'Dropped' };
+var STATUS_LABEL = { playing: 'In progress', completed: 'Completed', plan_to_play: 'Planned', on_hold: 'On hold', dropped: 'Dropped' };
 var STATUS_COLOR = { playing: '#3498db', completed: '#2ecc71', plan_to_play: '#9b59b6', on_hold: '#f39c12', dropped: '#e74c3c' };
 
 function getRatingColor(score) {
@@ -578,24 +578,9 @@ function showUpdateModal(gameId) {
     }
     if (typeof openModal === 'function') openModal('updateModal');
     else document.getElementById('updateModal').style.display = 'flex';
-    setTimeout(function() {
-        var up  = document.getElementById('updateScoreUpBtn');
-        var dn  = document.getElementById('updateScoreDownBtn');
-        var inp = document.getElementById('updateScore');
-        var clr = document.getElementById('updateScoreClearBtn');
-        if (up && dn) {
-            up.onclick = function() { if (!inp.value) inp.value = 1; else if (parseInt(inp.value) < 10) inp.value = parseInt(inp.value) + 1; };
-            dn.onclick = function() { if (!inp.value) inp.value = 1; else if (parseInt(inp.value) > 1)  inp.value = parseInt(inp.value) - 1; };
-        }
-        if (clr) clr.onclick = function() { inp.value = ''; };
-        if (!_updateScoreBound && inp) {
-            _updateScoreBound = true;
-            inp.addEventListener('input', function() {
-                var v = inp.value.replace(/[^0-9]/g, '');
-                inp.value = v ? Math.min(10, Math.max(1, parseInt(v))) : '';
-            });
-        }
-    }, 0);
+    if (typeof bindScoreInput === 'function') {
+        bindScoreInput('updateScore', 'updateScoreUpBtn', 'updateScoreDownBtn', 'updateScoreClearBtn');
+    }
 }
 
 function closeUpdateModal() {

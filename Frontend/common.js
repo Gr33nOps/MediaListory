@@ -573,15 +573,10 @@
     return msg;
   }
 
-  // Same internal status keys across all media; labels differ per category so the
-  // UI reads naturally (games "play", movies/series "watch").
+  // One consistent status vocabulary across every media type (no "watch" vs
+  // "play" split), so the same status reads the same everywhere.
   var STATUS_KEYS = ['playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];
-  var STATUS_LABELS = {
-    game:   { playing: 'Playing', completed: 'Completed', plan_to_play: 'Plan to Play', on_hold: 'On Hold', dropped: 'Dropped' },
-    movie:  { playing: 'Watching', completed: 'Watched', plan_to_play: 'Plan to Watch', on_hold: 'On Hold', dropped: 'Dropped' },
-    series: { playing: 'Watching', completed: 'Completed', plan_to_play: 'Plan to Watch', on_hold: 'On Hold', dropped: 'Dropped' },
-    anime:  { playing: 'Watching', completed: 'Completed', plan_to_play: 'Plan to Watch', on_hold: 'On Hold', dropped: 'Dropped' }
-  };
+  var STATUS_LABEL_MAP = { playing: 'In progress', completed: 'Completed', plan_to_play: 'Planned', on_hold: 'On hold', dropped: 'Dropped' };
 
   function mediaTypeLabel(mediaType, plural) {
     var map = { game: 'Game', movie: 'Movie', series: 'Show', anime: 'Anime' };
@@ -591,17 +586,40 @@
     return base + 's';
   }
 
-  function statusLabel(status, mediaType) {
-    var set = STATUS_LABELS[mediaType] || STATUS_LABELS.game;
-    return set[status] || status || '';
+  function statusLabel(status) {
+    return STATUS_LABEL_MAP[status] || status || '';
   }
 
   function statusOptions(mediaType, selected) {
-    var set = STATUS_LABELS[mediaType] || STATUS_LABELS.game;
     return STATUS_KEYS.map(function (key) {
       var sel = key === selected ? ' selected' : '';
-      return '<option value="' + key + '"' + sel + '>' + set[key] + '</option>';
+      return '<option value="' + key + '"' + sel + '>' + STATUS_LABEL_MAP[key] + '</option>';
     }).join('');
+  }
+
+  // Wire a score field: +/- steppers, a "clear" (No Score), and — importantly —
+  // reject letters so only 1–10 or empty can be entered (type=number still lets
+  // e/+/-/. through, hence the guards). Pass element ids (or the input node).
+  function bindScoreInput(input, upId, downId, clearId) {
+    input = (typeof input === 'string') ? document.getElementById(input) : input;
+    if (!input) return;
+    var up = upId && document.getElementById(upId);
+    var down = downId && document.getElementById(downId);
+    var clear = clearId && document.getElementById(clearId);
+    function cur() { var n = parseInt(input.value, 10); return Number.isNaN(n) ? null : n; }
+    function set(v) { input.value = (v == null) ? '' : String(Math.min(10, Math.max(1, v))); }
+    if (up) up.onclick = function () { var n = cur(); set(n == null ? 1 : n + 1); };
+    if (down) down.onclick = function () { var n = cur(); set(n == null ? 1 : n - 1); };
+    if (clear) clear.onclick = function () { input.value = ''; };
+    if (input.dataset.scoreBound) return; // don't stack listeners on a reused input
+    input.dataset.scoreBound = '1';
+    input.addEventListener('keydown', function (e) {
+      if (['e', 'E', '+', '-', '.', ','].indexOf(e.key) !== -1) e.preventDefault();
+    });
+    input.addEventListener('input', function () {
+      var v = String(input.value).replace(/[^0-9]/g, '');
+      input.value = v ? String(Math.min(10, Math.max(1, parseInt(v, 10)))) : '';
+    });
   }
 
   function mountAppNav() {
@@ -632,24 +650,30 @@
       tab('anime.html',  'anime',  'Anime',  'anime') +
       tab('home.html',   'games',  'Games',  'games');
 
+    var PEOPLE_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    // People (Find & follow) lives as its own nav icon between Search and Theme.
+    var peopleBtn = isGuest ? '' :
+      '<a href="friends.html" class="nav-icon-btn' + (active === 'friends' ? ' active' : '') + '" id="navPeopleBtn" aria-label="Find and follow people" title="People">' + PEOPLE_SVG + '</a>';
+
     var utils =
       '<button type="button" class="nav-icon-btn" id="navSearchBtn" aria-label="Search all media" title="Search (press /)">' + SEARCH_SVG + '</button>' +
+      peopleBtn +
       '<button type="button" class="nav-icon-btn" id="navThemeBtn" aria-label="Toggle light or dark theme"></button>';
 
     var userArea;
     if (isGuest) {
       userArea = '<a href="auth.html" class="nav-cta' + (active === 'auth' ? ' active' : '') + '">Sign in</a>';
     } else {
-      // Everything personal (My Library, Following, profile, account) lives behind
-      // the Profile menu, so the bar shows just: brand · categories · search/theme/profile.
-      var inMenu = (active === 'list' || active === 'friends' || active === 'profile' || active === 'moderator' || active === 'admin');
+      var inMenu = (active === 'list' || active === 'profile' || active === 'moderator' || active === 'admin');
       var nameStr = (user && (user.display_name || user.username)) || 'You';
       var initials = nameStr.trim().slice(0, 2).toUpperCase() || 'U';
+      var avaInner = (user && user.avatar_url)
+        ? '<img src="' + esc(user.avatar_url) + '" alt="" onerror="this.remove()">'
+        : esc(initials);
 
       var menuItems =
         '<div class="nav-menu-name" aria-hidden="true">' + esc(nameStr) + '</div>' +
         '<a role="menuitem" href="myGameList.html" class="nav-menu-item' + (active === 'list' ? ' active' : '') + '">My Library</a>' +
-        '<a role="menuitem" href="friends.html" class="nav-menu-item' + (active === 'friends' ? ' active' : '') + '">Following</a>' +
         '<a role="menuitem" href="profile.html" class="nav-menu-item' + (active === 'profile' ? ' active' : '') + '">My profile</a>';
       if (user && (user.is_moderator || user.is_admin)) {
         menuItems += '<a role="menuitem" href="moderator.html" class="nav-menu-item' + (active === 'moderator' ? ' active' : '') + '">Moderate</a>';
@@ -661,9 +685,8 @@
 
       userArea =
         '<div class="nav-menu">' +
-          '<button type="button" class="nav-menu-trigger' + (inMenu ? ' active' : '') + '" id="navProfileBtn" aria-haspopup="menu" aria-expanded="false">' +
-            '<span class="nav-ava" aria-hidden="true">' + esc(initials) + '</span>' +
-            '<span class="nav-menu-label">Profile</span>' +
+          '<button type="button" class="nav-menu-trigger nav-menu-trigger-ava' + (inMenu ? ' active' : '') + '" id="navProfileBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Account menu">' +
+            '<span class="nav-ava" aria-hidden="true">' + avaInner + '</span>' +
             '<svg class="nav-caret" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
           '</button>' +
           '<div class="nav-menu-pop" id="navProfileMenu" role="menu">' + menuItems + '</div>' +
@@ -967,5 +990,6 @@
   global.mediaTypeLabel = mediaTypeLabel;
   global.statusLabel = statusLabel;
   global.statusOptions = statusOptions;
+  global.bindScoreInput = bindScoreInput;
   global.MEDIA_STATUS_KEYS = STATUS_KEYS;
 })(typeof window !== 'undefined' ? window : globalThis);

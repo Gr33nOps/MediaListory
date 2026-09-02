@@ -761,21 +761,22 @@ async function showGameDetails(gameId) {
                             '<div>' +
                                 '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;">Status</label>' +
                                 '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' +
-                                    '<option value="playing">Playing</option>' +
+                                    '<option value="playing">In progress</option>' +
                                     '<option value="completed" selected>Completed</option>' +
-                                    '<option value="plan_to_play">Plan to Play</option>' +
-                                    '<option value="on_hold">On Hold</option>' +
+                                    '<option value="plan_to_play">Planned</option>' +
+                                    '<option value="on_hold">On hold</option>' +
                                     '<option value="dropped">Dropped</option>' +
                                 '</select>' +
                             '</div>' +
                             '<div>' +
-                                '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;">Your Score (1-10)</label>' +
+                                '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:6px;">Your Score (1-10)</label>' +
                                 '<div class="score-input-container" style="margin:0;">' +
                                     '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--" style="width:100%;">' +
                                     '<div class="score-controls">' +
-                                        '<div class="score-btn" id="scoreUpBtn">+</div>' +
-                                        '<div class="score-btn" id="scoreDownBtn">-</div>' +
+                                        '<button type="button" class="score-btn" id="scoreUpBtn" aria-label="Increase score">+</button>' +
+                                        '<button type="button" class="score-btn" id="scoreDownBtn" aria-label="Decrease score">−</button>' +
                                     '</div>' +
+                                    '<button type="button" class="btn btn-sm score-clear-btn" id="scoreClearBtn">No Score</button>' +
                                 '</div>' +
                             '</div>' +
                         '</div>' +
@@ -792,17 +793,7 @@ async function showGameDetails(gameId) {
             if (typeof openModal === 'function') openModal('gameModal');
             else document.getElementById('gameModal').style.display = 'flex';
 
-            document.getElementById('scoreUpBtn').addEventListener('click', function() {
-                var input = document.getElementById('gameScore');
-                if (!input.value) input.value = 1;
-                else if (parseInt(input.value) < 10) input.value = parseInt(input.value) + 1;
-            });
-
-            document.getElementById('scoreDownBtn').addEventListener('click', function() {
-                var input = document.getElementById('gameScore');
-                if (!input.value) input.value = 1;
-                else if (parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
-            });
+            if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'scoreUpBtn', 'scoreDownBtn', 'scoreClearBtn');
         }
     } catch (error) {
         console.error('Show game details error:', error);

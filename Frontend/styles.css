@@ -365,9 +365,11 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     border-radius: var(--radius-md);
     background: transparent; border: 0;
     color: var(--text-muted); cursor: pointer; flex-shrink: 0;
+    text-decoration: none;
     transition: background 0.18s ease, color 0.18s ease;
 }
 .nav-icon-btn:hover { background: var(--bg-deep); color: var(--text-primary); }
+.nav-icon-btn.active { background: var(--accent-dim); color: var(--accent-light); }
 
 .nav-link {
     padding: 7px 12px;
@@ -408,10 +410,14 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1
 }
 .nav-ava {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 26px; height: 26px; border-radius: 50%;
+    width: 28px; height: 28px; border-radius: 50%;
     background: var(--accent); color: #fff;
     font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+    overflow: hidden;
 }
+.nav-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Avatar-only trigger (pfp + caret, no label). */
+.nav-menu-trigger-ava { padding: 3px 8px 3px 3px; gap: 5px; }
 .nav-caret { transition: transform 0.2s ease; opacity: 0.8; }
 .nav-menu.open .nav-caret { transform: rotate(180deg); }
 .nav-menu-pop {
@@ -3837,6 +3843,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 .media-tab[data-media="series"] { --mt-color: var(--cat-series-light); }
 .media-tab[data-media="anime"]  { --mt-color: var(--cat-anime-light); }
 .media-tab[data-media="game"]   { --mt-color: var(--cat-game-light); }
+.media-tab[data-media="all"] { --mt-color: #64748b; } /* neutral, not category blue */
 .media-tab[data-media="all"]::before { background: linear-gradient(135deg, var(--cat-movie-light), var(--cat-anime-light)); }
 .media-tab .mt-count {
     font-size: 0.72rem; font-weight: 700; padding: 0 6px; min-width: 18px;
