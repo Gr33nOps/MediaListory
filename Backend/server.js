@@ -465,6 +465,7 @@ app.use(express.static(frontendPath, {
   etag: false,
   lastModified: true,
   maxAge: 0,
+  index: false, // '/' is routed to the dashboard below, not the static index.html
   setHeaders(res, filePath) {
     const name = path.basename(filePath).toLowerCase();
     // Avoid stale JS/HTML during local iteration (was causing old home.js + API 304 bugs).
@@ -476,7 +477,7 @@ app.use(express.static(frontendPath, {
   }
 }));
 
-app.get('/', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
+app.get('/', (req, res) => res.sendFile(path.join(frontendPath, 'dashboard.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
 app.get('/auth.html', (req, res) => res.sendFile(path.join(frontendPath, 'auth.html')));
 app.get('/home.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));

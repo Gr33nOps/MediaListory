@@ -140,18 +140,26 @@
     };
   }
 
-  async function searchOne(type, title) {
+  async function searchMany(type, title) {
     try {
       var res = await global.apiFetch(SEARCH_PATH[type], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ search: title, limit: 1 })
+        body: JSON.stringify({ search: title, limit: 5 })
       });
-      if (!res.ok) return null;
+      if (!res.ok) return [];
       var data = await res.json();
       var arr = Array.isArray(data) ? data : (data.results || data.games || data.data || []);
-      return arr && arr.length ? arr[0] : null;
-    } catch (e) { return null; }
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function candidateName(type, c) {
+    if (!c) return '';
+    var yr = '';
+    if (type === 'game' && c.first_release_date) yr = ' (' + new Date(c.first_release_date * 1000).getFullYear() + ')';
+    else if (c.released) yr = ' (' + String(c.released).slice(0, 4) + ')';
+    return (c.name || 'Untitled') + yr;
   }
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -164,10 +172,14 @@
       if (progress) progress.textContent = 'Matching ' + (i + 1) + ' of ' + parsedRows.length + '…';
       if (row.ref) {
         // Trusted MediaListory ref — no search needed.
-        matches.push({ row: row, match: { name: row.title }, gameData: { media_type: row.type, name: row.title, game_id: row.ref } });
+        matches.push({ row: row, candidates: [], selected: 0, match: { name: row.title }, gameData: { media_type: row.type, name: row.title, game_id: row.ref } });
       } else {
-        var m = await searchOne(row.type, row.title);
-        matches.push({ row: row, match: m, gameData: m ? buildGameData(row.type, m) : null });
+        var cands = await searchMany(row.type, row.title);
+        matches.push({
+          row: row, candidates: cands, selected: 0,
+          match: cands[0] || null,
+          gameData: cands[0] ? buildGameData(row.type, cands[0]) : null
+        });
         await sleep(140); // stay friendly to the provider rate limiter
       }
     }
@@ -225,6 +237,16 @@
     overlay.querySelector('#impFile').addEventListener('change', onFile);
     overlay.querySelector('#impParseBtn').addEventListener('click', onParse);
     overlay.querySelector('#impBackBtn').addEventListener('click', function () { show('input'); });
+    overlay.querySelector('#impPreviewRows').addEventListener('change', function (e) {
+      var sel = e.target.closest('.imp-pick');
+      if (!sel) return;
+      var idx = parseInt(sel.getAttribute('data-idx'), 10);
+      var m = matches[idx];
+      if (!m) return;
+      m.selected = parseInt(sel.value, 10) || 0;
+      m.match = m.candidates[m.selected] || null;
+      m.gameData = m.match ? buildGameData(m.row.type, m.match) : null;
+    });
     overlay.querySelector('#impAddBtn').addEventListener('click', onAdd);
     overlay.querySelector('#impDoneBtn').addEventListener('click', close);
     document.addEventListener('keydown', function (e) { if (!overlay.hidden && e.key === 'Escape') close(); });
@@ -289,13 +311,24 @@
     overlay.querySelector('#impPreviewSummary').innerHTML =
       '<strong>' + matched.length + '</strong> of ' + matches.length + ' rows matched. ' +
       (matches.length - matched.length ? (matches.length - matched.length) + ' could not be found and will be skipped.' : '');
-    overlay.querySelector('#impPreviewRows').innerHTML = matches.map(function (m) {
+    overlay.querySelector('#impPreviewRows').innerHTML = matches.map(function (m, idx) {
       var ok = !!m.gameData;
       var cat = m.row.type;
-      return '<tr class="' + (ok ? '' : 'imp-row-miss') + '">' +
+      // Match cell: a picker when there's a choice, else the single matched title.
+      var matchCell;
+      if (ok && m.candidates && m.candidates.length > 1) {
+        var opts = m.candidates.map(function (c, i) {
+          return '<option value="' + i + '"' + (i === m.selected ? ' selected' : '') + '>' + esc(candidateName(cat, c)) + '</option>';
+        }).join('');
+        matchCell = '<select class="imp-pick" data-idx="' + idx + '" aria-label="Choose the match for ' + esc(m.row.title) + '">' + opts + '</select>';
+      } else if (ok && m.match && m.match.name && m.match.name !== m.row.title) {
+        matchCell = '<span class="imp-title-match">→ ' + esc(m.match.name) + '</span>';
+      } else {
+        matchCell = '';
+      }
+      return '<tr class="' + (ok ? '' : 'imp-row-miss') + '" data-idx="' + idx + '">' +
         '<td class="imp-c-status">' + (ok ? '<span class="imp-ok">✓</span>' : '<span class="imp-miss">—</span>') + '</td>' +
-        '<td class="imp-c-title"><span class="imp-title-in">' + esc(m.row.title) + '</span>' +
-          (ok && m.match && m.match.name && m.match.name !== m.row.title ? '<span class="imp-title-match">→ ' + esc(m.match.name) + '</span>' : '') + '</td>' +
+        '<td class="imp-c-title"><span class="imp-title-in">' + esc(m.row.title) + '</span>' + matchCell + '</td>' +
         '<td><span class="cal-badge cal-badge-' + cat + '">' + (CAT_LABEL[cat] || '') + '</span></td>' +
         '<td class="imp-c-meta">' + esc(global.statusLabel ? global.statusLabel(m.row.status, cat) : m.row.status) +
           (m.row.score ? ' · ' + m.row.score + '/10' : '') + '</td></tr>';
