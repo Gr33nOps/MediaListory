@@ -612,60 +612,77 @@
     var brand = el.getAttribute('data-brand') || 'MediaListory';
     var user = getStoredUser();
 
-    function link(href, key, label, cat) {
-      var cls = 'btn btn-secondary' + (active === key ? ' active' : '');
-      var attr = cat ? ' data-cat="' + cat + '"' : '';
-      return '<a href="' + href + '" class="' + cls + '"' + attr +
+    var isGuest = !getToken();
+    var SEARCH_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+
+    // Category tabs (one connected group; only the active one is filled).
+    function tab(href, key, label, cat) {
+      return '<a href="' + href + '" class="nav-tab' + (active === key ? ' active' : '') +
+        '" data-cat="' + cat + '"' + (active === key ? ' aria-current="page"' : '') + '>' + label + '</a>';
+    }
+    // Neutral user-area links (My Library / Following).
+    function ulink(href, key, label) {
+      return '<a href="' + href + '" class="nav-link' + (active === key ? ' active' : '') + '"' +
         (active === key ? ' aria-current="page"' : '') + '>' + label + '</a>';
     }
 
-    // Four media categories in one app: Movies + Series (TMDB), Anime (Kitsu), Games (IGDB).
-    var isGuest = !getToken();
+    var primary =
+      tab('movies.html', 'movies', 'Movies', 'movies') +
+      tab('series.html', 'series', 'Shows', 'series') +
+      tab('anime.html',  'anime',  'Anime',  'anime') +
+      tab('home.html',   'games',  'Games',  'games');
 
-    var actions =
-      link('movies.html', 'movies', 'Movies', 'movies') +
-      link('series.html', 'series', 'Shows', 'series') +
-      link('anime.html', 'anime', 'Anime', 'anime') +
-      link('home.html', 'games', 'Games', 'games');
+    var utils =
+      '<button type="button" class="nav-icon-btn" id="navSearchBtn" aria-label="Search all media" title="Search (press /)">' + SEARCH_SVG + '</button>' +
+      '<button type="button" class="nav-icon-btn" id="navThemeBtn" aria-label="Toggle light or dark theme"></button>';
 
+    var userArea;
     if (isGuest) {
-      // Guests can browse everything; account features prompt sign-in.
-      actions += '<a href="auth.html" class="btn btn-primary' + (active === 'auth' ? ' active' : '') + '">Sign in</a>';
+      userArea = '<a href="auth.html" class="nav-cta' + (active === 'auth' ? ' active' : '') + '">Sign in</a>';
     } else {
-      actions +=
-        link('myGameList.html', 'list', 'My Library') +
-        link('friends.html', 'friends', 'Following') +
-        link('profile.html', 'profile', 'Profile');
+      // Account actions live behind the Profile menu, so Logout stops competing
+      // for attention in the bar and the nav / user areas read as separate groups.
+      var inMenu = (active === 'profile' || active === 'moderator' || active === 'admin');
+      var nameStr = (user && (user.display_name || user.username)) || 'You';
+      var initials = nameStr.trim().slice(0, 2).toUpperCase() || 'U';
 
+      var menuItems =
+        '<a role="menuitem" href="profile.html" class="nav-menu-item' + (active === 'profile' ? ' active' : '') + '">My profile</a>';
       if (user && (user.is_moderator || user.is_admin)) {
-        actions += link('moderator.html', 'moderator', 'Modify');
+        menuItems += '<a role="menuitem" href="moderator.html" class="nav-menu-item' + (active === 'moderator' ? ' active' : '') + '">Moderate</a>';
       }
       if (user && user.is_admin) {
-        actions += link('admin.html', 'admin', 'Manage');
+        menuItems += '<a role="menuitem" href="admin.html" class="nav-menu-item' + (active === 'admin' ? ' active' : '') + '">Admin</a>';
       }
+      menuItems += '<button type="button" role="menuitem" class="nav-menu-item nav-menu-danger" id="navLogoutBtn">Log out</button>';
 
-      actions += '<button type="button" class="btn btn-danger" id="navLogoutBtn">Logout</button>';
+      userArea =
+        ulink('myGameList.html', 'list', 'My Library') +
+        ulink('friends.html', 'friends', 'Following') +
+        '<div class="nav-menu">' +
+          '<button type="button" class="nav-menu-trigger' + (inMenu ? ' active' : '') + '" id="navProfileBtn" aria-haspopup="menu" aria-expanded="false">' +
+            '<span class="nav-ava" aria-hidden="true">' + esc(initials) + '</span>' +
+            '<span class="nav-menu-label">Profile</span>' +
+            '<svg class="nav-caret" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+          '</button>' +
+          '<div class="nav-menu-pop" id="navProfileMenu" role="menu">' + menuItems + '</div>' +
+        '</div>';
     }
 
     el.innerHTML =
-      '<div class="nav-bar-top">' +
-        '<a class="nav-brand" href="dashboard.html">' + esc(brand) + '</a>' +
-        '<button type="button" class="nav-search-btn" id="navSearchBtn" aria-label="Search all media" title="Search (press /)">' +
-          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
-        '</button>' +
-        '<button type="button" class="nav-theme-btn" id="navThemeBtn" aria-label="Toggle light or dark theme"></button>' +
-        '<button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navActions" aria-label="Open menu">' +
-          '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
-          '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
-          '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
-        '</button>' +
-      '</div>' +
-      '<div class="nav-actions" id="navActions">' + actions + '</div>';
+      '<a class="nav-brand" href="dashboard.html">' + esc(brand) + '</a>' +
+      '<span class="nav-sep" aria-hidden="true"></span>' +
+      '<nav class="nav-primary" aria-label="Categories">' + primary + '</nav>' +
+      '<div class="nav-utils">' + utils + '</div>' +
+      '<div class="nav-user">' + userArea + '</div>' +
+      '<button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="appNav" aria-label="Open menu">' +
+        '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
+        '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
+        '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
+      '</button>';
 
     var logoutBtn = document.getElementById('navLogoutBtn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', logoutToAuth);
-    }
+    if (logoutBtn) logoutBtn.addEventListener('click', logoutToAuth);
 
     var searchBtn = document.getElementById('navSearchBtn');
     if (searchBtn) {
@@ -682,16 +699,31 @@
       });
     }
 
+    // Profile dropdown (desktop). On mobile the menu shows inline in the drawer.
+    var profileBtn = document.getElementById('navProfileBtn');
+    var profileMenu = document.getElementById('navProfileMenu');
+    if (profileBtn && profileMenu) {
+      var menuWrap = profileBtn.parentNode;
+      var closeMenu = function () { menuWrap.classList.remove('open'); profileBtn.setAttribute('aria-expanded', 'false'); };
+      profileBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = menuWrap.classList.toggle('open');
+        profileBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', function (e) { if (!menuWrap.contains(e.target)) closeMenu(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+    }
+
+    // Mobile drawer toggle (hamburger opens category tabs + user links).
     var toggle = document.getElementById('navToggle');
-    var panel = document.getElementById('navActions');
-    if (toggle && panel) {
+    if (toggle) {
       toggle.addEventListener('click', function () {
         var open = el.classList.toggle('is-open');
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
         document.body.classList.toggle('nav-drawer-open', open);
       });
-      panel.querySelectorAll('a, button').forEach(function (node) {
+      el.querySelectorAll('.nav-tab, .nav-link, .nav-menu-item, .nav-cta').forEach(function (node) {
         node.addEventListener('click', function () {
           el.classList.remove('is-open');
           toggle.setAttribute('aria-expanded', 'false');

@@ -278,53 +278,164 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
-    padding: 16px 24px;
-    margin-bottom: 30px;
+    padding: 11px 18px;
+    margin-bottom: 28px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     box-shadow: var(--shadow-card);
     position: relative;
     z-index: 40;
 }
 
-.nav-bar-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-}
-
 .nav-brand {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--accent-light);
     text-decoration: none;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
     transition: color 0.3s ease;
 }
+
+/* Divider between the brand and the category tabs. */
+.nav-sep { width: 1px; height: 22px; background: var(--border-subtle); flex-shrink: 0; margin: 0 4px; }
+
+/* Category tabs — one connected group of text tabs, not four cards. */
+.nav-primary { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+.nav-tab::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--cat-color, var(--text-dim));
+    flex-shrink: 0;
+    transition: box-shadow 0.18s ease;
+}
+.nav-tab[data-cat="movies"] { --cat-color: var(--cat-movie-light); }
+.nav-tab[data-cat="series"] { --cat-color: var(--cat-series-light); }
+.nav-tab[data-cat="anime"]  { --cat-color: var(--cat-anime-light); }
+.nav-tab[data-cat="games"]  { --cat-color: var(--cat-game-light); }
+.nav-tab:hover { background: var(--bg-deep); color: var(--text-primary); }
+/* Only the active tab is filled — tinted in its own category color. */
+.nav-tab[data-cat="movies"].active { background: var(--cat-movie-dim); color: var(--cat-movie-light); }
+.nav-tab[data-cat="series"].active { background: var(--cat-series-dim); color: var(--cat-series-light); }
+.nav-tab[data-cat="anime"].active  { background: var(--cat-anime-dim);  color: var(--cat-anime-light); }
+.nav-tab[data-cat="games"].active  { background: var(--cat-game-dim);   color: var(--cat-game-light); }
+.nav-tab.active::before { box-shadow: 0 0 7px 0 var(--cat-color); }
+
+/* Utility icons (search + theme) — ghost buttons, right after the categories. */
+.nav-utils { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.nav-icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: var(--radius-md);
+    background: transparent; border: 0;
+    color: var(--text-muted); cursor: pointer; flex-shrink: 0;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+.nav-icon-btn:hover { background: var(--bg-deep); color: var(--text-primary); }
+
+/* User area — pushed right, a distinct group from the category nav. */
+.nav-user { display: flex; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0; }
+.nav-link {
+    padding: 7px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem; font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none; white-space: nowrap;
+    background: none; border: 0; cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+.nav-link:hover { background: var(--bg-deep); color: var(--text-primary); }
+.nav-link.active { background: var(--accent-dim); color: var(--accent-light); }
+
+.nav-cta {
+    padding: 8px 18px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem; font-weight: 700;
+    color: #fff; background: var(--accent);
+    text-decoration: none; white-space: nowrap;
+    transition: filter 0.18s ease;
+}
+.nav-cta:hover { filter: brightness(1.12); }
+body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1206; }
+
+/* Profile dropdown (holds My profile, admin links, and Log out). */
+.nav-menu { position: relative; }
+.nav-menu-trigger {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 10px 5px 6px;
+    border-radius: var(--radius-pill);
+    background: none; border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.nav-menu-trigger:hover, .nav-menu.open .nav-menu-trigger, .nav-menu-trigger.active {
+    background: var(--bg-deep); color: var(--text-primary); border-color: var(--border-subtle);
+}
+.nav-ava {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+}
+.nav-caret { transition: transform 0.2s ease; opacity: 0.8; }
+.nav-menu.open .nav-caret { transform: rotate(180deg); }
+.nav-menu-pop {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    min-width: 190px;
+    display: none; flex-direction: column;
+    padding: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
+    z-index: 60;
+}
+.nav-menu.open .nav-menu-pop { display: flex; }
+.nav-menu-item {
+    display: block; text-align: left;
+    padding: 9px 12px; border-radius: var(--radius-md);
+    font-size: 0.9rem; font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none; background: none; border: 0; cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-menu-item:hover { background: var(--bg-deep); color: var(--text-primary); }
+.nav-menu-item.active { color: var(--accent-light); }
+.nav-menu-danger { margin-top: 4px; padding-top: 11px; border-top: 1px solid var(--border-subtle); }
+.nav-menu-danger:hover { background: var(--red-dim); color: var(--red-light); }
 
 .nav-toggle {
     display: none;
     flex-direction: column;
     justify-content: center;
     gap: 5px;
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     padding: 10px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    background: rgba(15, 23, 42, 0.55);
+    background: var(--bg-deep);
     cursor: pointer;
     flex-shrink: 0;
 }
-
 .nav-toggle-bar {
     display: block;
     height: 2px;
@@ -333,22 +444,9 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     border-radius: 2px;
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
-
-.navbar.is-open .nav-toggle-bar:nth-child(1) {
-    transform: translateY(7px) rotate(45deg);
-}
+.navbar.is-open .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .navbar.is-open .nav-toggle-bar:nth-child(2) { opacity: 0; }
-.navbar.is-open .nav-toggle-bar:nth-child(3) {
-    transform: translateY(-7px) rotate(-45deg);
-}
-
-.nav-actions {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: flex-end;
-}
+.navbar.is-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 .btn {
     padding: 12px 20px;
@@ -3280,27 +3378,33 @@ select.update-status-select option,
     .container { padding: 14px; }
     .navbar {
         flex-wrap: wrap;
-        padding: 12px 14px;
+        padding: 9px 12px;
         margin-bottom: 18px;
         border-radius: var(--radius-lg);
+        gap: 6px;
     }
-    .nav-toggle { display: inline-flex; }
-    .nav-actions {
+    /* Keep brand + utilities + hamburger on the top row; drawer holds the rest. */
+    .nav-brand { flex: 1; order: 0; font-size: 1.15rem; }
+    .nav-sep { display: none; }
+    .nav-utils { order: 1; }
+    .nav-toggle { order: 2; display: inline-flex; }
+    .nav-primary, .nav-user {
         display: none;
         width: 100%;
         flex-direction: column;
         align-items: stretch;
-        gap: 8px;
-        padding-top: 12px;
-        margin-top: 4px;
-        border-top: 1px solid var(--border-subtle);
+        gap: 4px;
     }
-    .navbar.is-open .nav-actions { display: flex; }
-    .nav-actions .btn {
-        width: 100%;
-        justify-content: flex-start;
-        min-height: 44px;
-    }
+    .nav-primary { order: 3; }
+    .nav-user { order: 4; margin-left: 0; }
+    .navbar.is-open .nav-primary { display: flex; padding-top: 12px; margin-top: 2px; border-top: 1px solid var(--border-subtle); }
+    .navbar.is-open .nav-user { display: flex; padding-top: 4px; }
+    .nav-tab, .nav-link { width: 100%; padding: 12px 14px; font-size: 0.95rem; }
+    /* The Profile menu expands inline inside the drawer (no popover on mobile). */
+    .nav-menu { width: 100%; }
+    .nav-menu-trigger { display: none; }
+    .nav-menu-pop { position: static; display: flex; min-width: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+    .nav-menu-item { width: 100%; padding: 12px 14px; }
     body.nav-drawer-open { overflow: hidden; }
 
     .page-tabs { flex-direction: column; }
@@ -3762,42 +3866,23 @@ body[data-page="games"] .nav-actions .btn.active {
     color: #1a1206;
 }
 
-/* ── Desktop: center the whole nav (brand + tabs) as one tidy group ────── */
-@media (min-width: 901px) {
-    .navbar { justify-content: center; gap: 22px; }
-    .nav-bar-top { flex: 0 0 auto; }
-    .nav-actions { flex: 0 1 auto; justify-content: center; }
-}
-
 /* ── Mobile navigation drawer polish ──────────────────────────────────── */
 @media (max-width: 900px) {
-    .nav-toggle {
-        background: var(--accent-dim);
-        border-color: var(--accent-border);
-    }
+    .nav-toggle { background: var(--accent-dim); border-color: var(--accent-border); }
     .nav-toggle-bar { background: var(--accent-light); }
-    .navbar.is-open {
-        border-color: var(--accent-border);
-    }
-    .navbar.is-open .nav-actions {
-        gap: 6px;
-        padding: 12px 4px 4px;
-    }
-    /* Each drawer item reads as a full-width row with its category dot. */
-    .nav-actions .btn {
-        background: var(--bg-deep);
+    .navbar.is-open { border-color: var(--accent-border); }
+    /* Each drawer item reads as a full-width, tappable row. */
+    .navbar.is-open .nav-tab,
+    .navbar.is-open .nav-link,
+    .navbar.is-open .nav-menu-item {
         border: 1px solid var(--border-subtle);
-        color: var(--text-secondary);
-        box-shadow: none;
-        padding: 13px 16px;
-        font-size: 0.95rem;
         border-radius: var(--radius-md);
     }
-    .nav-actions .btn:hover:not(:disabled) { transform: none; }
-    .nav-actions .btn[data-cat]::before { width: 9px; height: 9px; margin-right: 10px; }
-    /* Keep the active category's colored fill in the drawer too. */
-    .nav-actions .btn.active { color: #fff; border-color: transparent; }
-    .nav-brand { font-size: 1.2rem; }
+    .navbar.is-open .nav-tab:not(.active),
+    .navbar.is-open .nav-link:not(.active),
+    .navbar.is-open .nav-menu-item:not(.active) { background: var(--bg-deep); }
+    .navbar.is-open .nav-tab::before { width: 9px; height: 9px; }
+    .navbar.is-open .nav-menu-danger { color: var(--red-light); border-color: rgba(239, 68, 68, 0.35); }
 }
 @media (max-width: 480px) {
     .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -3942,13 +4027,7 @@ a.cat-stat:hover { border-color: var(--cs-color); }
     .dash-card-poster { width: 120px; }
 }
 
-/* ══ Global search (nav button + overlay) ════════════════════════════════ */
-.nav-search-btn, .nav-theme-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--bg-deep); border: 1px solid var(--border-subtle); color: var(--text-secondary); cursor: pointer; flex-shrink: 0; }
-.nav-search-btn { margin-left: auto; }
-.nav-theme-btn { margin-left: 8px; }
-.nav-search-btn:hover, .nav-theme-btn:hover { color: var(--text-primary); border-color: var(--accent-border); }
-@media (min-width: 901px) { .nav-search-btn { margin-left: 14px; } }
-
+/* ══ Global search overlay ═══════════════════════════════════════════════ */
 .gsearch { position: fixed; inset: 0; z-index: 200; background: rgba(4,8,14,0.6); display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
 .gsearch[hidden] { display: none !important; }
 body.gsearch-open { overflow: hidden; }
