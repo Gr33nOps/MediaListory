@@ -20,7 +20,7 @@
     --text-primary:      #e2e8f0;
     --text-secondary:    #cbd5e1;
     --text-muted:        #94a3b8;
-    --text-dim:          #64748b;
+    --text-dim:          #7d8ba3;
 
     --blue:              #3b82f6;
     --blue-light:        #60a5fa;
@@ -88,7 +88,7 @@
     --radius-circle:     50%;
 
     --shadow-card:       0 4px 20px rgba(0, 0, 0, 0.3);
-    --shadow-card-hover: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 30px var(--blue-dim);
+    --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.45);
     --shadow-modal:      0 20px 60px rgba(0, 0, 0, 0.5);
     --shadow-btn:        0 2px 10px;
     --shadow-btn-hover:  0 4px 20px;
@@ -118,7 +118,7 @@
     --text-primary:      #0f172a;
     --text-secondary:    #334155;
     --text-muted:        #5b6b7a;
-    --text-dim:          #94a3b8;
+    --text-dim:          #667085;
 
     /* Category identities — deepened for contrast on white so fills carry
        their text and the -light shade reads as colored text on a white ground.
@@ -142,7 +142,7 @@
     --accent-border:     rgba(71, 85, 105, 0.28);
 
     --shadow-card:       0 4px 16px rgba(15, 23, 42, 0.08);
-    --shadow-card-hover: 0 10px 30px rgba(15, 23, 42, 0.12), 0 0 24px var(--blue-dim);
+    --shadow-card-hover: 0 10px 26px rgba(15, 23, 42, 0.14);
     --shadow-modal:      0 20px 60px rgba(15, 23, 42, 0.22);
     --shadow-inset:      inset 0 2px 8px rgba(15, 23, 42, 0.06);
 }
@@ -193,11 +193,11 @@ img, video, canvas, svg {
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: var(--bg-card); }
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    background: var(--blue);
     border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue) 100%);
+    background: var(--blue-light);
 }
 
 .hidden { display: none !important; }
@@ -258,7 +258,7 @@ img, video, canvas, svg {
     display: flex;
     gap: 4px;
     margin-bottom: 24px;
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 6px;
@@ -294,7 +294,7 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 .tab-panel.active { display: block; }
 
 .navbar {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 11px 18px;
@@ -523,34 +523,34 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, var(--red) 0%, var(--red-dark) 100%);
+    background: var(--red);
     color: #ffffff;
     box-shadow: var(--shadow-btn) var(--red-dim);
 }
 .btn-danger:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--red-light) 0%, var(--red) 100%);
+    background: var(--red-light);
     box-shadow: var(--shadow-btn-hover) rgba(239, 68, 68, 0.4);
     transform: translateY(-2px);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+    background: var(--green);
     color: #ffffff;
     box-shadow: var(--shadow-btn) var(--green-dim);
 }
 .btn-success:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--green-light) 0%, var(--green) 100%);
+    background: var(--green-light);
     box-shadow: var(--shadow-btn-hover) rgba(16, 185, 129, 0.4);
     transform: translateY(-2px);
 }
 
 .btn-warning {
-    background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dark) 100%);
+    background: var(--amber);
     color: #ffffff;
     box-shadow: var(--shadow-btn) var(--amber-dim);
 }
 .btn-warning:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--amber-light) 0%, var(--amber) 100%);
+    background: var(--amber-light);
     box-shadow: var(--shadow-btn-hover) rgba(245, 158, 11, 0.4);
     transform: translateY(-2px);
 }
@@ -561,13 +561,13 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1
 
 .btn.danger,
 .btn.small.danger {
-    background: linear-gradient(135deg, var(--red) 0%, var(--red-dark) 100%);
+    background: var(--red);
     color: #ffffff;
     box-shadow: var(--shadow-btn) var(--red-dim);
 }
 .btn.danger:hover,
 .btn.small.danger:hover {
-    background: linear-gradient(135deg, var(--red-light) 0%, var(--red) 100%);
+    background: var(--red-light);
     box-shadow: var(--shadow-btn-hover) rgba(239, 68, 68, 0.4);
     transform: translateY(-2px);
 }
@@ -594,10 +594,10 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1
 }
 
 .btn-nav.btn-nav-active {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    background: var(--blue);
     border-color: var(--blue);
     color: #ffffff;
-    box-shadow: 0 2px 10px var(--blue-glow);
+    box-shadow: none;
 }
 
 .form-group { margin-bottom: 20px; }
@@ -675,7 +675,7 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1
 }
 
 .search-container {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 25px;
@@ -779,7 +779,7 @@ select.update-status-select option,
 }
 
 .filter-section {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 20px;
@@ -819,7 +819,7 @@ select.update-status-select option,
 }
 
 .game-card {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -880,9 +880,9 @@ select.update-status-select option,
     display: inline-block;
     padding: 2px 8px;
     border-radius: 999px;
-    border: 1px solid var(--border);
-    background: rgba(15, 23, 42, 0.65);
-    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-deep);
+    color: var(--text-muted);
     font-size: 11px;
     line-height: 1.4;
 }
@@ -934,7 +934,7 @@ select.update-status-select option,
 }
 
 .game-rating {
-    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    background: #065f46;
     color: #a7f3d0;
     padding: 5px 12px;
     border-radius: var(--radius-sm);
@@ -959,7 +959,7 @@ select.update-status-select option,
 }
 
 .my-games-section {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-card);
@@ -972,7 +972,7 @@ select.update-status-select option,
     justify-content: space-between;
     align-items: center;
     padding: 25px 30px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
@@ -1068,7 +1068,7 @@ select.update-status-select option,
     flex-wrap: wrap;
     border-bottom: 2px solid var(--border);
     padding: 0 30px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
 }
 
 .status-tab {
@@ -1382,7 +1382,7 @@ select.update-status-select option,
 
 .update-modal-content,
 .remove-modal-content {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 30px;
@@ -1413,15 +1413,15 @@ select.update-status-select option,
 }
 
 .modal-content {
-    background: #0d1525;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 20px;
     width: 95%;
     max-width: 860px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(59,130,246,0.1);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.55);
     scrollbar-width: thin;
     scrollbar-color: var(--blue) transparent;
 }
@@ -1452,7 +1452,7 @@ select.update-status-select option,
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgba(13,21,37,0.2) 0%, rgba(13,21,37,0.4) 60%, #0d1525 100%);
+    background: linear-gradient(to bottom, transparent 0%, transparent 55%, var(--bg-card) 100%);
     pointer-events: none;
 }
 
@@ -1790,7 +1790,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .stats-dashboard {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 30px;
@@ -1818,7 +1818,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .bar-chart-section { display: flex; flex-direction: column; }
 
 .pie-chart-section {
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 20px;
@@ -1924,7 +1924,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .legend-value { color: var(--text-muted); font-size: 13px; font-weight: 600; }
 
 .profile-section {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-card);
@@ -1934,7 +1934,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .profile-header {
     padding: 25px 30px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border-bottom: 1px solid var(--border);
 }
 
@@ -1967,7 +1967,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     flex-direction: column;
     align-items: center;
     padding: 15px 25px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
 }
@@ -1994,7 +1994,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .detail-item {
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 20px;
@@ -2021,7 +2021,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .level-badge {
-    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%) !important;
+    background: var(--purple) !important;
     color: #ffffff !important;
     padding: 8px 20px;
     border-radius: 10px;
@@ -2033,7 +2033,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .level-progress-bar {
     width: 100%;
     height: 28px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
@@ -2043,9 +2043,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .level-progress-fill {
     height: 100%;
-    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
+    background: var(--accent);
     border-radius: 10px;
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
     transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -2058,7 +2057,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .friends-section {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     margin-bottom: 25px;
@@ -2083,8 +2082,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     height: 80px;
     border-radius: var(--radius-circle);
     object-fit: cover;
-    border: 2px solid var(--blue);
-    box-shadow: 0 4px 12px var(--blue-glow);
+    border: 1px solid var(--border);
     flex-shrink: 0;
 }
 
@@ -2105,7 +2103,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     display: flex;
     gap: 10px;
     margin-bottom: 25px;
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 10px;
@@ -2128,17 +2126,17 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .admin-tab-btn:hover { background: rgba(59, 130, 246, 0.1); color: var(--blue-light); }
 
 .admin-tab-btn.active {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    background: var(--blue);
     color: #ffffff;
     border-color: var(--blue);
-    box-shadow: 0 2px 10px var(--blue-glow);
+    box-shadow: none;
 }
 
 .admin-section { display: none; }
 .admin-section.active { display: block; }
 
 .section-card {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-card);
@@ -2148,7 +2146,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .section-header {
     padding: 25px 30px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
@@ -2166,12 +2164,12 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .admin-table {
     width: 100%;
     border-collapse: collapse;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border-radius: 10px;
     overflow: hidden;
 }
 
-.admin-table thead { background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%); }
+.admin-table thead { background: var(--bg-card); }
 .admin-table th {
     padding: 15px;
     text-align: left;
@@ -2234,7 +2232,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .overview-card {
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 25px;
@@ -2312,13 +2310,13 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .auth-card {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 40px;
     width: 100%;
     max-width: 450px;
-    box-shadow: var(--shadow-modal), 0 0 40px rgba(59, 130, 246, 0.1);
+    box-shadow: var(--shadow-modal);
 }
 
 .auth-header { text-align: center; margin-bottom: 30px; }
@@ -2458,7 +2456,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     display: flex;
     align-items: center;
     gap: 20px;
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-left: 4px solid var(--blue);
     border-radius: var(--radius-lg);
@@ -2520,7 +2518,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-card {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -2548,7 +2546,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
 }
 
 .cl-card-cover.cv-empty::after {
@@ -2663,7 +2661,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     padding: 40px;
     text-align: center;
     color: var(--text-muted);
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 2px dashed var(--border);
     border-radius: var(--radius-xl);
     font-size: 0.95rem;
@@ -2693,7 +2691,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-detail-header {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     margin-bottom: 20px;
@@ -2703,7 +2701,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .cl-detail-info {
     padding: 25px 30px 16px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border-bottom: 1px solid var(--border);
 }
 
@@ -2736,7 +2734,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-games-list {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -2820,7 +2818,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .cl-modal-overlay.open { display: flex; }
 
 .cl-modal-box {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     padding: 32px;
@@ -2963,7 +2961,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-toggle input:checked + .cl-toggle-slider {
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    background: var(--blue);
 }
 
 .cl-toggle input:checked + .cl-toggle-slider::before { transform: translateX(20px); }
@@ -2987,7 +2985,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     bottom: 28px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-end) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-pill);
     color: var(--text-primary);
@@ -3082,7 +3080,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .cl-acc-body { border-top: 1px solid var(--border-subtle); }
 
 .cl-acc-toolbar {
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
 }
 
 .cl-acc-toolbar .list-header {
@@ -3101,7 +3099,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     justify-content: space-between;
     align-items: center;
     padding: 25px 30px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     border-bottom: 1px solid var(--border);
     gap: 12px;
     flex-wrap: wrap;
@@ -3163,7 +3161,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     flex-wrap: wrap;
     border-bottom: 2px solid var(--border);
     padding: 0 30px;
-    background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-card) 100%);
+    background: var(--bg-deep);
     margin: 0;
 }
 
@@ -3226,8 +3224,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .cl-game-modal-overlay.open { display: flex; }
 
 .cl-game-modal-box {
-    background: #0d1525;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 20px;
     width: 95%;
     max-width: 860px;
@@ -3355,8 +3353,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     align-items: center;
     gap: 10px;
     padding: 12px 16px;
-    background: #0f172a;
-    border: 1px solid #1e293b;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-subtle);
     border-radius: 10px;
     margin-bottom: 24px;
 }
@@ -3741,7 +3739,7 @@ a:focus-visible {
 .footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .footer-col ul li a { color: #64748b; text-decoration: none; transition: color 0.18s; }
 .footer-col ul li a:hover { color: #e2e8f0; }
-.footer-igdb { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; margin-bottom: 28px; }
+.footer-igdb { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--bg-deep); border: 1px solid var(--border-subtle); border-radius: 10px; margin-bottom: 28px; }
 .footer-igdb img { height: 26px; width: auto; flex-shrink: 0; }
 .footer-igdb-text { font-size: 0.78rem; line-height: 1.6; color: #64748b; }
 .footer-igdb-text a { color: #3b82f6; text-decoration: none; }
@@ -3855,7 +3853,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 
 /* ── Search + filter bar polish ───────────────────────────────────────── */
 .search-container {
-    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-deep) 100%);
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     padding: 16px;
