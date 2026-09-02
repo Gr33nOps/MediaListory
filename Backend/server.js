@@ -90,9 +90,9 @@ app.use(helmet({
     directives: {
       "default-src": ["'self'"],
       "script-src": ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.googletagmanager.com', 'https://*.sentry-cdn.com'],
-      "style-src": ["'self'", "'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       "img-src": ["'self'", 'data:', 'https:'],
-      "font-src": ["'self'", 'data:'],
+      "font-src": ["'self'", 'data:', 'https://fonts.gstatic.com'],
       "connect-src": ["'self'", FRONTEND_URL, NEON_AUTH_ORIGIN, 'https://*.neon.tech', 'https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.sentry.io'].filter(Boolean),
       "object-src": ["'none'"],
       "base-uri": ["'self'"],

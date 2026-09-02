@@ -1,4 +1,11 @@
+/* Type: Bricolage Grotesque (display — brand, headings) + Hanken Grotesk (UI/body).
+   A deliberate pairing chosen over a system stack: the grotesque display gives the
+   personal-collection brand some editorial character; Hanken keeps dense lists legible. */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');
+
 :root {
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Hanken Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
     --bg-base:           #0a0f1c;
     --bg-card:           #1e293b;
     --bg-card-end:       #334155;
@@ -142,6 +149,18 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Display face for the brand and headings; body/UI stays Hanken (set on body). */
+h1, h2, h3,
+.nav-brand, .brand-name,
+.page-header-title, .dash-hero-title, .dash-row-title,
+.stats-card-h, .stat-tile-value, .game-detail-title,
+.donut-top, .cl-list-title {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+}
+/* Numeric UI reads straighter with lining tabular figures. */
+.stat-tile-value, .donut-top, .card-rating, .detail-rating, .st-bar-count, .mt-count { font-variant-numeric: tabular-nums; }
+
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -151,7 +170,7 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-body);
     /* Category-themed backdrop: an accent glow at the top that recolors per page
        (and when switching category tabs), over a deep base gradient. */
     background:
