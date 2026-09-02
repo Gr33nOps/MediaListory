@@ -145,6 +145,61 @@ module.exports = (db, verifyToken, checkBanned) => {
     }
   });
 
+  // Recent notable activity from the people you follow: things they finished
+  // or rated. No reviews — just "who did what". Ordered newest first.
+  router.get('/following/activity', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit, 10) || 40, 60);
+      const rows = await db('user_follows as f')
+        .join('user_game_lists as ugl', 'ugl.user_id', 'f.following_id')
+        .join('games as g', 'g.id', 'ugl.game_id')
+        .join('users as u', 'u.id', 'f.following_id')
+        .where('f.follower_id', req.userId)
+        .where('u.is_banned', false)
+        .andWhere(function () {
+          this.where('ugl.status', 'completed').orWhereNotNull('ugl.score');
+        })
+        .orderBy('ugl.updated_at', 'desc')
+        .limit(limit)
+        .select(
+          'u.id as user_id',
+          'u.username',
+          'u.display_name',
+          'u.avatar_url',
+          'ugl.status',
+          'ugl.score',
+          'ugl.updated_at',
+          'g.name',
+          'g.background_image',
+          'g.media_type',
+          'g.game_id as media_ref'
+        );
+
+      res.json({
+        activity: rows.map(r => ({
+          user: {
+            id: r.user_id,
+            username: r.username || 'unknown',
+            display_name: r.display_name || r.username || '',
+            avatar_url: r.avatar_url || null
+          },
+          status: r.status,
+          score: r.score,
+          updated_at: r.updated_at,
+          media: {
+            name: r.name,
+            background_image: r.background_image || null,
+            media_type: r.media_type || 'game',
+            media_ref: r.media_ref
+          }
+        }))
+      });
+    } catch (error) {
+      console.error('Get following activity error:', error);
+      return clientError(res, 400, 'Request failed', error);
+    }
+  });
+
   router.get('/follow/status/:userId', verifyToken, checkBanned, async (req, res) => {
     try {
       const userId = req.params.userId;

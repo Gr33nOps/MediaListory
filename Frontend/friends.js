@@ -60,6 +60,71 @@ function initPage() {
     });
 
     loadFollowing();
+    loadActivity();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ACTIVITY FEED — what people you follow recently finished or rated
+// ══════════════════════════════════════════════════════════════════════════
+const PAGE_FOR_MEDIA = { movie: 'movies.html', series: 'series.html', anime: 'anime.html', game: 'home.html' };
+
+function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const then = new Date(dateStr).getTime();
+    if (!Number.isFinite(then)) return '';
+    const s = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60); if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+    const d = Math.floor(h / 24); if (d < 7) return d + 'd ago';
+    const w = Math.floor(d / 7); if (w < 5) return w + 'w ago';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function loadActivity() {
+    try {
+        const r = await fetch(`${API_BASE}/following/activity`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        displayActivity(d.activity || []);
+    } catch (e) {
+        console.error('Load activity error:', e);
+    }
+}
+
+function displayActivity(items) {
+    const section = document.getElementById('activitySection');
+    const feed = document.getElementById('activityFeed');
+    if (!section || !feed) return;
+
+    if (!items.length) { section.hidden = true; return; }
+    section.hidden = false;
+
+    feed.innerHTML = items.map(a => {
+        const name = a.user.display_name || a.user.username;
+        const avatar = a.user.avatar_url ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=64&background=3b82f6&color=fff&bold=true`;
+        const verb = (a.score != null)
+            ? `rated <strong>${esc(a.media.name)}</strong> ${a.score}/10`
+            : `finished <strong>${esc(a.media.name)}</strong>`;
+        const page = PAGE_FOR_MEDIA[a.media.media_type] || 'home.html';
+        const href = `${page}?open=${encodeURIComponent(a.media.media_ref || '')}`;
+        const thumb = a.media.background_image
+            ? `<img class="activity-thumb" src="${esc(a.media.background_image)}" alt="" loading="lazy">`
+            : `<span class="activity-thumb activity-thumb-empty"></span>`;
+        return `
+            <a class="activity-item" href="${href}">
+                <img class="activity-avatar" src="${avatar}" alt=""
+                     onerror="this.src='https://ui-avatars.com/api/?name=User&size=64&background=3b82f6&color=fff&bold=true'">
+                <span class="activity-text">
+                    <span class="activity-line"><span class="activity-user">${esc(name)}</span> ${verb}</span>
+                    <span class="activity-time">${timeAgo(a.updated_at)}</span>
+                </span>
+                ${thumb}
+            </a>`;
+    }).join('');
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -270,6 +335,7 @@ async function handleUnfollow(userId) {
 // Refresh both the following list and search results after a follow/unfollow
 async function refreshAfterAction() {
     await loadFollowing();
+    loadActivity();
     const searchInput = document.getElementById('userSearchInput');
     if (searchInput.value.trim().length >= 2) {
         await searchUsers();
