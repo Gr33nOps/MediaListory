@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Your Stats - MediaListory</title>
+    <meta name="description" content="Your personal stats on MediaListory: hours, top genres, score patterns, and a year-in-review across movies, shows, anime, and games.">
+    <meta name="robots" content="noindex,follow">
+    <script>try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+    <link rel="stylesheet" href="styles.css">
+    <!-- seo:start -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/favicon.svg" color="#3b82f6">
+    <meta name="theme-color" content="#0b1220">
+    <!-- seo:end -->
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div id="main-content" tabindex="-1" class="container">
+        <nav class="navbar" id="appNav" data-active="" data-brand="MediaListory" data-page-title="Your Stats" data-page-sub="Everything you have tracked, counted up."></nav>
+        <h1 class="sr-only">Your stats</h1>
+
+        <div id="statsYearRow" class="stats-yearrow" hidden></div>
+
+        <div id="statsBody">
+            <div class="stats-loading">Crunching your numbers…</div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="stats.js"></script>
+</body>
+</html>
