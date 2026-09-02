@@ -18,14 +18,14 @@
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div id="main-content" tabindex="-1" class="container">
         <!-- Navigation Bar -->
-        <nav class="navbar" id="appNav" data-active="friends" data-brand="MediaListory" data-page-title="Following" data-page-sub="People you follow and their latest activity."></nav>
-        <h1 class="sr-only">People you follow</h1>
+        <nav class="navbar" id="appNav" data-active="friends" data-brand="MediaListory" data-page-title="People" data-page-sub="Find people to follow, and see what they are watching and playing."></nav>
+        <h1 class="sr-only">People</h1>
 
         <!-- Search Users Section -->
         <div class="search-container">
             <div class="search-bar">
-                <label class="sr-only" for="userSearchInput">Search users</label>
-                <input type="text" id="userSearchInput" class="search-input" placeholder="Search for users..." aria-label="Search users">
+                <label class="sr-only" for="userSearchInput">Search people by name</label>
+                <input type="text" id="userSearchInput" class="search-input" placeholder="Search people by name..." aria-label="Search people">
                 <button type="button" id="searchUsersBtn" class="btn btn-primary">Search</button>
             </div>
         </div>
@@ -33,9 +33,18 @@
         <!-- Search Results -->
         <div id="searchResults" class="friends-section hidden">
             <div class="list-header">
-                <h2>Search Results</h2>
+                <h2>Search results</h2>
             </div>
             <div id="userSearchResults" class="friends-list"></div>
+        </div>
+
+        <!-- Incoming follow requests (private accounts) -->
+        <div id="requestsSection" class="friends-section" hidden>
+            <div class="list-header">
+                <h2>Follow requests</h2>
+                <span id="requestsCount" class="friends-count"></span>
+            </div>
+            <div id="requestsList" class="friends-list"></div>
         </div>
 
         <!-- Recent activity from people you follow -->
@@ -47,12 +56,20 @@
         </div>
 
         <!-- Following Section -->
-        <div class="friends-section">
+        <div id="followingSection" class="friends-section" hidden>
             <div class="list-header">
                 <h2>Following</h2>
                 <span id="followingCount" class="friends-count">0 following</span>
             </div>
             <div id="followingList" class="friends-list"></div>
+        </div>
+
+        <!-- Discover people on the platform -->
+        <div class="friends-section">
+            <div class="list-header">
+                <h2>Discover people</h2>
+            </div>
+            <div id="discoverList" class="friends-list"></div>
         </div>
     </div>
 

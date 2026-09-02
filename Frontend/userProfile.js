@@ -3,7 +3,8 @@ const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API
 let authToken     = localStorage.getItem('authToken');
 let currentUser   = (typeof getStoredUser === 'function') ? getStoredUser() : null;
 let viewingUserId = null;
-let followStatus  = { isFollowing: false, followsYou: false };
+let followStatus  = { isFollowing: false, followsYou: false, requested: false, isPrivate: false };
+let viewedUser    = null;
 
 let userGamesCache      = [];
 let currentSort         = 'recently_added';
@@ -155,7 +156,6 @@ function initPage() {
     document.getElementById('shareProfileBtn').addEventListener('click', copyShareLink);
 
     loadUserProfile();
-    loadUserGames();
 }
 
 async function loadUserProfile() {
@@ -178,37 +178,51 @@ async function loadUserProfile() {
 }
 
 function displayUserProfile(user) {
+    viewedUser = user;
+    var name = user.display_name || user.username;
     var avatarUrl = user.avatar_url ||
-        'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.display_name || user.username) + '&size=200&background=3b82f6&color=fff&bold=true';
+        'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&size=200&background=475569&color=fff&bold=true';
 
-    document.getElementById('profileTitle').textContent     = (user.display_name || user.username) + "'s Profile";
-    document.getElementById('gameListTitle').textContent    = (user.display_name || user.username) + "'s Library";
-    if (user.mediaBreakdown) {
-        var bd = user.mediaBreakdown;
-        var titleEl = document.getElementById('gameListTitle');
-        var existing = document.getElementById('mediaBreakdownLine');
-        if (existing) existing.remove();
-        var line = document.createElement('div');
-        line.id = 'mediaBreakdownLine';
-        line.className = 'cat-breakdown';
-        var order = [['movie', 'Movies'], ['series', 'Shows'], ['anime', 'Anime'], ['game', 'Games']];
-        line.innerHTML = order.map(function(o) {
-            return '<span class="cat-stat" data-cat="' + o[0] + '">' +
-                '<span class="cs-num">' + (bd[o[0]] || 0) + '</span>' +
-                '<span class="cs-label">' + o[1] + '</span></span>';
-        }).join('');
-        if (titleEl && titleEl.parentNode) titleEl.parentNode.insertBefore(line, titleEl.nextSibling);
-    }
-    document.getElementById('customListsTitle').textContent = (user.display_name || user.username) + "'s Lists";
+    document.getElementById('profileTitle').textContent     = name + "'s profile";
+    document.getElementById('gameListTitle').textContent    = name + "'s library";
+    document.getElementById('customListsTitle').textContent = name + "'s lists";
     document.getElementById('userAvatar').src               = avatarUrl;
-    document.getElementById('displayName').textContent      = user.display_name || '-';
+    document.getElementById('displayName').textContent      = name;
     document.getElementById('displayUsername').textContent  = user.username;
     document.getElementById('displayCreatedAt').textContent = formatDate(user.created_at);
-    document.getElementById('totalGames').textContent       = user.totalGames     || 0;
     document.getElementById('userLevel').textContent        = calculateLevel(user.totalGames || 0);
     document.getElementById('followersCount').textContent   = user.followersCount || 0;
     document.getElementById('followingCount').textContent   = user.followingCount || 0;
+
+    // Category breakdown near the stats (matches your own profile).
+    var bdEl = document.getElementById('upMediaBreakdown');
+    if (bdEl) {
+        if (user.canView) {
+            var bd = user.mediaBreakdown || { movie: 0, series: 0, anime: 0, game: 0 };
+            var order = [['movie', 'Movies'], ['series', 'Shows'], ['anime', 'Anime'], ['game', 'Games']];
+            bdEl.hidden = false;
+            bdEl.innerHTML = order.map(function (o) {
+                return '<span class="cat-stat" data-cat="' + o[0] + '"><span class="cs-num">' + (bd[o[0]] || 0) + '</span><span class="cs-label">' + o[1] + '</span></span>';
+            }).join('');
+        } else { bdEl.hidden = true; bdEl.innerHTML = ''; }
+    }
+
+    // Privacy gate: hide the library/lists for a private account you don't follow.
+    var notice = document.getElementById('privateNotice');
+    var tabs   = document.getElementById('upTabs');
+    var panels = document.querySelectorAll('.tab-panel');
+    if (!user.canView) {
+        if (notice) { notice.hidden = false; var pt = document.getElementById('privateNoticeText'); if (pt) pt.textContent = 'Follow ' + name + ' to see their library and lists. They’ll get a request to approve.'; }
+        if (tabs) tabs.hidden = true;
+        panels.forEach(function (p) { p.style.display = 'none'; });
+    } else {
+        if (notice) notice.hidden = true;
+        if (tabs) tabs.hidden = false;
+        panels.forEach(function (p) { p.style.display = ''; });
+        if (!userGamesLoaded) { userGamesLoaded = true; loadUserGames(); }
+    }
 }
+var userGamesLoaded = false;
 
 async function loadUserGames() {
     try {
@@ -735,14 +749,16 @@ async function checkFollowStatus() {
 
 function updateFollowButton() {
     var btn = document.getElementById('followActionBtn');
+    if (!btn) return;
+    if (viewedUser && viewedUser.isSelf) { btn.style.display = 'none'; return; }
+    btn.style.display = '';
     if (followStatus.isFollowing) {
-        btn.textContent = 'Following';
-        btn.className   = 'btn btn-secondary btn-sm';
-        btn.onclick     = unfollowUser;
+        btn.textContent = 'Following'; btn.className = 'btn btn-secondary btn-sm'; btn.onclick = unfollowUser;
+    } else if (followStatus.requested) {
+        btn.textContent = 'Requested'; btn.className = 'btn btn-secondary btn-sm'; btn.onclick = unfollowUser;
     } else {
-        btn.textContent = 'Follow';
-        btn.className   = 'btn btn-success btn-sm';
-        btn.onclick     = followUser;
+        btn.textContent = followStatus.isPrivate ? 'Request to follow' : 'Follow';
+        btn.className = 'btn btn-primary btn-sm'; btn.onclick = followUser;
     }
 }
 
@@ -752,8 +768,12 @@ async function followUser() {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
-        if (r.ok) { await checkFollowStatus(); await loadUserProfile(); }
-        else { var d = await r.json(); notify('Failed to follow: ' + (d.error || 'Unknown error')); }
+        var d = await r.json().catch(function () { return {}; });
+        if (r.ok) {
+            if (d.status === 'requested' && typeof toast === 'function') toast('Follow request sent.', 'success');
+            userGamesLoaded = false;
+            await loadUserProfile();
+        } else { notify('Failed to follow: ' + (d.error || 'Unknown error')); }
     } catch (e) { notify('Error following user. Please try again.'); }
 }
 
@@ -772,7 +792,7 @@ async function unfollowUser() {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${authToken}` }
         });
-        if (r.ok) { await checkFollowStatus(); await loadUserProfile(); }
+        if (r.ok) { userGamesLoaded = false; await loadUserProfile(); }
         else { var d = await r.json(); notify('Failed to unfollow: ' + (d.error || 'Unknown error')); }
     } catch (e) { notify('Error unfollowing user. Please try again.'); }
 }

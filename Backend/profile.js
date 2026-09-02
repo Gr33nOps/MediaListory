@@ -12,6 +12,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       username:     u.username,
       display_name: u.display_name || u.username || '',
       avatar_url:   u.avatar_url || null,
+      is_private:   !!u.is_private,
       created_at:   u.created_at,
       updated_at:   u.updated_at
     };
@@ -30,7 +31,7 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   router.put('/profile', verifyToken, checkBanned, async (req, res) => {
     try {
-      const { display_name, email, avatar_url } = req.body;
+      const { display_name, email, avatar_url, is_private } = req.body;
       if (!display_name || !email) {
         return res.status(400).json({ error: 'Display name and email are required' });
       }
@@ -38,11 +39,18 @@ module.exports = (db, verifyToken, checkBanned) => {
       const current = await db('users').where({ id: req.userId }).first();
       if (!current) return res.status(404).json({ error: 'User not found' });
 
+      // Avatar may be a normal URL or an uploaded data: URI (kept modest client-side).
+      let avatar = avatar_url ? String(avatar_url).trim() : null;
+      if (avatar && avatar.length > 400000) avatar = null; // guard against oversized payloads
+
       const updates = {
         display_name: String(display_name).trim().slice(0, 100),
-        avatar_url:   avatar_url ? String(avatar_url).trim() : null,
+        avatar_url:   avatar,
         updated_at:   db.fn.now()
       };
+      if (typeof is_private !== 'undefined') {
+        updates.is_private = (is_private === true || is_private === 'true' || is_private === 1);
+      }
       // Email is managed by Neon Auth; we mirror it locally for display but do not
       // change the sign-in email here (that requires a verified email-change flow).
       if (String(email).trim() && String(email).trim() === current.email) {

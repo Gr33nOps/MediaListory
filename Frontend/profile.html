@@ -78,9 +78,14 @@
                             <img id="editAvatarPreview" src="" alt="Profile Avatar" onerror="this.src='https://ui-avatars.com/api/?name=User&size=200&background=3b82f6&color=fff&bold=true'">
                         </div>
                         <div class="avatar-input-group">
-                            <label for="editAvatarUrl">Avatar URL</label>
-                            <input type="url" id="editAvatarUrl" class="form-input" placeholder="Enter image URL">
-                            <small>Enter a direct link to your profile image</small>
+                            <label>Profile picture</label>
+                            <div id="avatarDrop" class="avatar-drop" tabindex="0" role="button" aria-label="Upload a profile picture">
+                                <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                                <span class="avatar-drop-main">Drop an image here or <span class="avatar-drop-link">choose a file</span></span>
+                                <small>Any photo from your device. It's cropped to a square and kept small.</small>
+                            </div>
+                            <button type="button" id="avatarClearBtn" class="link-btn" style="display:none;">Remove photo</button>
+                            <input type="hidden" id="editAvatarData">
                         </div>
                     </div>
 
@@ -92,6 +97,19 @@
                     <div class="form-group">
                         <label for="editEmail">Email</label>
                         <input type="email" id="editEmail" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="pv-toggle-row">
+                            <div>
+                                <div class="pv-toggle-title">Private account</div>
+                                <div class="pv-toggle-sub">Only approved followers can see your library. New followers have to send a request.</div>
+                            </div>
+                            <label class="pv-switch">
+                                <input type="checkbox" id="editPrivate">
+                                <span class="pv-slider"></span>
+                            </label>
+                        </div>
                     </div>
 
                     <div id="editMessage"></div>

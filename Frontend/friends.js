@@ -1,13 +1,10 @@
-// FIXED: relative path - works on any host, not just localhost
 const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '/api';
 
 let authToken   = localStorage.getItem('authToken');
 let currentUser = (typeof getStoredUser === 'function') ? getStoredUser() : null;
 
 (async function bootFriends() {
-    if (typeof ensureSession === 'function') {
-        try { await ensureSession(); } catch (_) {}
-    }
+    if (typeof ensureSession === 'function') { try { await ensureSession(); } catch (_) {} }
     authToken = localStorage.getItem('authToken');
     currentUser = (typeof getStoredUser === 'function') ? getStoredUser() : null;
     if (!authToken) {
@@ -20,52 +17,27 @@ let currentUser = (typeof getStoredUser === 'function') ? getStoredUser() : null
 async function verifyToken() {
     try {
         const r = await fetch(`${API_BASE}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${authToken}` },
-            credentials: 'same-origin',
-            cache: 'no-store'
+            headers: { 'Authorization': `Bearer ${authToken}` }, credentials: 'same-origin', cache: 'no-store'
         });
         if (r.ok) {
             const d = await r.json();
             currentUser = d.user;
             localStorage.setItem('currentUser', JSON.stringify(d.user));
             initPage();
-        } else if (r.status === 401 || r.status === 403) {
-            logout();
-        } else if (currentUser) {
-            initPage();
-        }
-    } catch (e) {
-        console.error('Verify token error:', e);
-        if (currentUser) initPage();
-    }
+        } else if (r.status === 401 || r.status === 403) { logout(); }
+        else if (currentUser) { initPage(); }
+    } catch (e) { console.error('Verify token error:', e); if (currentUser) initPage(); }
 }
 
 function initPage() {
     document.getElementById('searchUsersBtn').addEventListener('click', searchUsers);
-
-    document.getElementById('userSearchInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') searchUsers();
-    });
-
-    document.getElementById('followingList').addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-action="focus-search"]');
-        if (!btn) return;
-        var input = document.getElementById('userSearchInput');
-        if (input) {
-            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            input.focus({ preventScroll: true });
-            input.classList.add('input-flash');
-            setTimeout(function () { input.classList.remove('input-flash'); }, 1000);
-        }
-    });
-
+    document.getElementById('userSearchInput').addEventListener('keypress', e => { if (e.key === 'Enter') searchUsers(); });
     loadFollowing();
+    loadRequests();
+    loadDiscover();
     loadActivity();
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// ACTIVITY FEED — what people you follow recently finished or rated
-// ══════════════════════════════════════════════════════════════════════════
 const PAGE_FOR_MEDIA = { movie: 'movies.html', series: 'series.html', anime: 'anime.html', game: 'home.html' };
 
 function timeAgo(dateStr) {
@@ -81,31 +53,29 @@ function timeAgo(dateStr) {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function avatarFor(user, size) {
+    return user.avatar_url ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(user.display_name || user.username || 'User')}&size=${size || 80}&background=475569&color=fff&bold=true`;
+}
+
+// ── Activity feed ─────────────────────────────────────────────────────────
 async function loadActivity() {
     try {
-        const r = await fetch(`${API_BASE}/following/activity`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+        const r = await fetch(`${API_BASE}/following/activity`, { headers: { 'Authorization': `Bearer ${authToken}` } });
         if (!r.ok) return;
         const d = await r.json();
         displayActivity(d.activity || []);
-    } catch (e) {
-        console.error('Load activity error:', e);
-    }
+    } catch (e) { console.error('Load activity error:', e); }
 }
 
 function displayActivity(items) {
     const section = document.getElementById('activitySection');
     const feed = document.getElementById('activityFeed');
     if (!section || !feed) return;
-
     if (!items.length) { section.hidden = true; return; }
     section.hidden = false;
-
     feed.innerHTML = items.map(a => {
         const name = a.user.display_name || a.user.username;
-        const avatar = a.user.avatar_url ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=64&background=3b82f6&color=fff&bold=true`;
         const verb = (a.score != null)
             ? `rated <strong>${esc(a.media.name)}</strong> ${a.score}/10`
             : `finished <strong>${esc(a.media.name)}</strong>`;
@@ -114,252 +84,192 @@ function displayActivity(items) {
         const thumb = a.media.background_image
             ? `<img class="activity-thumb" src="${esc(a.media.background_image)}" alt="" loading="lazy">`
             : `<span class="activity-thumb activity-thumb-empty"></span>`;
-        return `
-            <a class="activity-item" href="${href}">
-                <img class="activity-avatar" src="${avatar}" alt=""
-                     onerror="this.src='https://ui-avatars.com/api/?name=User&size=64&background=3b82f6&color=fff&bold=true'">
-                <span class="activity-text">
-                    <span class="activity-line"><span class="activity-user">${esc(name)}</span> ${verb}</span>
-                    <span class="activity-time">${timeAgo(a.updated_at)}</span>
-                </span>
-                ${thumb}
-            </a>`;
+        return `<a class="activity-item" href="${href}">
+            <img class="activity-avatar" src="${avatarFor(a.user, 64)}" alt="" onerror="this.src='https://ui-avatars.com/api/?name=User&size=64&background=475569&color=fff&bold=true'">
+            <span class="activity-text">
+                <span class="activity-line"><span class="activity-user">${esc(name)}</span> ${verb}</span>
+                <span class="activity-time">${timeAgo(a.updated_at)}</span>
+            </span>${thumb}</a>`;
     }).join('');
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// FOLLOWING LIST
-// ══════════════════════════════════════════════════════════════════════════
+// ── Following ─────────────────────────────────────────────────────────────
 async function loadFollowing() {
     try {
-        const r = await fetch(`${API_BASE}/following`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        if (r.ok) {
-            const d = await r.json();
-            displayFollowing(d.following);
-        }
-    } catch (e) {
-        console.error('Load following error:', e);
-    }
+        const r = await fetch(`${API_BASE}/following`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (r.ok) { const d = await r.json(); displayFollowing(d.following || []); }
+    } catch (e) { console.error('Load following error:', e); }
 }
 
 function displayFollowing(following) {
+    const section   = document.getElementById('followingSection');
     const container = document.getElementById('followingList');
     const count     = document.getElementById('followingCount');
-
+    if (!following.length) { if (section) section.hidden = true; return; }
+    if (section) section.hidden = false;
     count.textContent = `${following.length} following`;
-
-    if (following.length === 0) {
-        container.innerHTML = '<div class="empty-state">' +
-            '<p>You are not following anyone yet.</p>' +
-            '<p>Search for someone below and follow them to see their profile and library here.</p>' +
-            '<button type="button" class="btn btn-primary" style="margin-top:14px;" data-action="focus-search">Find people</button>' +
-            '</div>';
-        return;
-    }
-
-    container.innerHTML = following.map(user => renderUserCard(user, {
-        showFollowedSince: true,
-        isFollowing: true
-    })).join('');
+    container.innerHTML = following.map(u => renderUserCard(u, { showFollowedSince: true })).join('');
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// USER SEARCH
-// ══════════════════════════════════════════════════════════════════════════
-async function searchUsers() {
-    const query = document.getElementById('userSearchInput').value.trim();
-
-    if (query.length < 2) {
-        document.getElementById('searchResults').classList.add('hidden');
-        return;
-    }
-
-    const container = document.getElementById('userSearchResults');
-    const section   = document.getElementById('searchResults');
-
-    section.classList.remove('hidden');
-    container.innerHTML = '<div class="empty-state">Searching…</div>';
-
+// ── Follow requests (incoming) ────────────────────────────────────────────
+async function loadRequests() {
     try {
-        const r = await fetch(`${API_BASE}/users/search?query=${encodeURIComponent(query)}`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-
-        if (!r.ok) throw new Error('Search failed');
-
-        const d = await r.json();
-        await displaySearchResults(d.users);
-    } catch (e) {
-        console.error('Search users error:', e);
-        container.innerHTML = '<div class="empty-state">Error loading search results. Please try again.</div>';
-    }
+        const r = await fetch(`${API_BASE}/follow/requests`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (r.ok) { const d = await r.json(); displayRequests(d.requests || []); }
+    } catch (e) { console.error('Load requests error:', e); }
 }
 
-async function displaySearchResults(users) {
-    const container = document.getElementById('userSearchResults');
-
-    if (users.length === 0) {
-        container.innerHTML = '<div class="empty-state">No users found.</div>';
-        return;
-    }
-
-    // Fetch follow status for all results in parallel
-    const statuses = await Promise.all(
-        users.map(u => checkFollowStatus(u.id).catch(() => ({ isFollowing: false, followsYou: false })))
-    );
-
-    container.innerHTML = users.map((user, i) => renderUserCard(user, {
-        showFollowedSince: false,
-        isFollowing:  statuses[i].isFollowing,
-        followsYou:   statuses[i].followsYou
-    })).join('');
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// SHARED CARD RENDERER
-// Uses data-* attributes + event delegation - safe with UUID user IDs
-// ══════════════════════════════════════════════════════════════════════════
-function renderUserCard(user, { showFollowedSince = false, isFollowing = false, followsYou = false } = {}) {
-    const avatarUrl = user.avatar_url ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(user.display_name || user.username)}&size=80&background=3b82f6&color=fff&bold=true`;
-
-    const followedSinceHtml = showFollowedSince && user.followed_since
-        ? `<div class="friend-since">Following since ${new Date(user.followed_since).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</div>`
-        : '';
-
-    const followsYouBadge = followsYou
-        ? `<span class="badge" style="background:#10b981;color:white;padding:2px 8px;border-radius:12px;font-size:12px;margin-left:8px;">Follows you</span>`
-        : '';
-
-    // FIXED: use data-user-id attribute instead of inline onclick with UUID arg
-    const followBtn = isFollowing
-        ? `<button class="btn btn-danger"  data-action="unfollow" data-user-id="${user.id}">Unfollow</button>`
-        : `<button class="btn btn-success" data-action="follow"   data-user-id="${user.id}">Follow</button>`;
-
-    return `
-        <div class="friend-item" data-user-id="${user.id}">
-            <img src="${avatarUrl}"
-                 alt="${esc(user.display_name || user.username)}"
-                 class="friend-avatar"
-                 onerror="this.src='https://ui-avatars.com/api/?name=User&size=80&background=3b82f6&color=fff&bold=true'">
+function displayRequests(reqs) {
+    const section = document.getElementById('requestsSection');
+    const list    = document.getElementById('requestsList');
+    const count   = document.getElementById('requestsCount');
+    if (!section || !list) return;
+    if (!reqs.length) { section.hidden = true; return; }
+    section.hidden = false;
+    count.textContent = `${reqs.length} pending`;
+    list.innerHTML = reqs.map(u => `
+        <div class="friend-item" data-user-id="${u.id}">
+            <img src="${avatarFor(u, 80)}" alt="" class="friend-avatar" onerror="this.src='https://ui-avatars.com/api/?name=User&size=80&background=475569&color=fff&bold=true'">
             <div class="friend-info">
-                <div class="friend-name">${esc(user.display_name || user.username)}${followsYouBadge}</div>
-                <div class="friend-username">@${esc(user.username)}</div>
-                ${followedSinceHtml}
+                <div class="friend-name">${esc(u.display_name || u.username)}</div>
+                <div class="friend-username">@${esc(u.username)} · wants to follow you</div>
             </div>
             <div class="friend-actions">
-                <button class="btn btn-primary" data-action="view-profile" data-user-id="${user.id}">View Profile</button>
-                ${followBtn}
+                <button class="btn btn-success" data-action="accept-request" data-user-id="${u.id}">Accept</button>
+                <button class="btn btn-secondary" data-action="reject-request" data-user-id="${u.id}">Decline</button>
+            </div>
+        </div>`).join('');
+}
+
+// ── Discover people ───────────────────────────────────────────────────────
+async function loadDiscover() {
+    const list = document.getElementById('discoverList');
+    if (list) list.innerHTML = '<div class="empty-state">Loading people…</div>';
+    try {
+        const r = await fetch(`${API_BASE}/discover`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (r.ok) { const d = await r.json(); displayDiscover(d.users || []); }
+    } catch (e) { console.error('Load discover error:', e); }
+}
+
+function displayDiscover(users) {
+    const list = document.getElementById('discoverList');
+    if (!list) return;
+    if (!users.length) {
+        list.innerHTML = '<div class="empty-state"><p>No other members yet.</p><p>As people join, they will show up here to follow.</p></div>';
+        return;
+    }
+    list.innerHTML = users.map(u => renderUserCard(u)).join('');
+}
+
+// ── User search ───────────────────────────────────────────────────────────
+async function searchUsers() {
+    const query = document.getElementById('userSearchInput').value.trim();
+    const section = document.getElementById('searchResults');
+    const container = document.getElementById('userSearchResults');
+    if (query.length < 2) { section.classList.add('hidden'); return; }
+    section.classList.remove('hidden');
+    container.innerHTML = '<div class="empty-state">Searching…</div>';
+    try {
+        const r = await fetch(`${API_BASE}/users/search?query=${encodeURIComponent(query)}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (!r.ok) throw new Error('Search failed');
+        const d = await r.json();
+        container.innerHTML = (d.users && d.users.length)
+            ? d.users.map(u => renderUserCard(u)).join('')
+            : '<div class="empty-state">No people found.</div>';
+    } catch (e) {
+        console.error('Search users error:', e);
+        container.innerHTML = '<div class="empty-state">Could not search right now. Try again.</div>';
+    }
+}
+
+// ── Shared card renderer (relationship-aware) ─────────────────────────────
+function relBtn(user) {
+    const rel = user.relationship || 'none';
+    if (rel === 'following') return `<button class="btn btn-secondary" data-action="unfollow" data-user-id="${user.id}">Following</button>`;
+    if (rel === 'requested') return `<button class="btn btn-secondary" data-action="cancel-request" data-user-id="${user.id}">Requested</button>`;
+    return `<button class="btn btn-primary" data-action="follow" data-user-id="${user.id}">${user.is_private ? 'Request' : 'Follow'}</button>`;
+}
+
+function renderUserCard(user, { showFollowedSince = false } = {}) {
+    const privateTag = user.is_private ? '<span class="friend-tag">Private</span>' : '';
+    const followedSince = showFollowedSince && user.followed_since
+        ? `<div class="friend-since">Following since ${new Date(user.followed_since).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</div>`
+        : '';
+    return `
+        <div class="friend-item" data-user-id="${user.id}">
+            <img src="${avatarFor(user, 80)}" alt="${esc(user.display_name || user.username)}" class="friend-avatar"
+                 onerror="this.src='https://ui-avatars.com/api/?name=User&size=80&background=475569&color=fff&bold=true'">
+            <div class="friend-info">
+                <div class="friend-name">${esc(user.display_name || user.username)} ${privateTag}</div>
+                <div class="friend-username">@${esc(user.username)}</div>
+                ${followedSince}
+            </div>
+            <div class="friend-actions">
+                <button class="btn btn-secondary" data-action="view-profile" data-user-id="${user.id}">View profile</button>
+                ${relBtn(user)}
             </div>
         </div>`;
 }
 
-// ── Single delegated listener for all card buttons ───────────────────────
+// ── Delegated actions ─────────────────────────────────────────────────────
 document.addEventListener('click', async e => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
-
     const action = btn.dataset.action;
     const userId = btn.dataset.userId;
-
-    if (action === 'view-profile') viewProfile(userId);
-    if (action === 'follow')       await handleFollow(userId);
-    if (action === 'unfollow')     await handleUnfollow(userId);
+    if (action === 'view-profile')   { viewProfile(userId); return; }
+    if (action === 'follow')         { await handleFollow(userId, btn); return; }
+    if (action === 'unfollow')       { await handleUnfollow(userId); return; }
+    if (action === 'cancel-request') { await handleUnfollow(userId, true); return; }
+    if (action === 'accept-request') { await handleRequest(userId, 'accept'); return; }
+    if (action === 'reject-request') { await handleRequest(userId, 'reject'); return; }
 });
 
-// ══════════════════════════════════════════════════════════════════════════
-// FOLLOW / UNFOLLOW ACTIONS
-// ══════════════════════════════════════════════════════════════════════════
-async function checkFollowStatus(userId) {
-    const r = await fetch(`${API_BASE}/follow/status/${userId}`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    if (r.ok) return r.json();
-    return { isFollowing: false, followsYou: false };
-}
-
-async function handleFollow(userId) {
+async function handleFollow(userId, btn) {
     try {
-        const r = await fetch(`${API_BASE}/follow/${userId}`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-
+        if (btn) btn.disabled = true;
+        const r = await fetch(`${API_BASE}/follow/${userId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` } });
+        const d = await r.json().catch(() => ({}));
         if (r.ok) {
-            await refreshAfterAction();
+            if (d.status === 'requested' && typeof toast === 'function') toast('Follow request sent.', 'success');
+            await refreshAll();
         } else {
-            const d = await r.json();
-            if (typeof toast === 'function') toast(d.error || 'Failed to follow user', 'error');
-            else notify(d.error || 'Failed to follow user');
+            if (btn) btn.disabled = false;
+            if (typeof toast === 'function') toast(d.error || 'Could not follow.', 'error');
         }
-    } catch (e) {
-        console.error('Follow error:', e);
-        if (typeof toast === 'function') toast('Failed to follow user. Please try again.', 'error');
-        else notify('Failed to follow user. Please try again.');
-    }
+    } catch (e) { if (btn) btn.disabled = false; console.error('Follow error:', e); }
 }
 
-async function handleUnfollow(userId) {
-    var ok = typeof confirmAction === 'function'
-        ? await confirmAction({
-            title: 'Unfollow user',
-            message: 'Are you sure you want to unfollow this user?',
-            confirmLabel: 'Unfollow',
-            danger: true
-          })
-        : window.confirm('Are you sure you want to unfollow this user?');
+async function handleUnfollow(userId, isCancel) {
+    const ok = typeof confirmAction === 'function'
+        ? await confirmAction({ title: isCancel ? 'Cancel request' : 'Unfollow', message: isCancel ? 'Cancel your follow request?' : 'Unfollow this person?', confirmLabel: isCancel ? 'Cancel request' : 'Unfollow', danger: true })
+        : window.confirm(isCancel ? 'Cancel your follow request?' : 'Unfollow this person?');
     if (!ok) return;
-
     try {
-        const r = await fetch(`${API_BASE}/follow/${userId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-
-        if (r.ok) {
-            await refreshAfterAction();
-        } else {
-            const d = await r.json();
-            if (typeof toast === 'function') toast(d.error || 'Failed to unfollow user', 'error');
-            else notify(d.error || 'Failed to unfollow user');
-        }
-    } catch (e) {
-        console.error('Unfollow error:', e);
-        if (typeof toast === 'function') toast('Failed to unfollow user. Please try again.', 'error');
-        else notify('Failed to unfollow user. Please try again.');
-    }
+        const r = await fetch(`${API_BASE}/follow/${userId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (r.ok) await refreshAll();
+        else { const d = await r.json().catch(() => ({})); if (typeof toast === 'function') toast(d.error || 'Failed.', 'error'); }
+    } catch (e) { console.error('Unfollow error:', e); }
 }
 
-// Refresh both the following list and search results after a follow/unfollow
-async function refreshAfterAction() {
-    await loadFollowing();
-    loadActivity();
+async function handleRequest(userId, kind) {
+    try {
+        const r = await fetch(`${API_BASE}/follow/requests/${userId}/${kind}`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` } });
+        if (r.ok) { if (typeof toast === 'function') toast(kind === 'accept' ? 'Request accepted.' : 'Request declined.', 'success'); await refreshAll(); }
+        else { const d = await r.json().catch(() => ({})); if (typeof toast === 'function') toast(d.error || 'Failed.', 'error'); }
+    } catch (e) { console.error('Request action error:', e); }
+}
+
+async function refreshAll() {
+    await Promise.all([loadFollowing(), loadRequests(), loadDiscover(), loadActivity()]);
     const searchInput = document.getElementById('userSearchInput');
-    if (searchInput.value.trim().length >= 2) {
-        await searchUsers();
-    }
+    if (searchInput && searchInput.value.trim().length >= 2) await searchUsers();
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// NAVIGATION
-// ══════════════════════════════════════════════════════════════════════════
-function viewProfile(userId) {
-    // userId is a UUID string - passes through safely in the URL
-    window.location.href = `userProfile.html?userId=${userId}`;
-}
+function viewProfile(userId) { window.location.href = `userProfile.html?userId=${userId}`; }
 
-// ══════════════════════════════════════════════════════════════════════════
-// UTILITY
-// ══════════════════════════════════════════════════════════════════════════
 function logout() {
     if (typeof logoutToAuth === 'function') logoutToAuth();
-    else {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('currentUser');
-        window.location.href = 'auth.html';
-    }
+    else { localStorage.removeItem('authToken'); localStorage.removeItem('currentUser'); window.location.href = 'auth.html'; }
 }
-
 window.logout = logout;

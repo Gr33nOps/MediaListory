@@ -115,7 +115,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '400kb' })); // headroom for uploaded data: URI avatars
 
 // API responses must not be cached - browsers turn GETs into 304s which break fetch().json().
 app.set('etag', false);

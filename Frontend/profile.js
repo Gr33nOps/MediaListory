@@ -66,13 +66,7 @@ function initPage() {
     document.getElementById('editProfileForm').addEventListener('submit', handleProfileUpdate);
     document.getElementById('changePasswordForm').addEventListener('submit', handlePasswordChange);
 
-    var avatarInput = document.getElementById('editAvatarUrl');
-    if (avatarInput) {
-        avatarInput.addEventListener('input', function(e) {
-            var preview = document.getElementById('editAvatarPreview');
-            if (preview && e.target.value) preview.src = e.target.value;
-        });
-    }
+    initAvatarUpload();
 
     if (typeof bindModal === 'function') {
         bindModal('passwordModal', 'closePasswordModal');
@@ -124,7 +118,71 @@ function displayProfile(user) {
     document.getElementById('displayCreatedAt').textContent = formatDate(user.created_at);
     document.getElementById('editDisplayName').value       = user.display_name || '';
     document.getElementById('editEmail').value             = user.email;
-    document.getElementById('editAvatarUrl').value         = user.avatar_url || '';
+    var avaData = document.getElementById('editAvatarData'); if (avaData) avaData.value = user.avatar_url || '';
+    var priv = document.getElementById('editPrivate'); if (priv) priv.checked = !!user.is_private;
+    var clr = document.getElementById('avatarClearBtn'); if (clr) clr.style.display = user.avatar_url ? 'inline-block' : 'none';
+}
+
+// Read a chosen image, cover-crop to a square, downscale, and return a small
+// JPEG data URL so any photo from the user's device becomes a light avatar.
+function readImageToDataUrl(file, cb) {
+    if (!file || !/^image\//.test(file.type)) { cb(null); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+            var size = 256;
+            var canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            var ctx = canvas.getContext('2d');
+            var s = Math.min(img.width, img.height);
+            var sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+            ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+            try { cb(canvas.toDataURL('image/jpeg', 0.82)); } catch (_) { cb(null); }
+        };
+        img.onerror = function () { cb(null); };
+        img.src = reader.result;
+    };
+    reader.onerror = function () { cb(null); };
+    reader.readAsDataURL(file);
+}
+
+function initAvatarUpload() {
+    var drop = document.getElementById('avatarDrop');
+    var fileInput = document.getElementById('avatarFile');
+    var preview = document.getElementById('editAvatarPreview');
+    var dataField = document.getElementById('editAvatarData');
+    var clearBtn = document.getElementById('avatarClearBtn');
+    if (!drop || !fileInput) return;
+
+    function handleFile(file) {
+        if (file && file.size > 8 * 1024 * 1024) { flashEdit('That image is too large (max 8MB).', true); return; }
+        readImageToDataUrl(file, function (url) {
+            if (!url) { flashEdit('Could not read that image. Try a JPG or PNG.', true); return; }
+            preview.src = url; dataField.value = url;
+            if (clearBtn) clearBtn.style.display = 'inline-block';
+        });
+    }
+    drop.addEventListener('click', function () { fileInput.click(); });
+    drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+    fileInput.addEventListener('change', function () { if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]); });
+    ['dragover', 'dragenter'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-drag'); }); });
+    ['dragleave', 'dragend'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('is-drag'); }); });
+    drop.addEventListener('drop', function (e) {
+        e.preventDefault(); drop.classList.remove('is-drag');
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) handleFile(f);
+    });
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+        dataField.value = '';
+        preview.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent((currentUser && (currentUser.display_name || currentUser.username)) || 'User') + '&size=200&background=475569&color=fff&bold=true';
+        clearBtn.style.display = 'none';
+    });
+}
+
+function flashEdit(msg, isErr) {
+    var m = document.getElementById('editMessage');
+    if (m) m.innerHTML = '<div class="' + (isErr ? 'error-message' : 'success-message') + '">' + msg + '</div>';
 }
 
 function displayStats(games, followers, following) {
@@ -175,7 +233,10 @@ async function handleProfileUpdate(e) {
     var messageDiv  = document.getElementById('editMessage');
     var displayName = document.getElementById('editDisplayName').value;
     var email       = document.getElementById('editEmail').value;
-    var avatarUrl   = document.getElementById('editAvatarUrl').value;
+    var avaData     = document.getElementById('editAvatarData');
+    var avatarUrl   = avaData ? (avaData.value || null) : null;
+    var privEl      = document.getElementById('editPrivate');
+    var isPrivate   = !!(privEl && privEl.checked);
 
     try {
         var response = await fetch(`${API_BASE}/user/profile`, {
@@ -184,7 +245,7 @@ async function handleProfileUpdate(e) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
             },
-            body: JSON.stringify({ display_name: displayName, email: email, avatar_url: avatarUrl || null })
+            body: JSON.stringify({ display_name: displayName, email: email, avatar_url: avatarUrl, is_private: isPrivate })
         });
         var data = await response.json();
 

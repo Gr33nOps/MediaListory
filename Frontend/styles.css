@@ -4224,3 +4224,29 @@ body.imp-open { overflow: hidden; }
 
 .imp-pick { margin-top: 3px; max-width: 100%; width: auto; font-size: 0.78rem; padding: 2px 6px; border-radius: 6px; background: var(--bg-deep); color: var(--text-secondary); border: 1px solid var(--border-subtle); cursor: pointer; }
 .imp-pick:focus { outline: none; border-color: var(--accent-border); color: var(--text-primary); }
+
+/* ══ Avatar upload + privacy toggle (profile edit) ═══════════════════════ */
+.avatar-drop { border: 1.5px dashed var(--border); border-radius: var(--radius-md); padding: 16px; text-align: center; cursor: pointer; background: var(--bg-deep); transition: border-color .18s ease, background .18s ease; }
+.avatar-drop:hover, .avatar-drop:focus-visible, .avatar-drop.is-drag { border-color: var(--accent-border); background: var(--accent-dim); outline: none; }
+.avatar-drop-main { display: block; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px; }
+.avatar-drop-link { color: var(--accent-light); font-weight: 600; }
+.avatar-drop small { color: var(--text-muted); font-size: 0.78rem; }
+
+.pv-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-deep); }
+.pv-toggle-title { font-weight: 600; color: var(--text-primary); }
+.pv-toggle-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; max-width: 46ch; }
+.pv-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.pv-switch input { opacity: 0; width: 0; height: 0; }
+.pv-slider { position: absolute; inset: 0; background: var(--bg-card-end); border: 1px solid var(--border); border-radius: 999px; transition: .2s; cursor: pointer; }
+.pv-slider::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+.pv-switch input:checked + .pv-slider { background: var(--accent); border-color: var(--accent); }
+.pv-switch input:checked + .pv-slider::before { transform: translateX(20px); }
+.pv-switch input:focus-visible + .pv-slider { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+
+.friend-tag { display: inline-block; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 999px; background: var(--bg-deep); border: 1px solid var(--border-subtle); color: var(--text-muted); vertical-align: middle; margin-left: 6px; }
+
+/* Private account notice (viewing someone else's private profile) */
+.private-notice { text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-bottom: 24px; }
+.private-notice-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--bg-deep); color: var(--text-muted); margin-bottom: 14px; }
+.private-notice h2 { font-family: var(--font-display); font-size: 1.3rem; color: var(--text-primary); margin: 0 0 8px; }
+.private-notice p { color: var(--text-muted); max-width: 44ch; margin: 0 auto; line-height: 1.6; }

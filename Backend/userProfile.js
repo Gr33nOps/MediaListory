@@ -14,6 +14,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         username:     dbUser.username     || 'unknown',
         display_name: dbUser.display_name || dbUser.username || '',
         avatar_url:   dbUser.avatar_url   || null,
+        is_private:   !!dbUser.is_private,
         created_at:   dbUser.created_at
       };
     } catch (_) {
@@ -27,6 +28,13 @@ module.exports = (db, verifyToken, checkBanned) => {
 
       const user = await getPublicUser(userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
+
+      const isSelf = req.userId === userId;
+      const [isFollowing, requested] = await Promise.all([
+        db('user_follows').where({ follower_id: req.userId, following_id: userId }).first(),
+        db('user_follow_requests').where({ requester_id: req.userId, target_id: userId }).first()
+      ]);
+      const canView = isSelf || !user.is_private || !!isFollowing;
 
       const [games, followers, following, breakdownRows] = await Promise.all([
         db('user_game_lists').where('user_id', userId).count('id as count').first(),
@@ -49,8 +57,12 @@ module.exports = (db, verifyToken, checkBanned) => {
       res.json({
         user: {
           ...user,
+          isSelf,
+          canView,
+          isFollowing: !!isFollowing,
+          requested:   !!requested,
           totalGames:     parseInt(games?.count)     || 0,
-          mediaBreakdown,
+          mediaBreakdown: canView ? mediaBreakdown : { game: 0, movie: 0, series: 0, anime: 0 },
           followersCount: parseInt(followers?.count) || 0,
           followingCount: parseInt(following?.count) || 0
         }
@@ -67,6 +79,13 @@ module.exports = (db, verifyToken, checkBanned) => {
 
       const user = await getPublicUser(userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
+
+      // Private libraries are only visible to the owner and accepted followers.
+      if (user.is_private && req.userId !== userId) {
+        const follows = await db('user_follows')
+          .where({ follower_id: req.userId, following_id: userId }).first();
+        if (!follows) return res.status(403).json({ error: 'This account is private', private: true });
+      }
 
       const games = await db('user_game_lists')
         .leftJoin('games', 'games.id', 'user_game_lists.game_id')
@@ -148,6 +167,12 @@ module.exports = (db, verifyToken, checkBanned) => {
       const userId = req.params.userId;
       const user = await getPublicUser(userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
+
+      if (user.is_private && req.userId !== userId) {
+        const follows = await db('user_follows')
+          .where({ follower_id: req.userId, following_id: userId }).first();
+        if (!follows) return res.status(403).json({ error: 'This account is private', private: true });
+      }
 
       const lists = await db('custom_lists')
         .where({ user_id: userId, is_public: true })
