@@ -150,6 +150,7 @@ module.exports = (verifyToken, checkBanned, db) => {
       const search = sanitizeToken(body.search, 80);
       const sortKey = body.sort || 'popularity';
       const comingSoon = !!body.comingSoon || sortKey === 'coming';
+      const trending = !!body.trending && !search && !comingSoon;
 
       const params = ['include=categories', `page[limit]=${limit}`, `page[offset]=${offset}`];
       if (search) {
@@ -167,7 +168,11 @@ module.exports = (verifyToken, checkBanned, db) => {
         } catch (_) {}
       }
 
-      const response = await kitsuFetch(`/anime?${params.join('&')}`);
+      // Kitsu exposes a dedicated, genuinely-trending feed at /trending/anime.
+      const listPath = trending
+        ? `/trending/anime?include=categories`
+        : `/anime?${params.join('&')}`;
+      const response = await kitsuFetch(listPath);
       const data = await response.json();
       if (!response.ok) {
         const degraded = await loadListFromDb(body);

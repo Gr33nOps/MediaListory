@@ -189,7 +189,9 @@ module.exports = (verifyToken, checkBanned, db) => {
     const sortField = ALLOWED_SORT[sortKey];
     const sortOrder = body.sortOrder === 'asc' ? 'asc' : 'desc';
     const comingSoon = !!body.comingSoon;
+    const trending = !!body.trending && !comingSoon;
     const now = Math.floor(Date.now() / 1000);
+    const TRENDING_WINDOW = 60 * 60 * 24 * 540; // ~18 months of recent releases
 
     // Main games + remakes/remasters/etc. Exclude DLC/mods/episodes via game_type.
     // version_parent / parent_game null drops editions that are child versions.
@@ -203,6 +205,10 @@ module.exports = (verifyToken, checkBanned, db) => {
 
     if (comingSoon || sortKey === 'coming') {
       where.push(`first_release_date > ${now}`);
+    } else if (trending && !search) {
+      // "Trending": recently-released titles that already have real traction.
+      where.push(`first_release_date != null & first_release_date >= ${now - TRENDING_WINDOW} & first_release_date <= ${now}`);
+      where.push('total_rating_count != null & total_rating_count >= 3');
     } else {
       where.push(`first_release_date != null & first_release_date <= ${now}`);
       if (sortKey === 'popularity' && !search) {
@@ -229,7 +235,7 @@ module.exports = (verifyToken, checkBanned, db) => {
     if (comingSoon || sortKey === 'coming') {
       finalSortField = 'first_release_date';
       finalSortOrder = 'asc';
-    } else if (sortKey === 'popularity') {
+    } else if (trending || sortKey === 'popularity') {
       finalSortField = 'total_rating_count';
       finalSortOrder = 'desc';
     }

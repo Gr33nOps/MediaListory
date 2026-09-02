@@ -280,9 +280,11 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     border-radius: var(--radius-xl);
     padding: 11px 18px;
     margin-bottom: 28px;
-    display: flex;
+    /* Three balanced tracks: brand left, categories dead-center, controls right. */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     box-shadow: var(--shadow-card);
     position: relative;
     z-index: 40;
@@ -295,15 +297,14 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     color: var(--accent-light);
     text-decoration: none;
     white-space: nowrap;
-    flex-shrink: 0;
+    justify-self: start;
     transition: color 0.3s ease;
 }
 
-/* Divider between the brand and the category tabs. */
-.nav-sep { width: 1px; height: 22px; background: var(--border-subtle); flex-shrink: 0; margin: 0 4px; }
+.nav-sep { display: none; }
 
-/* Category tabs — one connected group of text tabs, not four cards. */
-.nav-primary { display: flex; align-items: center; gap: 2px; min-width: 0; }
+/* Category tabs — one connected group, centered in the bar. */
+.nav-primary { display: flex; align-items: center; gap: 2px; min-width: 0; justify-self: center; }
 .nav-tab {
     display: inline-flex;
     align-items: center;
@@ -337,8 +338,8 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 .nav-tab[data-cat="games"].active  { background: var(--cat-game-dim);   color: var(--cat-game-light); }
 .nav-tab.active::before { box-shadow: 0 0 7px 0 var(--cat-color); }
 
-/* Utility icons (search + theme) — ghost buttons, right after the categories. */
-.nav-utils { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+/* Right controls: search + theme (ghost icons) + the Profile menu. */
+.nav-right { display: flex; align-items: center; gap: 4px; justify-self: end; }
 .nav-icon-btn {
     display: inline-flex; align-items: center; justify-content: center;
     width: 36px; height: 36px;
@@ -349,8 +350,6 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
 }
 .nav-icon-btn:hover { background: var(--bg-deep); color: var(--text-primary); }
 
-/* User area — pushed right, a distinct group from the category nav. */
-.nav-user { display: flex; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0; }
 .nav-link {
     padding: 7px 12px;
     border-radius: var(--radius-md);
@@ -408,6 +407,7 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1
     z-index: 60;
 }
 .nav-menu.open .nav-menu-pop { display: flex; }
+.nav-menu-name { padding: 6px 12px 8px; font-size: 0.9rem; font-weight: 700; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-menu-item {
     display: block; text-align: left;
     padding: 9px 12px; border-radius: var(--radius-md);
@@ -1636,8 +1636,8 @@ select.update-status-select option,
 
 .score-input:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .score-controls { display: flex; flex-direction: column; gap: 3px; }
@@ -1647,8 +1647,8 @@ select.update-status-select option,
     height: 22px;
     padding: 0;
     margin: 0;
-    border: 1px solid var(--blue);
-    background: linear-gradient(135deg, var(--blue) 0%, #2563eb 100%);
+    border: 1px solid var(--accent);
+    background: var(--accent);
     color: #ffffff;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -1664,9 +1664,10 @@ select.update-status-select option,
 }
 
 .score-btn:hover {
-    background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue) 100%);
+    filter: brightness(1.12);
     transform: translateY(-1px);
 }
+body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a1206; }
 
 .score-clear-btn {
     background: transparent;
@@ -1716,8 +1717,8 @@ select.update-status-select option,
 
 .update-status-select:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .update-form .score-input-container {
@@ -2870,8 +2871,8 @@ select.update-status-select option,
 
 .cl-form-input:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .cl-form-input::placeholder { color: var(--text-dim); }
@@ -3376,35 +3377,34 @@ select.update-status-select option,
 
 @media (max-width: 900px) {
     .container { padding: 14px; }
+    /* Switch the grid bar to a wrapping flex row: brand + controls + hamburger
+       on top; the 4 category tabs drop into the drawer. Profile stays a menu. */
     .navbar {
+        display: flex;
         flex-wrap: wrap;
+        align-items: center;
         padding: 9px 12px;
         margin-bottom: 18px;
         border-radius: var(--radius-lg);
         gap: 6px;
     }
-    /* Keep brand + utilities + hamburger on the top row; drawer holds the rest. */
     .nav-brand { flex: 1; order: 0; font-size: 1.15rem; }
-    .nav-sep { display: none; }
-    .nav-utils { order: 1; }
+    .nav-right { order: 1; gap: 2px; }
     .nav-toggle { order: 2; display: inline-flex; }
-    .nav-primary, .nav-user {
+    .nav-primary {
+        order: 3;
         display: none;
         width: 100%;
         flex-direction: column;
         align-items: stretch;
         gap: 4px;
     }
-    .nav-primary { order: 3; }
-    .nav-user { order: 4; margin-left: 0; }
     .navbar.is-open .nav-primary { display: flex; padding-top: 12px; margin-top: 2px; border-top: 1px solid var(--border-subtle); }
-    .navbar.is-open .nav-user { display: flex; padding-top: 4px; }
-    .nav-tab, .nav-link { width: 100%; padding: 12px 14px; font-size: 0.95rem; }
-    /* The Profile menu expands inline inside the drawer (no popover on mobile). */
-    .nav-menu { width: 100%; }
-    .nav-menu-trigger { display: none; }
-    .nav-menu-pop { position: static; display: flex; min-width: 0; padding: 0; background: none; border: 0; box-shadow: none; }
-    .nav-menu-item { width: 100%; padding: 12px 14px; }
+    .nav-tab { width: 100%; padding: 12px 14px; font-size: 0.95rem; }
+    /* Compact the profile trigger to an avatar-only button on mobile. */
+    .nav-menu-label, .nav-caret { display: none; }
+    .nav-menu-trigger { padding: 3px; border-radius: 50%; }
+    .nav-menu-pop { top: calc(100% + 6px); }
     body.nav-drawer-open { overflow: hidden; }
 
     .page-tabs { flex-direction: column; }
@@ -3995,10 +3995,10 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .view-toggle-btn { min-width: 44px; }
 
 /* ══ Home dashboard: hero · Up Next · Trending rows ══════════════════════ */
-.dash-hero-inner { padding: 8px 0 6px; }
-.dash-hero-title { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; margin: 0; color: var(--text-primary); }
-.dash-hero-sub { color: var(--text-muted); font-size: 1.02rem; margin: 10px 0 0; max-width: 60ch; }
-.dash-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.dash-hero-inner { padding: 12px 0 6px; text-align: center; }
+.dash-hero-title { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; margin: 0; color: var(--text-primary); text-wrap: balance; }
+.dash-hero-sub { color: var(--text-muted); font-size: 1.02rem; margin: 10px auto 0; max-width: 60ch; }
+.dash-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; justify-content: center; }
 
 .dash-row { margin: 30px 0; }
 .dash-row-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 14px; }

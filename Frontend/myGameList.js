@@ -532,6 +532,9 @@ async function showGameDetails(gameId) {
                 infoGridHtml +
                 (game.description ? '<p class="game-detail-desc">' + game.description + '</p>' : '') +
             '</div>';
+        var GCAT = { movie: 'movies', series: 'series', anime: 'anime', game: 'games' };
+        var gmEl = document.getElementById('gameModal');
+        if (gmEl) gmEl.setAttribute('data-cat', GCAT[game.media_type || 'game'] || 'games');
         if (typeof openModal === 'function') openModal('gameModal');
         else document.getElementById('gameModal').style.display = 'flex';
     } catch (error) {
@@ -556,6 +559,11 @@ function showUpdateModal(gameId) {
 
     // Episode progress only applies to series/anime that have a known episode count.
     var mediaType = game ? (game.media_type || 'game') : 'game';
+    // Theme the dialog to THIS item's category (green show, pink anime, …) rather
+    // than inheriting the neutral My Library page accent.
+    var CAT_OF = { movie: 'movies', series: 'series', anime: 'anime', game: 'games' };
+    var umEl = document.getElementById('updateModal');
+    if (umEl) umEl.setAttribute('data-cat', CAT_OF[mediaType] || 'games');
     var progRow = document.getElementById('updateProgressRow');
     var progInput = document.getElementById('updateProgress');
     var showProgress = game && (mediaType === 'series' || mediaType === 'anime') && game.episode_count;
@@ -850,7 +858,7 @@ function clRenderListBody(listId) {
 
     var statusOptions = ['all', 'playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];
     var statusTabsHtml = statusOptions.map(function(s) {
-        return '<button class="status-tab ' + (f.status === s ? 'active' : '') + '" data-status="' + s + '">' + (s === 'all' ? 'All Games' : STATUS_LABEL[s]) + '</button>';
+        return '<button class="status-tab ' + (f.status === s ? 'active' : '') + '" data-status="' + s + '">' + (s === 'all' ? 'All' : STATUS_LABEL[s]) + '</button>';
     }).join('');
 
     body.innerHTML =

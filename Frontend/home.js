@@ -14,7 +14,7 @@ let authToken   = localStorage.getItem('authToken');
 let currentUser = readStoredUser();
 let allGames    = [];
 let currentFilters   = {};
-let currentSort      = 'release';
+let currentSort      = 'popularity';
 let currentSortOrder = 'desc';
 let currentPage    = 1;
 let gamesPerPage   = 20;
@@ -200,7 +200,7 @@ function initPage() {
 
     var sortBySelect = document.getElementById('sortBy');
     if (sortBySelect) {
-        sortBySelect.value = 'release-desc';
+        sortBySelect.value = 'popularity-desc';
         sortBySelect.addEventListener('change', function() {
             var value = sortBySelect.value;
 
@@ -714,6 +714,9 @@ async function showGameDetails(gameId) {
             var releasedBadge = game.released
                 ? '<span class="game-detail-date">' + esc(new Date(game.released).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })) + '</span>'
                 : '';
+            var ratingBadge = game.rating
+                ? '<span class="detail-rating" title="Average rating">★ ' + esc(Number(game.rating).toFixed(1)) + '<span class="dr-sub">/5</span></span>'
+                : '';
 
             var descHtml = '';
             if (game.description) {
@@ -739,18 +742,18 @@ async function showGameDetails(gameId) {
                         '<img src="' + esc(coverSrc) + '" alt="' + esc(game.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
                         '<div class="game-detail-title-meta">' +
                             '<div class="game-detail-title">' + esc(game.name) + '</div>' +
-                            '<div class="game-detail-badges">' + releasedBadge + '</div>' +
+                            '<div class="game-detail-badges">' + releasedBadge + ratingBadge + '</div>' +
                         '</div>' +
                     '</div>' +
                     genreTagsHtml +
                     infoGridHtml +
                     descHtml +
                     '<div class="add-to-list">' +
-                        '<h3>Add to My List</h3>' +
+                        '<h3>Add to My Library</h3>' +
                         '<div style="margin-bottom:12px;">' +
                             '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;">Add to List</label>' +
                             '<select id="gameListSelect" class="filter-select" style="width:100%;margin:0;" onchange="handleListSelectChange()">' +
-                                '<option value="default">My Game Collection (Default)</option>' +
+                                '<option value="default">My Games Library (Default)</option>' +
                                 customListOptions +
                             '</select>' +
                         '</div>' +
@@ -776,7 +779,7 @@ async function showGameDetails(gameId) {
                                 '</div>' +
                             '</div>' +
                         '</div>' +
-                        '<div id="customListNote" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--blue-dim);border:1px solid var(--blue-glow);border-radius:var(--radius-md);font-size:0.82rem;color:var(--blue-light);">' +
+                        '<div id="customListNote" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:var(--radius-md);font-size:0.82rem;color:var(--accent-light);">' +
                             'The game will be added to your selected custom list with the status above.' +
                         '</div>' +
                         '<div style="display:flex;align-items:center;gap:12px;">' +
@@ -1025,8 +1028,8 @@ function searchGames() {
         currentSort      = 'popularity';
         currentSortOrder = 'desc';
     } else {
-        sortBySelect.value = 'release-desc';
-        currentSort      = 'release';
+        sortBySelect.value = 'popularity-desc';
+        currentSort      = 'popularity';
         currentSortOrder = 'desc';
     }
 

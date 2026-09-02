@@ -640,13 +640,16 @@
     if (isGuest) {
       userArea = '<a href="auth.html" class="nav-cta' + (active === 'auth' ? ' active' : '') + '">Sign in</a>';
     } else {
-      // Account actions live behind the Profile menu, so Logout stops competing
-      // for attention in the bar and the nav / user areas read as separate groups.
-      var inMenu = (active === 'profile' || active === 'moderator' || active === 'admin');
+      // Everything personal (My Library, Following, profile, account) lives behind
+      // the Profile menu, so the bar shows just: brand · categories · search/theme/profile.
+      var inMenu = (active === 'list' || active === 'friends' || active === 'profile' || active === 'moderator' || active === 'admin');
       var nameStr = (user && (user.display_name || user.username)) || 'You';
       var initials = nameStr.trim().slice(0, 2).toUpperCase() || 'U';
 
       var menuItems =
+        '<div class="nav-menu-name" aria-hidden="true">' + esc(nameStr) + '</div>' +
+        '<a role="menuitem" href="myGameList.html" class="nav-menu-item' + (active === 'list' ? ' active' : '') + '">My Library</a>' +
+        '<a role="menuitem" href="friends.html" class="nav-menu-item' + (active === 'friends' ? ' active' : '') + '">Following</a>' +
         '<a role="menuitem" href="profile.html" class="nav-menu-item' + (active === 'profile' ? ' active' : '') + '">My profile</a>';
       if (user && (user.is_moderator || user.is_admin)) {
         menuItems += '<a role="menuitem" href="moderator.html" class="nav-menu-item' + (active === 'moderator' ? ' active' : '') + '">Moderate</a>';
@@ -657,8 +660,6 @@
       menuItems += '<button type="button" role="menuitem" class="nav-menu-item nav-menu-danger" id="navLogoutBtn">Log out</button>';
 
       userArea =
-        ulink('myGameList.html', 'list', 'My Library') +
-        ulink('friends.html', 'friends', 'Following') +
         '<div class="nav-menu">' +
           '<button type="button" class="nav-menu-trigger' + (inMenu ? ' active' : '') + '" id="navProfileBtn" aria-haspopup="menu" aria-expanded="false">' +
             '<span class="nav-ava" aria-hidden="true">' + esc(initials) + '</span>' +
@@ -671,10 +672,8 @@
 
     el.innerHTML =
       '<a class="nav-brand" href="dashboard.html">' + esc(brand) + '</a>' +
-      '<span class="nav-sep" aria-hidden="true"></span>' +
       '<nav class="nav-primary" aria-label="Categories">' + primary + '</nav>' +
-      '<div class="nav-utils">' + utils + '</div>' +
-      '<div class="nav-user">' + userArea + '</div>' +
+      '<div class="nav-right">' + utils + userArea + '</div>' +
       '<button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="appNav" aria-label="Open menu">' +
         '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
         '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
@@ -862,6 +861,58 @@
     global.__openGlobalSearch = open;
   }
 
+  // ── Shared footer ───────────────────────────────────────────────────────
+  // One canonical footer for every app page (pages used to bake their own, and
+  // they had drifted — some credited only IGDB, the dashboard had none at all).
+  function mountAppFooter() {
+    if (!document.getElementById('appNav')) return; // main app pages only
+    // Drop any page-baked footer so exactly one, consistent footer shows.
+    document.querySelectorAll('.site-footer').forEach(function (f) { f.remove(); });
+    var host = document.getElementById('main-content') || document.body;
+    var f = document.createElement('footer');
+    f.className = 'site-footer';
+    f.innerHTML =
+      '<div class="footer-inner">' +
+        '<div class="footer-brand">' +
+          '<div class="brand-name">MediaListory</div>' +
+          '<p>Track the movies, shows, anime, and games you love, discover what to enjoy next, and share your library with friends.</p>' +
+        '</div>' +
+        '<div class="footer-col"><h4>Browse</h4><ul>' +
+          '<li><a href="movies.html">Movies</a></li>' +
+          '<li><a href="series.html">Shows</a></li>' +
+          '<li><a href="anime.html">Anime</a></li>' +
+          '<li><a href="home.html">Games</a></li>' +
+        '</ul></div>' +
+        '<div class="footer-col"><h4>Your space</h4><ul>' +
+          '<li><a href="myGameList.html">My Library</a></li>' +
+          '<li><a href="stats.html">Your Stats</a></li>' +
+          '<li><a href="calendar.html">Release Calendar</a></li>' +
+          '<li><a href="profile.html">Profile</a></li>' +
+        '</ul></div>' +
+        '<div class="footer-col"><h4>Data &amp; Credits</h4><ul>' +
+          '<li><a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a></li>' +
+          '<li><a href="https://kitsu.io" target="_blank" rel="noopener noreferrer">Kitsu</a></li>' +
+          '<li><a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer">IGDB</a></li>' +
+        '</ul></div>' +
+      '</div>' +
+      '<div class="footer-igdb"><div class="footer-igdb-text">' +
+        'Movie &amp; show data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">TMDB</a> ' +
+        '(this product uses the TMDB API but is not endorsed or certified by TMDB); anime from ' +
+        '<a href="https://kitsu.io" target="_blank" rel="noopener noreferrer">Kitsu</a>; games from ' +
+        '<a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer">IGDB</a>, a Twitch service. ' +
+        'All titles, images, and metadata are the property of their respective owners.' +
+      '</div></div>' +
+      '<div class="footer-bottom">' +
+        '<span>© 2026 MediaListory. All rights reserved.</span>' +
+        '<div class="footer-bottom-links">' +
+          '<a href="about.html">About</a>' +
+          '<a href="privacy.html">Privacy Policy</a>' +
+          '<a href="terms.html">Terms of Service</a>' +
+        '</div>' +
+      '</div>';
+    host.appendChild(f);
+  }
+
   if (typeof document !== 'undefined') {
     initSentry(); // set up as early as possible so init-time errors are caught
     if (document.readyState === 'loading') {
@@ -870,6 +921,7 @@
         mountAppNav();
         mountPageHeader();
         mountGlobalSearch();
+        mountAppFooter();
         initAnalytics();
       });
     } else {
@@ -877,6 +929,7 @@
       mountAppNav();
       mountPageHeader();
       mountGlobalSearch();
+      mountAppFooter();
       initAnalytics();
     }
   }

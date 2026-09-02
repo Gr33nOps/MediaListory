@@ -550,7 +550,7 @@ function upRenderListBody(listId) {
 
     var statusOptions = ['all', 'playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];
     var statusTabsHtml = statusOptions.map(function(s) {
-        return '<button class="status-tab ' + (f.status === s ? 'active' : '') + '" data-status="' + s + '">' + (s === 'all' ? 'All Games' : STATUS_LABEL[s]) + '</button>';
+        return '<button class="status-tab ' + (f.status === s ? 'active' : '') + '" data-status="' + s + '">' + (s === 'all' ? 'All' : STATUS_LABEL[s]) + '</button>';
     }).join('');
 
     body.innerHTML =
