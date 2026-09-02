@@ -123,6 +123,25 @@ function initCollectionTab() {
         });
     });
 
+    // Grid / list view toggle (persisted per device).
+    var viewBtn = document.getElementById('viewToggleBtn');
+    var gridEl = document.getElementById('myGamesGrid');
+    function applyView(mode) {
+        var isGrid = mode === 'grid';
+        if (gridEl) gridEl.classList.toggle('as-grid', isGrid);
+        if (viewBtn) { viewBtn.textContent = isGrid ? 'List' : 'Grid'; viewBtn.setAttribute('aria-pressed', isGrid ? 'true' : 'false'); }
+    }
+    var savedView = 'list';
+    try { if (localStorage.getItem('libraryView') === 'grid') savedView = 'grid'; } catch (_) {}
+    applyView(savedView);
+    if (viewBtn) {
+        viewBtn.addEventListener('click', function() {
+            var next = (gridEl && gridEl.classList.contains('as-grid')) ? 'list' : 'grid';
+            applyView(next);
+            try { localStorage.setItem('libraryView', next); } catch (_) {}
+        });
+    }
+
     document.getElementById('editListBtn').addEventListener('click', function() { toggleEditMode(true); });
     document.getElementById('doneEditingBtn').addEventListener('click', function() { toggleEditMode(false); });
 

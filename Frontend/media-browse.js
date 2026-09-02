@@ -150,11 +150,24 @@
     } catch (_) {}
   }
 
+  function skeletonCards(n) {
+    var one = '<div class="skeleton-card"><div class="skeleton skel-poster"></div>' +
+      '<div class="skel-info"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w50"></div></div></div>';
+    return new Array(n).join(one) + one;
+  }
+
   async function fetchMedia(replace) {
     if (isLoading) return;
     isLoading = true;
     var loading = byId('loadingIndicator');
-    if (loading) loading.style.display = 'flex';
+    // Show skeleton cards in place of the results while a fresh query loads;
+    // the spinner is only used for the (rare) append case.
+    if (replace) {
+      if (loading) loading.style.display = 'none';
+      byId('searchResults').innerHTML = skeletonCards(perPage || 12);
+    } else if (loading) {
+      loading.style.display = 'flex';
+    }
 
     try {
       var offset = (currentPage - 1) * perPage;

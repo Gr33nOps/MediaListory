@@ -332,12 +332,23 @@ async function loadIGDBFilters() {
     }
 }
 
+function skeletonCards(n) {
+    var one = '<div class="skeleton-card"><div class="skeleton skel-poster"></div>' +
+        '<div class="skel-info"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w50"></div></div></div>';
+    return new Array(n).join(one) + one;
+}
+
 async function fetchGames(replace) {
     if (replace === undefined) replace = true;
     if (isLoading || (!replace && !hasMoreGames)) return;
     isLoading = true;
 
-    document.getElementById('loadingIndicator').style.display = 'flex';
+    if (replace) {
+        document.getElementById('loadingIndicator').style.display = 'none';
+        document.getElementById('searchResults').innerHTML = skeletonCards(12);
+    } else {
+        document.getElementById('loadingIndicator').style.display = 'flex';
+    }
 
     try {
         var offset           = (currentPage - 1) * apiGamesPerPage;
