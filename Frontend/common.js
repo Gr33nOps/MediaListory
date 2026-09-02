@@ -625,6 +625,9 @@
     el.innerHTML =
       '<div class="nav-bar-top">' +
         '<a class="nav-brand" href="dashboard.html">' + esc(brand) + '</a>' +
+        '<button type="button" class="nav-search-btn" id="navSearchBtn" aria-label="Search all media" title="Search (press /)">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+        '</button>' +
         '<button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navActions" aria-label="Open menu">' +
           '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
           '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
@@ -636,6 +639,13 @@
     var logoutBtn = document.getElementById('navLogoutBtn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', logoutToAuth);
+    }
+
+    var searchBtn = document.getElementById('navSearchBtn');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', function () {
+        if (typeof global.__openGlobalSearch === 'function') global.__openGlobalSearch();
+      });
     }
 
     var toggle = document.getElementById('navToggle');
@@ -683,6 +693,109 @@
     el.parentNode.insertBefore(header, el.nextSibling);
   }
 
+  // ── Global search: a keyboard-driven overlay that searches all four media
+  // types at once and deep-links into the matching title's detail. ──────────
+  function mountGlobalSearch() {
+    if (document.getElementById('globalSearch')) return;
+    var PAGE_FOR = { movie: 'movies.html', series: 'series.html', anime: 'anime.html', game: 'home.html' };
+    var GROUPS = [
+      { cat: 'movie',  label: 'Movies', ep: '/tmdb/movies' },
+      { cat: 'series', label: 'Shows',  ep: '/tmdb/series' },
+      { cat: 'anime',  label: 'Anime',  ep: '/kitsu/anime' },
+      { cat: 'game',   label: 'Games',  ep: '/igdb/games' }
+    ];
+    var overlay = document.createElement('div');
+    overlay.id = 'globalSearch';
+    overlay.className = 'gsearch';
+    overlay.hidden = true;
+    overlay.innerHTML =
+      '<div class="gsearch-box" role="dialog" aria-label="Search">' +
+        '<div class="gsearch-bar">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+          '<input id="gsearchInput" type="text" placeholder="Search movies, shows, anime, games…" autocomplete="off" aria-label="Search all media" aria-controls="gsearchResults">' +
+          '<button type="button" class="gsearch-esc" id="gsearchClose" aria-label="Close search">Esc</button>' +
+        '</div>' +
+        '<div id="gsearchResults" class="gsearch-results" role="listbox"></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    var input = overlay.querySelector('#gsearchInput');
+    var resultsEl = overlay.querySelector('#gsearchResults');
+    var timer = null, activeIndex = -1, seq = 0;
+
+    function open() { overlay.hidden = false; document.body.classList.add('gsearch-open'); setTimeout(function () { input.focus(); }, 30); }
+    function close() { overlay.hidden = true; document.body.classList.remove('gsearch-open'); input.value = ''; resultsEl.innerHTML = ''; activeIndex = -1; }
+
+    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) close(); });
+    overlay.querySelector('#gsearchClose').addEventListener('click', close);
+
+    function normalize(cat, arr) {
+      if (!Array.isArray(arr)) return [];
+      if (cat === 'game') {
+        return arr.map(function (g) {
+          var cover = (g.cover && g.cover.url) ? ('https:' + String(g.cover.url).replace('t_thumb', 't_cover_big')) : (g.background_image || null);
+          return { id: 'igdb_' + g.id, media_type: 'game', name: g.name, background_image: cover, released: g.first_release_date ? new Date(g.first_release_date * 1000).toISOString() : null };
+        }).filter(function (x) { return x.name; });
+      }
+      return arr.map(function (m) { return { id: m.id, media_type: m.media_type || cat, name: m.name, background_image: m.background_image, released: m.released }; })
+                .filter(function (x) { return x.name; });
+    }
+
+    async function doSearch(q) {
+      if (q.length < 2) { resultsEl.innerHTML = '<div class="gsearch-hint">Type at least 2 characters to search.</div>'; return; }
+      var mine = ++seq;
+      resultsEl.innerHTML = '<div class="gsearch-hint">Searching…</div>';
+      var res = await Promise.all(GROUPS.map(function (g) {
+        return apiFetch(g.ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ search: q, limit: 6 }) })
+          .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; });
+      }));
+      if (mine !== seq) return; // a newer query superseded this one
+      var html = '', idx = 0;
+      GROUPS.forEach(function (g, i) {
+        var items = normalize(g.cat, res[i]).slice(0, 6);
+        if (!items.length) return;
+        var single = g.label === 'Movies' ? 'Movie' : g.label === 'Shows' ? 'Show' : g.label === 'Games' ? 'Game' : 'Anime';
+        html += '<div class="gsearch-group"><div class="gsearch-group-h">' + esc(g.label) + '</div>';
+        items.forEach(function (it) {
+          var year = it.released ? (' · ' + new Date(it.released).getFullYear()) : '';
+          html += '<a class="gsearch-item" data-idx="' + (idx++) + '" role="option" href="' + PAGE_FOR[it.media_type] + '?open=' + encodeURIComponent(it.id) + '">' +
+            '<img src="' + esc(it.background_image || '/img/no-image.svg') + '" alt="" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+            '<span class="gsearch-item-txt"><span class="gsearch-item-name">' + esc(it.name) + '</span>' +
+            '<span class="gsearch-item-meta">' + single + esc(year) + '</span></span>' +
+          '</a>';
+        });
+        html += '</div>';
+      });
+      resultsEl.innerHTML = html || '<div class="gsearch-hint">No matches for “' + esc(q) + '”.</div>';
+      activeIndex = -1;
+    }
+
+    function highlight(items) {
+      items.forEach(function (el, i) { el.classList.toggle('active', i === activeIndex); });
+      if (items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      var q = input.value.trim();
+      timer = setTimeout(function () { doSearch(q); }, 300);
+    });
+    input.addEventListener('keydown', function (e) {
+      var items = resultsEl.querySelectorAll('.gsearch-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); activeIndex = Math.min(activeIndex + 1, items.length - 1); highlight(items); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); activeIndex = Math.max(activeIndex - 1, 0); highlight(items); }
+      else if (e.key === 'Enter') { var t = items[activeIndex] || items[0]; if (t) window.location.href = t.getAttribute('href'); }
+      else if (e.key === 'Escape') { close(); }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!overlay.hidden) return;
+      var typing = /^(input|textarea|select)$/i.test((e.target && e.target.tagName) || '') || (e.target && e.target.isContentEditable);
+      if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey))) { e.preventDefault(); open(); }
+    });
+
+    global.__openGlobalSearch = open;
+  }
+
   if (typeof document !== 'undefined') {
     initSentry(); // set up as early as possible so init-time errors are caught
     if (document.readyState === 'loading') {
@@ -690,12 +803,14 @@
         initDensity();
         mountAppNav();
         mountPageHeader();
+        mountGlobalSearch();
         initAnalytics();
       });
     } else {
       initDensity();
       mountAppNav();
       mountPageHeader();
+      mountGlobalSearch();
       initAnalytics();
     }
   }
