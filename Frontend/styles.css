@@ -4053,3 +4053,31 @@ body[data-page="games"] .year-chip.active { color: #1a1206; }
 .activity-time { font-size: 0.75rem; color: var(--text-dim); }
 .activity-thumb { width: 40px; height: 54px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--bg-deep); }
 .activity-thumb-empty { display: inline-block; }
+
+/* ══ Release calendar ════════════════════════════════════════════════════ */
+.cal-filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 22px; }
+.cal-chip { padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition-fast); }
+.cal-chip:hover { border-color: var(--accent-border); color: var(--text-primary); }
+.cal-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+body[data-page="games"] .cal-chip.active { color: #1a1206; }
+
+.cal-watchlist { margin-bottom: 26px; }
+.cal-month { margin-bottom: 26px; }
+.cal-month-h { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle); }
+.cal-month-n { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); background: var(--bg-deep); border-radius: var(--radius-pill); padding: 2px 9px; }
+.cal-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.cal-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--border-subtle); text-decoration: none; transition: var(--transition-fast); }
+.cal-item:hover { border-color: var(--accent-border); transform: translateY(-1px); }
+.cal-date { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; flex-shrink: 0; background: var(--bg-deep); border-radius: 8px; padding: 6px 0; }
+.cal-date-day { font-size: 1.15rem; font-weight: 800; color: var(--accent-light); line-height: 1; }
+.cal-date-mon { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; }
+.cal-thumb { width: 38px; height: 52px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--bg-deep); }
+.cal-thumb-empty { display: inline-block; }
+.cal-item-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cal-item-name { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-badge { align-self: flex-start; font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 999px; border: 1px solid transparent; }
+.cal-badge-movie  { background: var(--cat-movie-dim);  color: var(--cat-movie-light);  border-color: var(--cat-movie-border); }
+.cal-badge-series { background: var(--cat-series-dim); color: var(--cat-series-light); border-color: var(--cat-series-border); }
+.cal-badge-anime  { background: var(--cat-anime-dim);  color: var(--cat-anime-light);  border-color: var(--cat-anime-border); }
+.cal-badge-game   { background: var(--cat-game-dim);   color: var(--cat-game-light);   border-color: var(--cat-game-border); }
+@media (max-width: 640px) { .cal-list { grid-template-columns: 1fr; } }
