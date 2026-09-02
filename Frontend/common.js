@@ -38,6 +38,31 @@
     gtag('config', id, { anonymize_ip: true });
   }
 
+  // ── Theme (dark default, opt-in light) ────────────────────────────────
+  // The saved theme is applied to <html data-theme> by a tiny inline script in
+  // each page's <head> (before paint, so no flash). These helpers drive the
+  // nav toggle and keep localStorage in sync.
+  var SUN_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  var MOON_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
+  function currentTheme() {
+    try { return localStorage.getItem('theme') === 'light' ? 'light' : 'dark'; }
+    catch (e) { return 'dark'; }
+  }
+  function paintThemeBtn(btn, theme) {
+    // Show the icon for the mode you'd switch TO.
+    btn.innerHTML = theme === 'light' ? MOON_SVG : SUN_SVG;
+    btn.setAttribute('title', theme === 'light' ? 'Switch to dark' : 'Switch to light');
+  }
+  function applyTheme(theme) {
+    var root = document.documentElement;
+    if (theme === 'light') root.setAttribute('data-theme', 'light');
+    else root.removeAttribute('data-theme');
+    try { localStorage.setItem('theme', theme); } catch (e) {}
+    var btn = document.getElementById('navThemeBtn');
+    if (btn) paintThemeBtn(btn, theme);
+  }
+
   // ── Sentry error tracking (opt-in) ─────────────────────────────────────
   // No-op until a DSN is configured (global.MGL_SENTRY_DSN or a
   // <meta name="sentry-dsn">). Uses Sentry's Loader Script so we never pin an
@@ -628,6 +653,7 @@
         '<button type="button" class="nav-search-btn" id="navSearchBtn" aria-label="Search all media" title="Search (press /)">' +
           '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
         '</button>' +
+        '<button type="button" class="nav-theme-btn" id="navThemeBtn" aria-label="Toggle light or dark theme"></button>' +
         '<button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navActions" aria-label="Open menu">' +
           '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
           '<span class="nav-toggle-bar" aria-hidden="true"></span>' +
@@ -645,6 +671,14 @@
     if (searchBtn) {
       searchBtn.addEventListener('click', function () {
         if (typeof global.__openGlobalSearch === 'function') global.__openGlobalSearch();
+      });
+    }
+
+    var themeBtn = document.getElementById('navThemeBtn');
+    if (themeBtn) {
+      paintThemeBtn(themeBtn, currentTheme());
+      themeBtn.addEventListener('click', function () {
+        applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
       });
     }
 
