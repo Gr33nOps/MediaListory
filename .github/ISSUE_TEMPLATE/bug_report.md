@@ -20,6 +20,6 @@ labels: bug
 ## Environment
 
 - [ ] Local (`npm start`)
-- [ ] Live (Vercel / Render)
+- [ ] Live ([medialistory.onrender.com](https://medialistory.onrender.com))
 - Browser:
 - Account type (guest / user / admin):

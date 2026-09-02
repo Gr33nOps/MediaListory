@@ -11,15 +11,26 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 **Live:** [medialistory.onrender.com](https://medialistory.onrender.com)
 
+## Screenshots
+
+| Home dashboard | Browse & track | Your stats |
+| :---: | :---: | :---: |
+| [![Home dashboard](docs/screenshots/dashboard.png)](docs/screenshots/dashboard.png) | [![Browse movies](docs/screenshots/browse.png)](docs/screenshots/browse.png) | [![Your stats](docs/screenshots/stats.png)](docs/screenshots/stats.png) |
+
 ## Features
 
-- Four separate tabs in one app — **Movies** and **Series** (TMDB), **Anime** (Kitsu), **Games** (IGDB) — each with its own discovery, search, and detail, sharing the same tracking, rating, notes, lists, and profile UI
-- Browse and search each category (genre + sort; platform/publisher/developer for games)
-- Track status (game "play" / movie, series & anime "watch"), score 1–10, and notes; per-type metadata (episode progress for series & anime); mixed-media custom lists; JSON export
-- Library and profiles filter and break down by category
-- **Guest mode:** browse, search, and view details without an account; sign in to save
-- Email/password auth plus Google & GitHub social sign-in (direct, same-origin OAuth2)
-- Follow users and public profiles
+- **One app, four categories** — **Movies** & **Shows** (TMDB), **Anime** (Kitsu), **Games** (IGDB), each with its own discovery, search, and detail pages, sharing the same tracking, rating, notes, lists, and profile UI
+- **Home dashboard** — a personal landing page with "Up Next" (in-progress shows/anime + one-tap episode +1) and per-category trending rows
+- **Global search** — a nav search box (or `/` · `⌘K`/`Ctrl-K`) that autocompletes across all four categories with keyboard navigation and deep-links to detail
+- **Rich detail pages** — cast, trailer, where-to-watch providers, ratings, and "more like this", pulled live per title
+- **Track & organize** — status (game "play" / movie·show·anime "watch"), score 1–10, notes; episode progress for shows & anime; mixed-media custom lists
+- **Your Stats / year-in-review** — hours, top genres, score distribution, category & status breakdowns, activity timeline, with a per-year switcher
+- **Release calendar** — upcoming movies, shows, anime, and games merged and grouped by month, filterable by category
+- **List import** — bring a collection in from a CSV (Letterboxd / MAL / Trakt) or a MediaListory JSON export, with a per-row match preview
+- **Social** — follow users, public profiles, and an activity feed of what they finished or rated
+- **Per-category theming** with a **light / dark** toggle (saved per browser)
+- **Guest mode** — browse, search, and view details without an account; sign in to save
+- Email/password auth plus **Google & GitHub** social sign-in (direct, same-origin OAuth2)
 - Admin and moderator dashboards
 
 ## Stack
