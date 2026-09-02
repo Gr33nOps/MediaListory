@@ -4081,3 +4081,37 @@ body[data-page="games"] .cal-chip.active { color: #1a1206; }
 .cal-badge-anime  { background: var(--cat-anime-dim);  color: var(--cat-anime-light);  border-color: var(--cat-anime-border); }
 .cal-badge-game   { background: var(--cat-game-dim);   color: var(--cat-game-light);   border-color: var(--cat-game-border); }
 @media (max-width: 640px) { .cal-list { grid-template-columns: 1fr; } }
+
+/* ══ List import modal ═══════════════════════════════════════════════════ */
+body.imp-open { overflow: hidden; }
+.imp-overlay { position: fixed; inset: 0; z-index: 210; background: var(--bg-overlay); display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; }
+.imp-box { width: 100%; max-width: 640px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); display: flex; flex-direction: column; max-height: 86vh; overflow: hidden; }
+.imp-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); }
+.imp-head h3 { font-size: 1.1rem; color: var(--text-primary); }
+.imp-close { background: none; border: 0; color: var(--text-muted); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 4px; }
+.imp-close:hover { color: var(--text-primary); }
+.imp-body { padding: 18px 20px; overflow-y: auto; }
+.imp-help { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 14px; }
+.imp-help em { color: var(--text-primary); font-style: normal; font-weight: 600; }
+.imp-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: 0.85rem; color: var(--text-secondary); }
+.imp-textarea { width: 100%; min-height: 150px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.82rem; resize: vertical; }
+.imp-orfile { margin: 12px 0; font-size: 0.85rem; color: var(--text-muted); }
+.imp-msg { font-size: 0.85rem; color: var(--text-muted); min-height: 1.2em; margin: 6px 0; }
+.imp-msg.error { color: var(--red-light); }
+.imp-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.imp-summary { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px; }
+.imp-summary strong { color: var(--text-primary); }
+.imp-table-wrap { max-height: 42vh; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
+.imp-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.imp-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
+.imp-table tr:last-child td { border-bottom: 0; }
+.imp-row-miss { opacity: 0.55; }
+.imp-c-status { width: 26px; text-align: center; }
+.imp-ok { color: #10b981; font-weight: 700; }
+.imp-miss { color: var(--text-dim); }
+.imp-c-title { max-width: 260px; }
+.imp-title-in { color: var(--text-primary); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-title-match { color: var(--text-muted); font-size: 0.78rem; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-c-meta { color: var(--text-muted); white-space: nowrap; }
+.imp-run-bar { height: 10px; background: var(--bg-deep); border-radius: 5px; overflow: hidden; margin-bottom: 12px; }
+.imp-run-fill { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 5px; transition: width 0.25s ease; }
