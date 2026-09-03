@@ -397,26 +397,24 @@
               '<option value="default">' + esc(defaultLabel) + '</option>' + customListOptions +
             '</select>' +
           '</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
-            '<div>' +
+          '<div class="atl-controls">' +
+            '<div class="atl-field atl-field-status">' +
               '<label>Status</label>' +
               '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' + statusOptions(MEDIA_TYPE, 'completed') + '</select>' +
             '</div>' +
-            '<div>' +
+            '<div class="atl-field">' +
               '<label>Your score (1-10)</label>' +
               '<div class="score-input-container" style="margin:0;">' +
-                '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--" style="width:100%;">' +
+                '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--">' +
                 '<div class="score-controls">' +
                   '<button type="button" class="score-btn" id="mbScoreUp" aria-label="Increase score">+</button>' +
                   '<button type="button" class="score-btn" id="mbScoreDown" aria-label="Decrease score">−</button>' +
                 '</div>' +
               '</div>' +
             '</div>' +
+            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + esc(media.id) + '">Add to Library</button>' +
           '</div>' +
-          '<div style="display:flex;align-items:center;gap:12px;">' +
-            '<button class="btn btn-primary btn-sm add-to-list-btn" data-game-id="' + esc(media.id) + '" style="flex-shrink:0;white-space:nowrap;">Add to Library</button>' +
-            '<span id="addGameMessage" style="font-size:13px;font-weight:600;"></span>' +
-          '</div>' +
+          '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
         '</div>' +
         similarHtml +
       '</div>';

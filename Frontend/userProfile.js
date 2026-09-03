@@ -238,6 +238,7 @@ var userGamesLoaded = false;
 
 async function loadUserGames() {
     if (typeof showSkeleton === 'function') showSkeleton('userGamesList', 'rows', 6);
+    var container = document.getElementById('userGamesList');
     try {
         var r = await fetch(`${API_BASE}/users/${viewingUserId}/games`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
@@ -248,10 +249,13 @@ async function loadUserGames() {
             updateUpMediaCounts();
             displayUserGames(sortGames(userGamesCache));
         } else {
-            console.error('Failed to load games');
+            // Never leave the skeleton spinning — always resolve to a real state.
+            var msg = r.status === 403 ? 'This collection is private.' : 'Could not load this collection.';
+            if (container) container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">' + msg + '</div><p>Please try again in a moment.</p></div>';
         }
     } catch (e) {
         console.error('Load user games error:', e);
+        if (container) container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">Could not load this collection.</div><p>Check your connection and try again.</p></div>';
     }
 }
 

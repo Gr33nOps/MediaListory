@@ -805,8 +805,8 @@ async function showGameDetails(gameId) {
                                 customListOptions +
                             '</select>' +
                         '</div>' +
-                        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
-                            '<div>' +
+                        '<div class="atl-controls">' +
+                            '<div class="atl-field atl-field-status">' +
                                 '<label>Status</label>' +
                                 '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' +
                                     '<option value="playing">In progress</option>' +
@@ -816,24 +816,22 @@ async function showGameDetails(gameId) {
                                     '<option value="dropped">Dropped</option>' +
                                 '</select>' +
                             '</div>' +
-                            '<div>' +
+                            '<div class="atl-field">' +
                                 '<label>Your score (1-10)</label>' +
                                 '<div class="score-input-container" style="margin:0;">' +
-                                    '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--" style="width:100%;">' +
+                                    '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--">' +
                                     '<div class="score-controls">' +
                                         '<button type="button" class="score-btn" id="scoreUpBtn" aria-label="Increase score">+</button>' +
                                         '<button type="button" class="score-btn" id="scoreDownBtn" aria-label="Decrease score">−</button>' +
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
+                            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + game.id + '" data-game-data="' + gameDataStr + '">Add to Library</button>' +
                         '</div>' +
-                        '<div id="customListNote" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:var(--radius-md);font-size:0.82rem;color:var(--accent-light);">' +
+                        '<div id="customListNote" style="display:none;margin-top:12px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:var(--radius-md);font-size:0.82rem;color:var(--accent-light);">' +
                             'The game will be added to your selected custom list with the status above.' +
                         '</div>' +
-                        '<div style="display:flex;align-items:center;gap:12px;">' +
-                            '<button class="btn btn-primary btn-sm add-to-list-btn" data-game-id="' + game.id + '" data-game-data="' + gameDataStr + '" style="flex-shrink:0;white-space:nowrap;">Add to List</button>' +
-                            '<span id="addGameMessage" style="font-size:13px;font-weight:600;"></span>' +
-                        '</div>' +
+                        '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
                     '</div>' +
                     similarHtml +
                 '</div>';

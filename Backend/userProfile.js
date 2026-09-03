@@ -87,22 +87,22 @@ module.exports = (db, verifyToken, checkBanned) => {
         if (!follows) return res.status(403).json({ error: 'This account is private', private: true });
       }
 
+      // Game metadata lives on `games`, not `user_game_lists` (which only holds
+      // status/score/progress). Reading name/artwork/etc. from user_game_lists
+      // was throwing "column game_name does not exist" → the collection hung.
       const games = await db('user_game_lists')
         .leftJoin('games', 'games.id', 'user_game_lists.game_id')
         .where('user_game_lists.user_id', userId)
         .select(
           db.raw(`COALESCE(games.game_id, user_game_lists.game_id::text) as id`),
           db.raw(`COALESCE(games.media_type, 'game') as media_type`),
-          'user_game_lists.game_name as name',
-          db.raw(`COALESCE(
-            NULLIF(user_game_lists.background_image, ''),
-            games.background_image
-          ) as background_image`),
-          'user_game_lists.rating',
-          'user_game_lists.description',
-          'user_game_lists.released',
-          'user_game_lists.metacritic_score',
-          'user_game_lists.playtime',
+          'games.name as name',
+          'games.background_image',
+          'games.rating',
+          'games.description',
+          'games.released',
+          'games.metacritic_score',
+          'games.playtime',
           'user_game_lists.status',
           'user_game_lists.score',
           'user_game_lists.progress_hours',
@@ -223,14 +223,12 @@ module.exports = (db, verifyToken, checkBanned) => {
           'custom_list_games.added_at',
           'custom_list_games.status',
           'custom_list_games.score as user_score',
-          'custom_list_games.game_name as name',
-          db.raw(`COALESCE(
-            NULLIF(custom_list_games.background_image, ''),
-            games.background_image
-          ) as background_image`),
-          'custom_list_games.rating',
-          'custom_list_games.released',
-          'custom_list_games.metacritic_score'
+          'games.name as name',
+          'games.background_image',
+          'games.media_type',
+          'games.rating',
+          'games.released',
+          'games.metacritic_score'
         );
 
       res.json({

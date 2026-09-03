@@ -810,10 +810,35 @@ select.update-status-select option,
 .page-info {
     font-size: 15px;
     color: var(--text-secondary);
-    font-weight: 500;
-    min-width: 100px;
+    font-weight: 600;
+    min-width: 84px;
     text-align: center;
+    font-variant-numeric: tabular-nums;
 }
+
+/* Prev / Next: consistent bordered pills (the bare .btn had no surface and fell
+   back to the browser default). Next carries the accent as the forward action. */
+.pagination .btn {
+    background: var(--bg-deep);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 10px 22px;
+    box-shadow: none;
+}
+.pagination .btn:hover:not(:disabled) {
+    border-color: var(--accent-border);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+.pagination #nextPageBtn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+.pagination #nextPageBtn:hover:not(:disabled) { filter: brightness(1.1); color: #fff; }
+.pagination .btn:disabled { opacity: 0.45; background: var(--bg-deep); color: var(--text-dim); }
+body[data-page="games"] .pagination #nextPageBtn { color: #1a1206; }
 
 /* Fixed columns so the 24 results per page fill complete rows with no trailing
    gaps. 24 divides evenly by 6 / 4 / 3 / 2, so every breakpoint stays full. */
@@ -1644,6 +1669,17 @@ select.update-status-select option,
     font-weight: 600;
     color: var(--text-dim);
     margin-bottom: 7px;
+}
+
+/* Add-to-library controls: Status grows, the score stays compact, and the
+   primary action fills the freed space beside the score. */
+.atl-controls { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+.atl-field { display: flex; flex-direction: column; }
+.atl-field-status { flex: 1 1 200px; min-width: 150px; }
+.atl-add { flex: 0 0 auto; align-self: flex-end; height: 46px; white-space: nowrap; }
+@media (max-width: 520px) {
+    .atl-field-status { flex-basis: 100%; }
+    .atl-add { flex: 1 1 100%; }
 }
 
 .score-input-container {
@@ -3380,8 +3416,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     color: #64748b;
 }
 
-.footer-igdb-text a { color: #3b82f6; text-decoration: none; }
-.footer-igdb-text a:hover { text-decoration: underline; }
+.footer-igdb-text a { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 2px; }
+.footer-igdb-text a:hover { color: var(--text-primary); }
 
 .footer-bottom {
     display: flex;
@@ -3752,8 +3788,8 @@ a:focus-visible {
 .footer-igdb { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--bg-deep); border: 1px solid var(--border-subtle); border-radius: 10px; margin-bottom: 28px; }
 .footer-igdb img { height: 26px; width: auto; flex-shrink: 0; }
 .footer-igdb-text { font-size: 0.78rem; line-height: 1.6; color: #64748b; }
-.footer-igdb-text a { color: #3b82f6; text-decoration: none; }
-.footer-igdb-text a:hover { text-decoration: underline; }
+.footer-igdb-text a { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 2px; }
+.footer-igdb-text a:hover { color: var(--text-primary); }
 .footer-bottom { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding-top: 20px; border-top: 1px solid #1e293b; font-size: 0.78rem; color: #475569; }
 .footer-bottom-links { display: flex; gap: 20px; }
 .footer-bottom-links a { color: #475569; text-decoration: none; transition: color 0.18s; }
@@ -4387,8 +4423,7 @@ body.imp-open { overflow: hidden; }
 .coll-item:hover .coll-item-img img { transform: scale(1.05); }
 
 /* Thread the page's category accent into content, not just the top bar. */
-.stats-dashboard { border-left: 3px solid var(--accent); }
-.section-title-accent { border-left: 3px solid var(--accent); padding-left: 12px; }
+/* (left accent bar removed per request) */
 
 @media (prefers-reduced-motion: no-preference) {
     /* A grid of freshly-loaded results fades in once as a group — no per-card
