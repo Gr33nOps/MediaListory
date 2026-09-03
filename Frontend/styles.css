@@ -166,25 +166,27 @@ h1, h2, h3,
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    /* Solid base behind the fixed body gradient so overscroll / tall pages
-       never flash the canvas (matters in both themes). */
-    background: var(--bg-base);
+    /* The deep base gradient lives on the root (the canvas), so the Aurora layer
+       — a negative-z-index child of body — paints ABOVE it. If the gradient sat
+       on body it would repaint over the Aurora and hide it entirely. */
+    background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-grad-mid) 55%, var(--bg-grad-end) 100%) fixed;
 }
 
 body {
     font-family: var(--font-body);
-    /* Category-themed backdrop: an accent glow at the top that recolors per page
-       (and when switching category tabs), over a deep base gradient. */
-    background:
-        radial-gradient(1900px 1300px at 50% -120px, var(--accent-glow) 0%, transparent 66%),
-        linear-gradient(180deg, var(--bg-base) 0%, var(--bg-grad-mid) 55%, var(--bg-grad-end) 100%);
-    background-attachment: fixed;
+    background: transparent;   /* base is on <html>; Aurora sits between them */
     min-height: 100vh;
     color: var(--text-primary);
     overflow-x: hidden;
-    transition: background 0.45s ease;
     padding-left: env(safe-area-inset-left, 0);
     padding-right: env(safe-area-inset-right, 0);
+}
+/* Light theme keeps a clean, still base with a whisper of the page accent —
+   Aurora is a dark-environment effect and does not render on light. */
+:root[data-theme="light"] html {
+    background:
+        radial-gradient(1600px 1100px at 50% -160px, var(--accent-glow) 0%, transparent 62%),
+        linear-gradient(180deg, var(--bg-base) 0%, var(--bg-grad-mid) 55%, var(--bg-grad-end) 100%) fixed;
 }
 
 img, video, canvas, svg {
@@ -4448,4 +4450,81 @@ body.imp-open { overflow: hidden; }
     .data-tools-row { flex-direction: column; align-items: stretch; }
     .data-export { justify-content: space-between; }
     .data-export .filter-select { flex: 1; }
+}
+
+/* ══ AURORA — animated gradient-blob atmosphere ═════════════════════════════
+   Moving luminous light in the brand's own colours (the four media hues), used
+   as an environmental background behind content — not inside cards. One reusable
+   system (mountAurora injects the layer + sets intensity per page). Dark theme
+   only; light theme keeps its clean base. See ~/.claude/skills/aurora. */
+
+/* Blob palette per page: the active category's colour dominates (--au-1),
+   with two harmonising brand hues. Neutral pages use the multi-media trio. */
+:root { --au-1: #3b82f6; --au-2: #ec4899; --au-3: #10b981; --aurora-blur: 72px; }
+body[data-page="movies"] { --au-1: #3b82f6; --au-2: #6366f1; --au-3: #06b6d4; }
+body[data-page="series"] { --au-1: #10b981; --au-2: #06b6d4; --au-3: #3b82f6; }
+body[data-page="anime"]  { --au-1: #ec4899; --au-2: #8b5cf6; --au-3: #3b82f6; }
+body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f43f5e; --au-3: #8b5cf6; }
+
+.aurora {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    /* Screen-blend the whole layer onto the dark base so the colour reads as
+       emitted light. (The blend must live here, not on the blobs — the layer's
+       own stacking context would otherwise trap it.) */
+    mix-blend-mode: screen;
+    --aurora-mult: 0.55;               /* default = subtle (app/content pages) */
+}
+.aurora[data-i="strong"]   { --aurora-mult: 1; }
+.aurora[data-i="moderate"] { --aurora-mult: 0.66; }
+.aurora[data-i="subtle"]   { --aurora-mult: 0.42; }
+:root[data-theme="light"] .aurora { display: none; }
+
+.aurora-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(var(--aurora-blur));
+    will-change: transform;
+    transition: opacity 0.6s ease;
+}
+.aurora-blob-1 { width: 46vmax; height: 46vmax; top: -14%; left: -12%;  background: var(--au-1); opacity: calc(0.85 * var(--aurora-mult)); animation: aurora-drift-1 23s ease-in-out infinite; }
+.aurora-blob-2 { width: 38vmax; height: 38vmax; top:   4%; right: -14%; background: var(--au-2); opacity: calc(0.68 * var(--aurora-mult)); animation: aurora-drift-2 31s ease-in-out infinite; }
+.aurora-blob-3 { width: 32vmax; height: 32vmax; bottom:-16%; left: 26%; background: var(--au-3); opacity: calc(0.55 * var(--aurora-mult)); animation: aurora-drift-3 19s ease-in-out infinite; }
+
+@keyframes aurora-drift-1 {
+    0%   { transform: translate3d(0, 0, 0); }
+    25%  { transform: translate3d(24%, 14%, 0); }
+    50%  { transform: translate3d(10%, 34%, 0); }
+    75%  { transform: translate3d(-12%, 10%, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes aurora-drift-2 {
+    0%   { transform: translate3d(0, 0, 0); }
+    25%  { transform: translate3d(-18%, 20%, 0); }
+    50%  { transform: translate3d(-6%, -14%, 0); }
+    75%  { transform: translate3d(14%, 8%, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes aurora-drift-3 {
+    0%   { transform: translate3d(0, 0, 0); }
+    25%  { transform: translate3d(16%, -18%, 0); }
+    50%  { transform: translate3d(-14%, -6%, 0); }
+    75%  { transform: translate3d(8%, 20%, 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+
+/* Mobile: recompose (not a cropped desktop) — fewer/softer, lower blur, no overflow. */
+@media (max-width: 640px) {
+    .aurora { --aurora-blur: 48px; }
+    .aurora-blob-1 { width: 78vw; height: 78vw; top: -12%; left: -18%; }
+    .aurora-blob-2 { width: 66vw; height: 66vw; top: 30%; right: -22%; }
+    .aurora-blob-3 { display: none; }   /* two blobs is enough on a phone */
+}
+
+/* Reduced motion: hold a composed, still Aurora (no drift). */
+@media (prefers-reduced-motion: reduce) {
+    .aurora-blob { animation: none !important; }
 }

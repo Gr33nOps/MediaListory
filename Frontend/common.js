@@ -1040,6 +1040,30 @@
   global.startTopProgress = startTopProgress;
   global.finishTopProgress = finishTopProgress;
 
+  // ── Aurora atmosphere ──────────────────────────────────────────────────────
+  // One reusable environmental light layer behind all content (dark theme only,
+  // via CSS). Colours come from the page's category (CSS --au-* on body[data-page]);
+  // intensity is stronger on marketing/auth, moderate on the dashboard, subtle in
+  // the content-dense app — content always dominates. See ~/.claude/skills/aurora.
+  function mountAurora() {
+    if (typeof document === 'undefined' || !document.body) return;
+    if (document.querySelector('.aurora')) return;
+    var el = document.createElement('div');
+    el.className = 'aurora';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML =
+      '<div class="aurora-blob aurora-blob-1"></div>' +
+      '<div class="aurora-blob aurora-blob-2"></div>' +
+      '<div class="aurora-blob aurora-blob-3"></div>';
+    var path = (location.pathname || '').toLowerCase();
+    var intensity = 'subtle';
+    if (/(auth|about)\.html$/.test(path)) intensity = 'strong';      // marketing / entry
+    else if (path === '/' || /dashboard\.html$/.test(path)) intensity = 'moderate'; // home hero
+    el.setAttribute('data-i', intensity);
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  global.mountAurora = mountAurora;
+
   if (typeof document !== 'undefined') {
     initSentry(); // set up as early as possible so init-time errors are caught
     if (document.readyState === 'loading') {
@@ -1047,6 +1071,7 @@
         initDensity();
         mountTopProgress();
         mountAppNav();
+        mountAurora();
         mountPageHeader();
         mountGlobalSearch();
         mountAppFooter();
@@ -1056,6 +1081,7 @@
       initDensity();
       mountTopProgress();
       mountAppNav();
+      mountAurora();
       mountPageHeader();
       mountGlobalSearch();
       mountAppFooter();
