@@ -556,29 +556,8 @@ function displaySearchResults(games, replace) {
             releasedHtml = '<span class="game-card-date' + (isComingSoon ? ' is-soon' : '') + '">' + esc(dateStr) + '</span>';
         }
 
-        var genresHtml = (game.genres || []).slice(0, 3).map(function(g) {
-            return '<span class="genre-tag">' + esc(g.name) + '</span>';
-        }).join('');
-
-        var platformsHtml = (game.platforms || []).slice(0, 3).map(function(p) {
-            return '<span class="platform-badge">' + esc(p.name) + '</span>';
-        }).join('');
-
-        var descHtml = '';
-        if (game.description) {
-            var full = String(game.description);
-            if (full.length > 110) {
-                descHtml =
-                    '<p class="game-card-desc">' +
-                        '<span class="desc-short">' + esc(full.slice(0, 110)) + '…</span>' +
-                        '<span class="desc-full hidden">' + esc(full) + '</span> ' +
-                        '<button type="button" class="link-btn show-more-btn">Show more</button>' +
-                    '</p>';
-            } else {
-                descHtml = '<p class="game-card-desc">' + esc(full) + '</p>';
-            }
-        }
-
+        // Poster-first tile: cover + title + year. Genres, platforms and the
+        // summary all live in the detail modal.
         var cardLabel = 'View details for ' + (game.name || 'game');
         var ratingHtml = game.rating ? '<span class="card-rating">★ ' + esc(Number(game.rating).toFixed(1)) + '</span>' : '';
         return '<div class="game-card" data-game-id="' + esc(game.id) + '" role="button" tabindex="0" aria-label="' + esc(cardLabel) + '">' +
@@ -589,9 +568,6 @@ function displaySearchResults(games, replace) {
             '<div class="game-info">' +
                 '<div class="game-title">' + esc(game.name) + '</div>' +
                 '<div class="game-card-meta">' + releasedHtml + '</div>' +
-                '<div class="game-genres">' + genresHtml + '</div>' +
-                (platformsHtml ? '<div class="game-platforms">' + platformsHtml + '</div>' : '') +
-                descHtml +
             '</div>' +
         '</div>';
     }).join('');

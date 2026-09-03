@@ -235,21 +235,8 @@
         var dateStr = new Date(m.released).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         releasedHtml = '<span class="game-card-date">' + esc(dateStr) + '</span>';
       }
-      var genresHtml = (m.genres || []).slice(0, 3).map(function (g) {
-        return '<span class="genre-tag">' + esc(g.name || g) + '</span>';
-      }).join('');
-      var descHtml = '';
-      if (m.description) {
-        var full = String(m.description);
-        if (full.length > 110) {
-          descHtml = '<p class="game-card-desc">' +
-            '<span class="desc-short">' + esc(full.slice(0, 110)) + '…</span>' +
-            '<span class="desc-full hidden">' + esc(full) + '</span> ' +
-            '<button type="button" class="link-btn show-more-btn">Show more</button></p>';
-        } else {
-          descHtml = '<p class="game-card-desc">' + esc(full) + '</p>';
-        }
-      }
+      // Grid tiles stay poster-first: title + year only. Genres, synopsis and
+      // the rest live in the detail modal, one click away.
       var label = 'View details for ' + (m.name || NOUN);
       var ratingHtml = m.rating ? '<span class="card-rating">★ ' + esc(Number(m.rating).toFixed(1)) + '</span>' : '';
       return '<div class="game-card" data-game-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="' + esc(label) + '">' +
@@ -260,8 +247,6 @@
         '<div class="game-info">' +
           '<div class="game-title">' + esc(m.name) + '</div>' +
           '<div class="game-card-meta">' + releasedHtml + '</div>' +
-          '<div class="game-genres">' + genresHtml + '</div>' +
-          descHtml +
         '</div>' +
       '</div>';
     }).join('');
