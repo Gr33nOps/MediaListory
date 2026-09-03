@@ -410,7 +410,6 @@
                   '<button type="button" class="score-btn" id="mbScoreUp" aria-label="Increase score">+</button>' +
                   '<button type="button" class="score-btn" id="mbScoreDown" aria-label="Decrease score">−</button>' +
                 '</div>' +
-                '<button type="button" class="btn btn-sm score-clear-btn" id="mbScoreClear">No Score</button>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -422,7 +421,7 @@
         similarHtml +
       '</div>';
 
-    if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'mbScoreUp', 'mbScoreDown', 'mbScoreClear');
+    if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'mbScoreUp', 'mbScoreDown', null);
     if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(byId('gameDetails'));
     if (typeof openModal === 'function') openModal('gameModal');
   }

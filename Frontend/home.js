@@ -824,7 +824,6 @@ async function showGameDetails(gameId) {
                                         '<button type="button" class="score-btn" id="scoreUpBtn" aria-label="Increase score">+</button>' +
                                         '<button type="button" class="score-btn" id="scoreDownBtn" aria-label="Decrease score">−</button>' +
                                     '</div>' +
-                                    '<button type="button" class="btn btn-sm score-clear-btn" id="scoreClearBtn">No Score</button>' +
                                 '</div>' +
                             '</div>' +
                         '</div>' +
@@ -842,7 +841,7 @@ async function showGameDetails(gameId) {
             if (typeof openModal === 'function') openModal('gameModal');
             else document.getElementById('gameModal').style.display = 'flex';
 
-            if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'scoreUpBtn', 'scoreDownBtn', 'scoreClearBtn');
+            if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'scoreUpBtn', 'scoreDownBtn', null);
             if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(document.getElementById('gameDetails'));
         }
     } catch (error) {

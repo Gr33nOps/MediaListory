@@ -1,18 +1,20 @@
 /* Type: Bricolage Grotesque (display — brand, headings) + Hanken Grotesk (UI/body).
    A deliberate pairing chosen over a system stack: the grotesque display gives the
-   personal-collection brand some editorial character; Hanken keeps dense lists legible. */
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');
+   personal-collection brand some editorial character; Hanken keeps dense lists legible.
+   The font <link>s live in each page <head> (before this file) so they load in
+   parallel — an @import here would block this stylesheet from applying, flashing
+   raw HTML on a slow fetch. */
 
 :root {
     --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
     --font-body: 'Hanken Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --bg-base:           #0a0f1c;
-    --bg-card:           #1e293b;
-    --bg-card-end:       #334155;
-    --bg-deep:           #0f172a;
+    --bg-base:           #0a0c12;
+    --bg-card:           #1c2432;
+    --bg-card-end:       #313c4d;
+    --bg-deep:           #0e1119;
     --bg-overlay:        rgba(0, 0, 0, 0.85);
-    --bg-grad-mid:       #0c1224;
-    --bg-grad-end:       #0a0f1f;
+    --bg-grad-mid:       #0b0d15;
+    --bg-grad-end:       #0a0c13;
 
     --border:            #475569;
     --border-subtle:     rgba(71, 85, 105, 0.3);
@@ -3775,6 +3777,34 @@ body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --a
 body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.46); }
 body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.48); }
 body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
+
+/* Dark theme only: warm the surfaces (nav, cards, inputs, panels) toward the
+   active category so the whole page belongs to that colour instead of sitting
+   as navy islands on the wash. Light theme keeps its clean white surfaces. */
+:root:not([data-theme="light"]) body[data-page="movies"] {
+    --bg-base: color-mix(in srgb, var(--cat-movie) 10%, #0a0c12);
+    --bg-card: color-mix(in srgb, var(--cat-movie) 12%, #1c2432);
+    --bg-deep: color-mix(in srgb, var(--cat-movie) 11%, #0e1119);
+    --border-subtle: color-mix(in srgb, var(--cat-movie) 22%, rgba(71,85,105,0.3));
+}
+:root:not([data-theme="light"]) body[data-page="series"] {
+    --bg-base: color-mix(in srgb, var(--cat-series) 10%, #0a0c12);
+    --bg-card: color-mix(in srgb, var(--cat-series) 12%, #1c2432);
+    --bg-deep: color-mix(in srgb, var(--cat-series) 11%, #0e1119);
+    --border-subtle: color-mix(in srgb, var(--cat-series) 22%, rgba(71,85,105,0.3));
+}
+:root:not([data-theme="light"]) body[data-page="anime"] {
+    --bg-base: color-mix(in srgb, var(--cat-anime) 10%, #0a0c12);
+    --bg-card: color-mix(in srgb, var(--cat-anime) 12%, #1c2432);
+    --bg-deep: color-mix(in srgb, var(--cat-anime) 11%, #0e1119);
+    --border-subtle: color-mix(in srgb, var(--cat-anime) 22%, rgba(71,85,105,0.3));
+}
+:root:not([data-theme="light"]) body[data-page="games"] {
+    --bg-base: color-mix(in srgb, var(--cat-game) 10%, #0a0c12);
+    --bg-card: color-mix(in srgb, var(--cat-game) 12%, #1c2432);
+    --bg-deep: color-mix(in srgb, var(--cat-game) 11%, #0e1119);
+    --border-subtle: color-mix(in srgb, var(--cat-game) 22%, rgba(71,85,105,0.3));
+}
 /* My Library, Following, and Profile stay neutral (inherit :root) and only
    pick up a category color when a category filter is chosen inside the page. */
 
@@ -3933,8 +3963,8 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 /* ══ Detail page enrichment: rating · trailer · cast · where-to-watch · similar ══ */
 .detail-rating {
     display: inline-flex; align-items: center; gap: 3px;
-    font-weight: 700; font-size: 0.95rem; color: #fbbf24;
-    background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3);
+    font-weight: 700; font-size: 0.95rem; color: var(--accent-light);
+    background: var(--accent-dim); border: 1px solid var(--accent-border);
     padding: 3px 11px; border-radius: 999px;
 }
 .detail-rating .dr-sub { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-left: 1px; }
@@ -3990,8 +4020,8 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .game-image-wrapper { position: relative; }
 .card-rating {
     position: absolute; top: 8px; right: 8px;
-    font-size: 0.74rem; font-weight: 700; color: #fbbf24;
-    background: rgba(8,12,20,0.82); border: 1px solid rgba(251,191,36,0.4);
+    font-size: 0.74rem; font-weight: 700; color: var(--accent-light);
+    background: rgba(8,12,20,0.82); border: 1px solid var(--accent-border);
     padding: 2px 8px; border-radius: 999px;
 }
 
@@ -4367,3 +4397,7 @@ body.imp-open { overflow: hidden; }
     .games-grid { animation: fade-in-soft 0.4s ease both; }
     .modal-content .detail-section { animation: fade-in-soft 0.45s ease both; }
 }
+
+/* Reserve the navbar height before common.js mounts it, so a fast navigation
+   doesn't flash a collapsed top and jump when the nav appears. */
+#appNav:empty { display: block; min-height: 62px; }
