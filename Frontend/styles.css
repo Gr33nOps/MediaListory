@@ -1968,21 +1968,23 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .profile-stats { display: flex; gap: 30px; }
 
+/* Stat figures sit inside the profile card already, so they read as plain
+   numbers, not boxes inside a box (rule 18). */
 .stat-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15px 25px;
-    background: var(--bg-deep);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    padding: 4px 22px;
 }
 
 .stat-item .stat-value {
+    font-family: var(--font-display);
     font-size: 2rem;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: var(--text-primary);
-    margin-bottom: 5px;
+    margin-bottom: 3px;
+    font-variant-numeric: tabular-nums;
 }
 
 .stat-item .stat-label {
@@ -1997,11 +1999,11 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     margin-bottom: 30px;
 }
 
+/* Read-only account facts read as a divided key/value list, not four boxes
+   inside the profile card. */
 .detail-item {
-    background: var(--bg-deep);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: 13px 2px;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .detail-item label {
