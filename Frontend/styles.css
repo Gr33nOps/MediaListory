@@ -1013,7 +1013,7 @@ select.update-status-select option,
     cursor: pointer;
 }
 
-.list-item:hover { background: rgba(59, 130, 246, 0.08); }
+.list-item:hover { background: var(--accent-dim); }
 .list-item:last-child { border-bottom: none; }
 
 .list-game-image {
@@ -1150,7 +1150,7 @@ select.update-status-select option,
 }
 
 .coll-item:last-child { border-bottom: none; }
-.coll-item:hover { background: rgba(59, 130, 246, 0.06); }
+.coll-item:hover { background: var(--accent-dim); }
 
 .coll-item-img {
     width: 64px;
@@ -1227,16 +1227,19 @@ select.update-status-select option,
     flex-shrink: 0;
 }
 
+/* The user's score is category-agnostic, so the badge is neutral — not tied
+   to the movies-blue colour on every row. */
 .coll-score-badge {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    color: var(--blue-light);
-    background: var(--blue-dim);
-    border: 1px solid var(--blue-glow);
+    color: var(--text-primary);
+    background: var(--bg-deep);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 6px 14px;
     min-width: 48px;
     text-align: center;
+    font-variant-numeric: tabular-nums;
 }
 
 .coll-item-edit-actions {
@@ -2078,7 +2081,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     gap: 20px;
 }
 
-.friend-item:hover { background: rgba(59, 130, 246, 0.08); }
+.friend-item:hover { background: var(--accent-dim); }
 .friend-item:last-child { border-bottom: none; }
 
 .friend-avatar {
@@ -2753,7 +2756,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-game-item:last-child { border-bottom: none; }
-.cl-game-item:hover { background: rgba(59, 130, 246, 0.08); }
+.cl-game-item:hover { background: var(--accent-dim); }
 
 .cl-game-img {
     width: 56px;
@@ -3018,8 +3021,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     user-select: none;
 }
 
-.cl-acc-header:hover { background: rgba(59, 130, 246, 0.08); }
-.cl-acc-row.expanded .cl-acc-header { background: rgba(59, 130, 246, 0.08); }
+.cl-acc-header:hover { background: var(--accent-dim); }
+.cl-acc-row.expanded .cl-acc-header { background: var(--accent-dim); }
 
 .cl-acc-header-left {
     display: flex;
@@ -3152,7 +3155,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .coll-item.list-item:last-child,
 .coll-item.cl-list-item:last-child { border-bottom: none; }
 .coll-item.list-item:hover,
-.coll-item.cl-list-item:hover { background: rgba(59, 130, 246, 0.06); }
+.coll-item.cl-list-item:hover { background: var(--accent-dim); }
 
 .my-games-section .status-tabs,
 .cl-acc-status-tabs {
