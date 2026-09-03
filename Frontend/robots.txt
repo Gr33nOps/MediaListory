@@ -14,7 +14,6 @@ Allow: /privacy.html
 
 Disallow: /auth.html
 Disallow: /myGameList.html
-Disallow: /calendar.html
 Disallow: /profile.html
 Disallow: /friends.html
 Disallow: /userProfile.html

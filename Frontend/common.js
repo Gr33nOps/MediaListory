@@ -908,7 +908,6 @@
         '</ul></div>' +
         '<div class="footer-col"><h4>Your space</h4><ul>' +
           '<li><a href="myGameList.html">My Library</a></li>' +
-          '<li><a href="calendar.html">Release Calendar</a></li>' +
           '<li><a href="profile.html">Profile</a></li>' +
         '</ul></div>' +
         '<div class="footer-col"><h4>Data &amp; Credits</h4><ul>' +
