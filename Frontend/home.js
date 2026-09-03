@@ -799,7 +799,7 @@ async function showGameDetails(gameId) {
                     '<div class="add-to-list">' +
                         '<h3>Add to My Library</h3>' +
                         '<div style="margin-bottom:12px;">' +
-                            '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;">Add to List</label>' +
+                            '<label>Add to list</label>' +
                             '<select id="gameListSelect" class="filter-select" style="width:100%;margin:0;" onchange="handleListSelectChange()">' +
                                 '<option value="default">My Games Library (Default)</option>' +
                                 customListOptions +
@@ -807,7 +807,7 @@ async function showGameDetails(gameId) {
                         '</div>' +
                         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">' +
                             '<div>' +
-                                '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:6px;">Status</label>' +
+                                '<label>Status</label>' +
                                 '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' +
                                     '<option value="playing">In progress</option>' +
                                     '<option value="completed" selected>Completed</option>' +
@@ -817,7 +817,7 @@ async function showGameDetails(gameId) {
                                 '</select>' +
                             '</div>' +
                             '<div>' +
-                                '<label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:6px;">Your Score (1-10)</label>' +
+                                '<label>Your score (1-10)</label>' +
                                 '<div class="score-input-container" style="margin:0;">' +
                                     '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--" style="width:100%;">' +
                                     '<div class="score-controls">' +

@@ -1128,12 +1128,10 @@ select.update-status-select option,
 }
 
 .coll-empty-icon {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-dim);
-    margin-bottom: 16px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
 }
 
 .coll-empty-state p {
@@ -1589,13 +1587,11 @@ select.update-status-select option,
 .game-detail-info-item { display: flex; align-items: baseline; gap: 8px; }
 
 .game-detail-info-label {
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
+    font-size: 0.82rem;
     color: var(--text-dim);
     font-weight: 600;
     flex-shrink: 0;
-    min-width: 80px;
+    min-width: 88px;
 }
 
 .game-detail-info-value {
@@ -1634,10 +1630,8 @@ select.update-status-select option,
 
 .add-to-list label {
     display: block;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
     color: var(--text-dim);
     margin-bottom: 7px;
 }
@@ -1992,10 +1986,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .stat-item .stat-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .profile-details {
@@ -2014,11 +2006,9 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .detail-item label {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .detail-value { font-size: 1.1rem; color: var(--text-primary); font-weight: 500; }
@@ -2454,11 +2444,9 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-section-label {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: var(--text-dim);
+    color: var(--text-secondary);
     margin-bottom: 12px;
 }
 
@@ -2880,9 +2868,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 .cl-form-label {
     display: block;
     font-size: 0.82rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
+    font-weight: 600;
     color: var(--text-dim);
     margin-bottom: 8px;
 }
@@ -3747,7 +3733,7 @@ a:focus-visible {
 .footer-inner { display: flex; flex-wrap: wrap; gap: 48px; justify-content: space-between; margin-bottom: 36px; }
 .footer-brand .brand-name { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin-bottom: 10px; letter-spacing: -0.01em; }
 .footer-brand p { max-width: 260px; line-height: 1.65; color: #64748b; }
-.footer-col h4 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; margin-bottom: 14px; }
+.footer-col h4 { font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 14px; }
 .footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .footer-col ul li a { color: #64748b; text-decoration: none; transition: color 0.18s; }
 .footer-col ul li a:hover { color: #e2e8f0; }
@@ -3944,7 +3930,7 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .detail-rating .dr-sub { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; margin-left: 1px; }
 
 .detail-section { margin-top: 26px; }
-.detail-h { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); margin: 0 0 12px; }
+.detail-h { font-family: var(--font-display); font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary); margin: 0 0 13px; }
 
 .detail-trailer { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; background: #000; cursor: pointer; border: 1px solid var(--border-subtle); }
 .detail-trailer img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.82; transition: opacity 0.2s; }
