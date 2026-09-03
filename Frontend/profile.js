@@ -51,8 +51,13 @@ function initPage() {
     document.getElementById('changePasswordBtn').addEventListener('click', showPasswordModal);
     var exportBtn = document.getElementById('exportDataBtn');
     if (exportBtn) {
-        exportBtn.addEventListener('click', exportMyData);
+        exportBtn.addEventListener('click', function () {
+            var sel = document.getElementById('exportCategory');
+            exportMyData(sel ? sel.value : '');
+        });
     }
+    var backupBtn = document.getElementById('backupDataBtn');
+    if (backupBtn) backupBtn.addEventListener('click', function () { exportMyData(''); });
 
     var densitySelect = document.getElementById('densitySelect');
     if (densitySelect && typeof getDensity === 'function') {
@@ -330,9 +335,11 @@ async function handlePasswordChange(e) {
     }
 }
 
-async function exportMyData() {
+async function exportMyData(category) {
+    var CAT_FILE = { movie: 'movies', series: 'shows', anime: 'anime', game: 'games' };
+    var qs = category ? ('?category=' + encodeURIComponent(category)) : '';
     try {
-        var r = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '/api') + '/user/export', {
+        var r = await fetch((typeof API_BASE !== 'undefined' ? API_BASE : '/api') + '/user/export' + qs, {
             headers: { 'Authorization': 'Bearer ' + authToken }
         });
         if (!r.ok) {
@@ -348,12 +355,13 @@ async function exportMyData() {
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'medialistory-export.json';
+        a.download = category ? ('medialistory-' + (CAT_FILE[category] || category) + '.json') : 'medialistory-backup.json';
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        if (typeof toast === 'function') toast('Export downloaded', 'success');
+        var okMsg = category ? ('Exported your ' + (CAT_FILE[category] || category)) : 'Full backup downloaded';
+        if (typeof toast === 'function') toast(okMsg, 'success');
     } catch (e) {
         if (typeof toast === 'function') toast('Network error exporting data', 'error');
         else notify('Network error exporting data', 'error');

@@ -68,8 +68,26 @@
                 <div class="profile-actions">
                     <button id="editProfileBtn" class="btn btn-primary">Edit Profile</button>
                     <button id="changePasswordBtn" class="btn btn-secondary">Change Password</button>
-                    <button id="importDataBtn" class="btn btn-secondary" type="button">Import a list</button>
-                    <button id="exportDataBtn" class="btn btn-secondary" type="button">Export my data</button>
+                </div>
+
+                <div class="data-tools">
+                    <h3 class="data-tools-h">Your data</h3>
+                    <div class="data-tools-row">
+                        <button id="importDataBtn" class="btn btn-secondary" type="button">Import a list</button>
+                        <div class="data-export">
+                            <label class="sr-only" for="exportCategory">Export category</label>
+                            <select id="exportCategory" class="filter-select" aria-label="Export category">
+                                <option value="">Everything</option>
+                                <option value="movie">Movies only</option>
+                                <option value="series">Shows only</option>
+                                <option value="anime">Anime only</option>
+                                <option value="game">Games only</option>
+                            </select>
+                            <button id="exportDataBtn" class="btn btn-secondary" type="button">Export</button>
+                        </div>
+                        <button id="backupDataBtn" class="btn btn-secondary" type="button">Download full backup</button>
+                    </div>
+                    <p class="data-tools-note">Export one category (e.g. just your movies) to move it to another site, or download a full backup of your whole account — collection and lists. To restore a backup, use <strong>Import</strong> with Auto-detect.</p>
                 </div>
             </div>
 

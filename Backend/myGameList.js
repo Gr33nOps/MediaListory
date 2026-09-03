@@ -589,9 +589,15 @@ module.exports = (db, verifyToken, checkBanned) => {
   router.get('/export', verifyToken, checkBanned, async (req, res) => {
     try {
       const user = await db('users').where({ id: req.userId }).first();
-      const collection = await db('user_game_lists as ugl')
+      // Optional per-category export; no category = a full backup of everything.
+      const cat = ['movie', 'series', 'anime', 'game'].includes(req.query.category)
+        ? req.query.category : null;
+
+      let collectionQ = db('user_game_lists as ugl')
         .join('games', 'ugl.game_id', 'games.id')
-        .where('ugl.user_id', req.userId)
+        .where('ugl.user_id', req.userId);
+      if (cat) collectionQ = collectionQ.where('games.media_type', cat);
+      const collection = await collectionQ
         .select(
           'games.game_id',
           'games.igdb_id',
@@ -611,10 +617,14 @@ module.exports = (db, verifyToken, checkBanned) => {
         .orderBy('created_at', 'desc');
 
       const listIds = lists.map(l => l.id);
-      const listGames = listIds.length
-        ? await db('custom_list_games as clg')
+      let listGamesQ = listIds.length
+        ? db('custom_list_games as clg')
             .join('games', 'clg.game_id', 'games.id')
             .whereIn('clg.list_id', listIds)
+        : null;
+      if (listGamesQ && cat) listGamesQ = listGamesQ.where('games.media_type', cat);
+      const listGames = listGamesQ
+        ? await listGamesQ
             .select(
               'clg.list_id',
               'games.game_id',
@@ -645,10 +655,12 @@ module.exports = (db, verifyToken, checkBanned) => {
         });
       });
 
-      res.setHeader('Content-Disposition', 'attachment; filename="medialistory-export.json"');
+      const fileName = cat ? `medialistory-${cat}.json` : 'medialistory-backup.json';
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.json({
         exported_at: new Date().toISOString(),
         product: 'MediaListory',
+        category: cat || 'all',
         catalog_apis: ['igdb', 'tmdb'],
         user: user
           ? {

@@ -3781,7 +3781,7 @@ a:focus-visible {
 .footer-inner { display: flex; flex-wrap: wrap; gap: 48px; justify-content: space-between; margin-bottom: 36px; }
 .footer-brand .brand-name { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin-bottom: 10px; letter-spacing: -0.01em; }
 .footer-brand p { max-width: 260px; line-height: 1.65; color: #64748b; }
-.footer-col h4 { font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 14px; }
+.footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: none; letter-spacing: normal; color: var(--text-secondary); margin-bottom: 14px; }
 .footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .footer-col ul li a { color: #64748b; text-decoration: none; transition: color 0.18s; }
 .footer-col ul li a:hover { color: #e2e8f0; }
@@ -4436,3 +4436,16 @@ body.imp-open { overflow: hidden; }
 /* Reserve the navbar height before common.js mounts it, so a fast navigation
    doesn't flash a collapsed top and jump when the nav appears. */
 #appNav:empty { display: block; min-height: 62px; }
+
+/* Profile › Your data: import, per-category export, and full backup. */
+.data-tools { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--border-subtle); }
+.data-tools-h { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 12px; }
+.data-tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.data-export { display: inline-flex; align-items: center; gap: 8px; }
+.data-export .filter-select { margin: 0; }
+.data-tools-note { margin: 12px 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; max-width: 66ch; }
+@media (max-width: 560px) {
+    .data-tools-row { flex-direction: column; align-items: stretch; }
+    .data-export { justify-content: space-between; }
+    .data-export .filter-select { flex: 1; }
+}

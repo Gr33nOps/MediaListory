@@ -93,7 +93,7 @@
       if (!title) continue;
       out.push({
         title: title,
-        type: normType(iType >= 0 ? cols[iType] : '', defaultType),
+        type: (defaultType === 'auto') ? normType(iType >= 0 ? cols[iType] : '', 'movie') : defaultType,
         status: normStatus(iStatus >= 0 ? cols[iStatus] : ''),
         score: normScore(iScore >= 0 ? cols[iScore] : null)
       });
@@ -107,7 +107,7 @@
       if (!e || !e.name) return;
       out.push({
         title: e.name,
-        type: normType(e.media_type, defaultType),
+        type: (defaultType === 'auto') ? normType(e.media_type, 'movie') : defaultType,
         status: normStatus(e.status),
         score: normScore(e.score),
         ref: e.game_id || null // our own export carries the catalog ref
@@ -201,11 +201,13 @@
           '<div id="impPhaseInput">' +
             '<p class="imp-help">Paste a <strong>CSV</strong> (e.g. a Letterboxd, MAL or Trakt export) or a MediaListory JSON export, or choose a file. ' +
             'CSV columns we look for: <em>title, type, status, score</em>.</p>' +
-            '<label class="imp-field"><span>Default category for rows without a type</span>' +
+            '<label class="imp-field"><span>What are you importing?</span>' +
               '<select id="impDefaultType" class="form-input">' +
-                '<option value="movie">Movie</option><option value="series">Show</option>' +
-                '<option value="anime">Anime</option><option value="game">Game</option>' +
+                '<option value="auto" selected>Auto-detect from the file</option>' +
+                '<option value="movie">Movies only</option><option value="series">Shows only</option>' +
+                '<option value="anime">Anime only</option><option value="game">Games only</option>' +
               '</select></label>' +
+            '<p class="imp-help" style="margin-top:-4px;">Importing from a single-category site (Letterboxd → Movies, MAL → Anime, a games export → Games)? Pick that category. A mixed export (e.g. movies + shows, or a MediaListory backup) can use Auto-detect — each title still lands in its own category.</p>' +
             '<textarea id="impText" class="form-input imp-textarea" placeholder="Paste CSV or JSON here…"></textarea>' +
             '<div class="imp-orfile"><input type="file" id="impFile" accept=".csv,.json,.txt"></div>' +
             '<div id="impInputMsg" class="imp-msg"></div>' +
