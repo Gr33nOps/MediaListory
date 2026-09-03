@@ -193,11 +193,11 @@ img, video, canvas, svg {
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: var(--bg-card); }
 ::-webkit-scrollbar-thumb {
-    background: var(--blue);
+    background: var(--accent);
     border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--blue-light);
+    background: var(--accent-light);
 }
 
 .hidden { display: none !important; }
@@ -1436,11 +1436,11 @@ select.update-status-select option,
     position: relative;
     box-shadow: 0 24px 64px rgba(0,0,0,0.55);
     scrollbar-width: thin;
-    scrollbar-color: var(--blue) transparent;
+    scrollbar-color: var(--accent) transparent;
 }
 
 .modal-content::-webkit-scrollbar { width: 4px; }
-.modal-content::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 4px; }
+.modal-content::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
 
 .game-detail-hero {
     position: relative;
@@ -1783,8 +1783,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 
 .update-form input:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .remove-form p { color: var(--text-secondary); font-size: 1rem; line-height: 1.6; margin: 15px 0; }
@@ -3237,11 +3237,11 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     position: relative;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(59, 130, 246, 0.1);
     scrollbar-width: thin;
-    scrollbar-color: var(--blue) transparent;
+    scrollbar-color: var(--accent) transparent;
 }
 
 .cl-game-modal-box::-webkit-scrollbar { width: 4px; }
-.cl-game-modal-box::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 4px; }
+.cl-game-modal-box::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
 
 .cl-game-modal-close-btn {
     position: absolute;
