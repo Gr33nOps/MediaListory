@@ -71,6 +71,15 @@
         <div class="friends-section">
             <div class="list-header">
                 <h2>Discover people</h2>
+                <div class="list-header-actions">
+                    <label class="sr-only" for="discoverSort">Sort people</label>
+                    <select id="discoverSort" class="filter-select" aria-label="Sort people">
+                        <option value="recent" selected>Recently joined</option>
+                        <option value="active">Most active</option>
+                        <option value="name_asc">Name (A–Z)</option>
+                        <option value="name_desc">Name (Z–A)</option>
+                    </select>
+                </div>
             </div>
             <div id="discoverList" class="friends-list"></div>
         </div>

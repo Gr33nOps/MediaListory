@@ -145,11 +145,21 @@ function displayRequests(reqs) {
 async function loadDiscover() {
     const list = document.getElementById('discoverList');
     if (list) list.innerHTML = '<div class="empty-state">Loading people…</div>';
+    const sortSel = document.getElementById('discoverSort');
+    const sort = sortSel ? sortSel.value : 'recent';
     try {
-        const r = await fetch(`${API_BASE}/discover`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const r = await fetch(`${API_BASE}/discover?sort=${encodeURIComponent(sort)}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
         if (r.ok) { const d = await r.json(); displayDiscover(d.users || []); }
-    } catch (e) { console.error('Load discover error:', e); }
+        else if (list) list.innerHTML = '<div class="empty-state"><p>Could not load people. Try again.</p></div>';
+    } catch (e) {
+        console.error('Load discover error:', e);
+        if (list) list.innerHTML = '<div class="empty-state"><p>Could not load people. Check your connection.</p></div>';
+    }
 }
+// Re-fetch when the sort changes.
+document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'discoverSort') loadDiscover();
+});
 
 function displayDiscover(users) {
     const list = document.getElementById('discoverList');

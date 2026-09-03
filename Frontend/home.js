@@ -196,6 +196,15 @@ function initPage() {
         searchInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') searchGames();
         });
+        // Live search: results update as you type (debounced), like the global bar.
+        var searchDebounce;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchDebounce);
+            var term = searchInput.value.trim();
+            searchDebounce = setTimeout(function() {
+                if (term.length === 0 || term.length >= 2) searchGames();
+            }, 350);
+        });
     }
 
     var sortBySelect = document.getElementById('sortBy');

@@ -58,12 +58,27 @@ module.exports = (db, verifyToken, checkBanned) => {
   // private accounts show a Request button), minus yourself and banned users.
   router.get('/discover', verifyToken, checkBanned, async (req, res) => {
     try {
-      const rows = await db('users')
-        .where('is_banned', false)
-        .whereNot('id', req.userId)
-        .orderBy('created_at', 'desc')
+      const sort = String(req.query.sort || 'recent');
+      let q = db('users as u')
+        .where('u.is_banned', false)
+        .whereNot('u.id', req.userId)
         .limit(60)
-        .select('id', 'username', 'display_name', 'avatar_url', 'is_private');
+        .select('u.id', 'u.username', 'u.display_name', 'u.avatar_url', 'u.is_private');
+
+      if (sort === 'active') {
+        // "Most active" ~= level: the more titles tracked, the higher the level.
+        q = q.select(db.raw('(SELECT count(*) FROM user_game_lists ugl WHERE ugl.user_id = u.id) as game_count'))
+             .orderBy('game_count', 'desc')
+             .orderBy('u.created_at', 'desc');
+      } else if (sort === 'name_asc') {
+        q = q.orderByRaw('LOWER(COALESCE(u.display_name, u.username)) asc');
+      } else if (sort === 'name_desc') {
+        q = q.orderByRaw('LOWER(COALESCE(u.display_name, u.username)) desc');
+      } else {
+        q = q.orderBy('u.created_at', 'desc'); // recent (default)
+      }
+
+      const rows = await q;
       res.json({ users: await decorateRelationship(req.userId, rows) });
     } catch (error) {
       console.error('Discover users error:', error);

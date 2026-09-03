@@ -64,6 +64,15 @@
     var searchInput = byId('searchInput');
     if (searchInput) {
       searchInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') doSearch(); });
+      // Live search: results update as you type (debounced), like the global bar.
+      var searchDebounce;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(searchDebounce);
+        var term = searchInput.value.trim();
+        searchDebounce = setTimeout(function () {
+          if (term.length === 0 || term.length >= 2) doSearch();
+        }, 350);
+      });
     }
 
     var sortBy = byId('sortBy');
