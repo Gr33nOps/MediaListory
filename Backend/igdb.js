@@ -362,21 +362,24 @@ module.exports = (verifyToken, checkBanned, db) => {
         return res.json(cached);
       }
 
-      if (detailId) {
-        const fromDb = await loadDetailFromDb(detailId);
-        if (fromDb) {
-          cache.set(cacheKey, fromDb, TTL.detail);
-          res.setHeader('X-Cache', 'DB');
-          return res.json(fromDb);
-        }
-      }
-
+      // Detail views must come from IGDB so they carry the rich fields (videos,
+      // screenshots, similar games, modes). The stored DB row only has the
+      // browse-level columns, so it is a fallback for when IGDB is unavailable,
+      // not the primary source.
       const query = buildGamesQuery(body);
       const response = await igdbFetch('/games', query);
       const data = await response.json();
 
       if (!response.ok) {
-        if (!detailId) {
+        if (detailId) {
+          const fromDb = await loadDetailFromDb(detailId);
+          if (fromDb) {
+            cache.set(cacheKey, fromDb, TTL.detail);
+            res.setHeader('X-Cache', 'DB');
+            res.setHeader('X-Degraded', 'igdb');
+            return res.json(fromDb);
+          }
+        } else {
           const degraded = await serveDegradedList(res, body, cacheKey);
           if (degraded) return;
         }
@@ -390,7 +393,15 @@ module.exports = (verifyToken, checkBanned, db) => {
       res.setHeader('X-Cache', 'MISS');
       res.json(data);
     } catch (error) {
-      if (!(req.body && clampInt(req.body.id, 1, Number.MAX_SAFE_INTEGER, 0))) {
+      const detailId = clampInt(req.body && req.body.id, 1, Number.MAX_SAFE_INTEGER, 0);
+      if (detailId) {
+        const fromDb = await loadDetailFromDb(detailId);
+        if (fromDb) {
+          res.setHeader('X-Cache', 'DB');
+          res.setHeader('X-Degraded', 'igdb');
+          return res.json(fromDb);
+        }
+      } else {
         const body = req.body || {};
         const cacheKey = `list:${crypto.createHash('sha1').update(JSON.stringify(body)).digest('hex')}`;
         const degraded = await serveDegradedList(res, body, cacheKey);

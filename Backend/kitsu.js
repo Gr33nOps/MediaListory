@@ -142,7 +142,7 @@ module.exports = (verifyToken, checkBanned, db) => {
           // Characters ("cast") give anime the same richness as movies/shows.
           // A failure here must never break the detail response.
           try {
-            const cRes = await kitsuFetch(`/anime/${detailId}/characters?include=character&page[limit]=12&sort=-favoritesCount`);
+            const cRes = await kitsuFetch(`/anime/${detailId}/characters?include=character&page[limit]=20`);
             const cJson = await cRes.json();
             if (cRes.ok && Array.isArray(cJson.data)) {
               const chars = {};
@@ -154,12 +154,18 @@ module.exports = (verifyToken, checkBanned, db) => {
                 const c = rel && chars[rel.id];
                 if (!c || !c.name) return null;
                 const img = c.image || {};
+                const main = mc.attributes && mc.attributes.role === 'main';
                 return {
                   name: c.name,
-                  character: (mc.attributes && mc.attributes.role === 'main') ? 'Main character' : 'Supporting',
-                  image: img.original || img.large || img.medium || null
+                  character: main ? 'Main character' : 'Supporting',
+                  image: img.original || img.large || img.medium || null,
+                  _main: main
                 };
-              }).filter(Boolean).slice(0, 12);
+              }).filter(Boolean)
+                // Main characters first; media-characters has no server-side sort for this.
+                .sort((a, b) => (b._main ? 1 : 0) - (a._main ? 1 : 0))
+                .slice(0, 12)
+                .map(({ _main, ...c }) => c);
             }
           } catch (_) {}
         }
