@@ -199,6 +199,7 @@ function initCollectionTab() {
 }
 
 async function loadMyGames() {
+    if (typeof showSkeleton === 'function') showSkeleton('myGamesGrid', 'rows', 6);
     try {
         var response = await fetch(`${API_BASE}/user/games`, {
             headers: { 'Authorization': `Bearer ${authToken}` }

@@ -973,11 +973,86 @@
   }
   global.enhanceScrollers = enhanceScrollers;
 
+  // ── Loading skeletons ─────────────────────────────────────────────────────
+  // Shared placeholders so every data view (browse, collection, profiles) shows
+  // the same shimmer while it loads, not just the search grids.
+  function skeletonCards(n) {
+    var one = '<div class="skeleton-card"><div class="skeleton skel-poster"></div>' +
+      '<div class="skel-info"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w50"></div></div></div>';
+    return new Array(Math.max(1, n || 10)).fill(one).join('');
+  }
+  function skeletonRows(n) {
+    var one = '<div class="skel-row"><div class="skeleton skel-row-img"></div>' +
+      '<div class="skel-row-body"><div class="skeleton skel-line w50"></div><div class="skeleton skel-line w80"></div></div>' +
+      '<div class="skeleton skel-row-badge"></div></div>';
+    return new Array(Math.max(1, n || 6)).fill(one).join('');
+  }
+  function showSkeleton(target, kind, n) {
+    var el = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!el) return;
+    el.innerHTML = (kind === 'rows') ? skeletonRows(n) : skeletonCards(n);
+  }
+  global.skeletonCards = skeletonCards;
+  global.skeletonRows = skeletonRows;
+  global.showSkeleton = showSkeleton;
+
+  // ── Top navigation progress bar ───────────────────────────────────────────
+  // Gives every page-to-page navigation immediate feedback, and completes when
+  // the incoming page finishes loading.
+  var progressBar = null, progressTimer = null;
+  function ensureProgressBar() {
+    if (progressBar) return progressBar;
+    progressBar = document.createElement('div');
+    progressBar.className = 'top-progress';
+    document.body.appendChild(progressBar);
+    return progressBar;
+  }
+  function startTopProgress() {
+    var bar = ensureProgressBar();
+    clearTimeout(progressTimer);
+    bar.classList.remove('done');
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    bar.style.opacity = '1';
+    // force reflow so the width reset applies before we animate
+    void bar.offsetWidth;
+    bar.style.transition = 'width 8s cubic-bezier(0.1, 0.7, 0.1, 1), opacity 0.3s';
+    bar.style.width = '90%';
+  }
+  function finishTopProgress() {
+    if (!progressBar) return;
+    var bar = progressBar;
+    bar.style.transition = 'width 0.25s ease, opacity 0.4s ease 0.2s';
+    bar.style.width = '100%';
+    bar.style.opacity = '0';
+    progressTimer = setTimeout(function () { bar.style.width = '0%'; }, 600);
+  }
+  function mountTopProgress() {
+    if (typeof document === 'undefined' || !document.body) return;
+    ensureProgressBar();
+    if (document.readyState === 'complete') { /* already loaded, no bar */ }
+    else { startTopProgress(); window.addEventListener('load', finishTopProgress); }
+    // Immediate feedback when leaving for another internal page.
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (a.target === '_blank' || a.hasAttribute('download') || href[0] === '#' ||
+          /^(mailto:|tel:|javascript:)/i.test(href)) return;
+      if (a.origin && a.origin !== location.origin) return;
+      startTopProgress();
+    }, true);
+    window.addEventListener('pageshow', function (e) { if (e.persisted) finishTopProgress(); });
+  }
+  global.startTopProgress = startTopProgress;
+  global.finishTopProgress = finishTopProgress;
+
   if (typeof document !== 'undefined') {
     initSentry(); // set up as early as possible so init-time errors are caught
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function () {
         initDensity();
+        mountTopProgress();
         mountAppNav();
         mountPageHeader();
         mountGlobalSearch();
@@ -986,6 +1061,7 @@
       });
     } else {
       initDensity();
+      mountTopProgress();
       mountAppNav();
       mountPageHeader();
       mountGlobalSearch();

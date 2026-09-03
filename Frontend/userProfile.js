@@ -237,6 +237,7 @@ function displayUserProfile(user) {
 var userGamesLoaded = false;
 
 async function loadUserGames() {
+    if (typeof showSkeleton === 'function') showSkeleton('userGamesList', 'rows', 6);
     try {
         var r = await fetch(`${API_BASE}/users/${viewingUserId}/games`, {
             headers: { 'Authorization': `Bearer ${authToken}` }

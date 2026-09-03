@@ -4020,6 +4020,19 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .skel-line.w50 { width: 50%; }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 
+/* List-row skeleton (Collection / friend Collection list view) */
+.skel-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-deep); margin-bottom: 10px; }
+.skel-row-img { width: 46px; height: 62px; border-radius: 8px; flex-shrink: 0; }
+.skel-row-body { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+.skel-row-badge { width: 84px; height: 26px; border-radius: var(--radius-pill); flex-shrink: 0; }
+.stat-skel { display: inline-block; width: 2.2ch; height: 1em; border-radius: 6px; vertical-align: middle; }
+
+/* Top navigation progress bar */
+.top-progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 9999; opacity: 0;
+  background: linear-gradient(90deg, var(--accent, #6366f1), var(--accent-light, #818cf8));
+  box-shadow: 0 0 8px var(--accent-glow, rgba(99,102,241,0.4)); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .top-progress { transition: opacity 0.2s !important; } }
+
 /* ── Library grid view (toggle) ─────────────────────────────────────────── */
 .my-games-list.as-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
 .my-games-list.as-grid .coll-item { flex-direction: column; align-items: stretch; gap: 0; padding: 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-deep); }
@@ -4332,3 +4345,40 @@ body.imp-open { overflow: hidden; }
 .cl-cat-badge[data-cat="anime"]  { --cc: var(--cat-anime-light);  color: var(--cat-anime-light);  background: var(--cat-anime-dim); }
 .cl-cat-badge[data-cat="game"]   { --cc: var(--cat-game-light);   color: var(--cat-game-light);   background: var(--cat-game-dim); }
 .cl-cat-badge[data-cat="mixed"]  { color: var(--text-muted); background: var(--bg-deep); border-color: var(--border-subtle); }
+
+/* ══ Motion & depth: keep pages feeling alive, not flat ══════════════════════
+   The accent should read beyond the navbar, and content should arrive with a
+   little life rather than snapping in. All of it is gated behind
+   prefers-reduced-motion and stays subtle (no glows, no surface gradients). */
+.game-image { transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.game-card:hover .game-image { transform: scale(1.05); }
+.coll-item-img, .coll-item-img img { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.coll-item:hover .coll-item-img img { transform: scale(1.06); }
+
+/* Thread the page's category accent into content, not just the top bar. */
+.stats-dashboard { border-left: 3px solid var(--accent); }
+.list-header > h2, .my-games-section > .list-header h2 { position: relative; }
+.section-title-accent { border-left: 3px solid var(--accent); padding-left: 12px; }
+
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes card-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes fade-in-soft { from { opacity: 0; } to { opacity: 1; } }
+    .games-grid > .game-card { animation: card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .games-grid > .game-card:nth-child(1)  { animation-delay: 0.00s; }
+    .games-grid > .game-card:nth-child(2)  { animation-delay: 0.035s; }
+    .games-grid > .game-card:nth-child(3)  { animation-delay: 0.07s; }
+    .games-grid > .game-card:nth-child(4)  { animation-delay: 0.105s; }
+    .games-grid > .game-card:nth-child(5)  { animation-delay: 0.14s; }
+    .games-grid > .game-card:nth-child(6)  { animation-delay: 0.175s; }
+    .games-grid > .game-card:nth-child(7)  { animation-delay: 0.21s; }
+    .games-grid > .game-card:nth-child(8)  { animation-delay: 0.245s; }
+    .games-grid > .game-card:nth-child(9)  { animation-delay: 0.28s; }
+    .games-grid > .game-card:nth-child(n+10) { animation-delay: 0.31s; }
+    .my-games-list > .coll-item { animation: card-enter 0.4s ease both; }
+    .my-games-list > .coll-item:nth-child(2) { animation-delay: 0.03s; }
+    .my-games-list > .coll-item:nth-child(3) { animation-delay: 0.06s; }
+    .my-games-list > .coll-item:nth-child(4) { animation-delay: 0.09s; }
+    .my-games-list > .coll-item:nth-child(n+5) { animation-delay: 0.12s; }
+    .modal-content .detail-section { animation: fade-in-soft 0.5s ease both; }
+    .game-detail-body > .game-detail-title-row { animation: card-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+}

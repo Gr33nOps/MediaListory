@@ -90,6 +90,8 @@ async function loadProfile() {
             displayProfile(profileData.user);
         }
 
+        showStatsSkeleton();
+
         var results = await Promise.all([
             fetch(`${API_BASE}/user/games`,  { headers: { 'Authorization': `Bearer ${authToken}` } }),
             fetch(`${API_BASE}/followers`,    { headers: { 'Authorization': `Bearer ${authToken}` } }),
@@ -183,6 +185,20 @@ function initAvatarUpload() {
 function flashEdit(msg, isErr) {
     var m = document.getElementById('editMessage');
     if (m) m.innerHTML = '<div class="' + (isErr ? 'error-message' : 'success-message') + '">' + msg + '</div>';
+}
+
+function showStatsSkeleton() {
+    ['userLevel', 'totalGames', 'followersCount', 'followingCount'].forEach(function(id) {
+        var e = document.getElementById(id);
+        if (e) e.innerHTML = '<span class="skeleton stat-skel"></span>';
+    });
+    var bd = document.getElementById('mediaBreakdown');
+    if (bd) {
+        bd.className = 'cat-breakdown';
+        bd.removeAttribute('style');
+        bd.innerHTML = new Array(4).fill('<span class="cat-stat"><span class="skeleton stat-skel"></span>' +
+            '<span class="skeleton skel-line w50" style="margin-top:6px;"></span></span>').join('');
+    }
 }
 
 function displayStats(games, followers, following) {
