@@ -18,20 +18,23 @@
         .about-section { margin: 48px 0; }
         .about-section > h2 { font-size: 1.4rem; font-family: var(--font-display); color: var(--text-primary); margin: 0 0 18px; letter-spacing: -0.01em; }
         .about-lead { color: var(--text-secondary); line-height: 1.75; font-size: 1rem; }
-        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-        .feature-card { display: block; padding: 18px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-card); text-decoration: none; transition: border-color .18s, transform .18s; }
-        .feature-card:hover { border-color: var(--accent-border); transform: translateY(-2px); }
-        .feature-card h3 { margin: 0 0 6px; color: var(--text-primary); font-size: 1.02rem; display: flex; align-items: center; gap: 8px; }
+        /* The four categories: a colour-coded left rule carries the identity
+           (a meaningful border, not decoration), so no boxes are needed. */
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 26px; }
+        .feature-card { display: block; padding: 3px 0 3px 15px; border-left: 2px solid var(--fc, var(--border)); text-decoration: none; }
+        .feature-card h3 { margin: 0 0 5px; color: var(--text-primary); font-size: 1.05rem; }
+        .feature-card:hover h3 { color: var(--fc, var(--accent-light)); }
         .feature-card p { margin: 0; color: var(--text-muted); font-size: .88rem; line-height: 1.55; }
-        .fc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-        .fc-movies .fc-dot { background: var(--cat-movie-light); }
-        .fc-series .fc-dot { background: var(--cat-series-light); }
-        .fc-anime  .fc-dot { background: var(--cat-anime-light); }
-        .fc-games  .fc-dot { background: var(--cat-game-light); }
-        .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-        .trust-item { padding: 16px 18px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-card); }
-        .trust-item h3 { margin: 0 0 6px; font-size: .95rem; color: var(--text-primary); }
-        .trust-item p { margin: 0; color: var(--text-muted); font-size: .86rem; line-height: 1.6; }
+        .fc-dot { display: none; }
+        .fc-movies { --fc: var(--cat-movie-light); }
+        .fc-series { --fc: var(--cat-series-light); }
+        .fc-anime  { --fc: var(--cat-anime-light); }
+        .fc-games  { --fc: var(--cat-game-light); }
+        /* Trust points read as a divided list, not four cards. */
+        .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 4px 32px; }
+        .trust-item { padding: 15px 0; border-top: 1px solid var(--border-subtle); }
+        .trust-item h3 { margin: 0 0 5px; font-size: .98rem; color: var(--text-primary); }
+        .trust-item p { margin: 0; color: var(--text-muted); font-size: .88rem; line-height: 1.6; }
         .trust-item a { color: var(--accent-light); text-decoration: none; }
         .trust-item a:hover { text-decoration: underline; }
         .faq details { border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-card); margin-bottom: 10px; padding: 0 16px; }
