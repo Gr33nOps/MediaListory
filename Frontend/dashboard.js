@@ -182,6 +182,7 @@
       html += rowShell('Trending ' + LABEL[t.cat], items.map(posterCard).join(''), CAT_FOR[t.cat]);
     });
     container.innerHTML = html || '<p class="dash-empty">Could not load trending right now. Try refreshing.</p>';
+    if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(container);
   }
 
   renderHero();

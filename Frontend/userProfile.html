@@ -220,19 +220,27 @@
         </div>
 
         <div id="upTabs" class="page-tabs" role="tablist" aria-label="Profile sections">
-            <button type="button" class="page-tab active" role="tab" id="upTabBtnCollection" data-tab="collection" aria-controls="tab-collection" aria-selected="true">Library</button>
+            <button type="button" class="page-tab active" role="tab" id="upTabBtnCollection" data-tab="collection" aria-controls="tab-collection" aria-selected="true">Collection</button>
             <button type="button" class="page-tab" role="tab" id="upTabBtnLists" data-tab="lists" aria-controls="tab-lists" aria-selected="false" tabindex="-1">Custom Lists</button>
+        </div>
+
+        <div id="upMediaTabs" class="media-tabs" role="tablist" aria-label="Filter by category">
+            <button class="media-tab active" data-media="all" role="tab" aria-selected="true">All</button>
+            <button class="media-tab" data-media="movie" role="tab" aria-selected="false">Movies</button>
+            <button class="media-tab" data-media="series" role="tab" aria-selected="false">Shows</button>
+            <button class="media-tab" data-media="anime" role="tab" aria-selected="false">Anime</button>
+            <button class="media-tab" data-media="game" role="tab" aria-selected="false">Games</button>
         </div>
 
         <div class="tab-panel active" id="tab-collection" role="tabpanel" aria-labelledby="upTabBtnCollection">
             <div class="my-games-section">
                 <div class="list-header">
-                    <h2 id="gameListTitle">Library</h2>
+                    <h2 id="gameListTitle">Collection</h2>
                     <div class="list-header-actions">
-                        <label class="sr-only" for="userGamesSearch">Search games</label>
-                        <input type="text" id="userGamesSearch" class="search-input" placeholder="Search games..." aria-label="Search games">
-                        <label class="sr-only" for="userGamesSort">Sort games</label>
-                        <select id="userGamesSort" class="filter-select" aria-label="Sort games">
+                        <label class="sr-only" for="userGamesSearch">Search this collection</label>
+                        <input type="text" id="userGamesSearch" class="search-input" placeholder="Search titles..." aria-label="Search this collection">
+                        <label class="sr-only" for="userGamesSort">Sort titles</label>
+                        <select id="userGamesSort" class="filter-select" aria-label="Sort titles">
                             <option value="recently_added">Recently Added</option>
                             <option value="name">Name (A-Z)</option>
                             <option value="name_desc">Name (Z-A)</option>

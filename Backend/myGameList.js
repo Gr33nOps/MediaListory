@@ -406,6 +406,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       const { name, description, cover_color, is_public } = req.body;
       if (!name || !name.trim()) return res.status(400).json({ error: 'List name is required' });
       if (name.trim().length > 100) return res.status(400).json({ error: 'List name must be 100 characters or less' });
+      const category = ['movie', 'series', 'anime', 'game'].includes(req.body.category) ? req.body.category : null;
 
       const countResult = await db('custom_lists')
         .where({ user_id: req.userId })
@@ -421,7 +422,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         slug,
         description: description ? description.trim() : null,
         cover_color: cover_color || '#3a7bd5',
-        is_public:   is_public !== undefined ? Boolean(is_public) : true
+        is_public:   is_public !== undefined ? Boolean(is_public) : true,
+        category
       }).returning('id');
 
       const listId = row.id ?? row;
@@ -452,6 +454,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       if (description !== undefined) updates.description = description ? description.trim() : null;
       if (cover_color  !== undefined) updates.cover_color = cover_color;
       if (is_public    !== undefined) updates.is_public   = Boolean(is_public);
+      if (req.body.category !== undefined) updates.category = ['movie', 'series', 'anime', 'game'].includes(req.body.category) ? req.body.category : null;
 
       await db('custom_lists').where({ id: list.id }).update(updates);
       const updated = await db('custom_lists').where({ id: list.id }).first();

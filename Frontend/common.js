@@ -908,7 +908,6 @@
         '</ul></div>' +
         '<div class="footer-col"><h4>Your space</h4><ul>' +
           '<li><a href="myGameList.html">My Library</a></li>' +
-          '<li><a href="stats.html">Your Stats</a></li>' +
           '<li><a href="calendar.html">Release Calendar</a></li>' +
           '<li><a href="profile.html">Profile</a></li>' +
         '</ul></div>' +
@@ -935,6 +934,44 @@
       '</div>';
     host.appendChild(f);
   }
+
+  // Turn a horizontal overflow row into a clean scroller: hide the scrollbar,
+  // wrap it with edge fades + prev/next arrows. Idempotent; call after render.
+  function enhanceScrollers(root) {
+    var scope = root || document;
+    scope.querySelectorAll('.dash-scroller, .detail-cast, .detail-similar').forEach(function (sc) {
+      if (sc.parentNode && sc.parentNode.classList.contains('scroller')) return;
+      var wrap = document.createElement('div');
+      wrap.className = 'scroller';
+      sc.parentNode.insertBefore(wrap, sc);
+      wrap.appendChild(sc);
+      var mk = function (dir) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'scroller-arrow scroller-arrow-' + dir;
+        b.setAttribute('aria-label', dir === 'left' ? 'Scroll left' : 'Scroll right');
+        b.innerHTML = dir === 'left' ? '‹' : '›';
+        b.addEventListener('click', function () {
+          sc.scrollBy({ left: (dir === 'left' ? -1 : 1) * sc.clientWidth * 0.8, behavior: 'smooth' });
+        });
+        return b;
+      };
+      wrap.appendChild(mk('left'));
+      wrap.appendChild(mk('right'));
+      var update = function () {
+        var max = sc.scrollWidth - sc.clientWidth;
+        wrap.classList.toggle('no-scroll', max <= 4);
+        wrap.classList.toggle('at-start', sc.scrollLeft <= 2);
+        wrap.classList.toggle('at-end', sc.scrollLeft >= max - 2);
+      };
+      sc.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('resize', update);
+      // Images load late and change scrollWidth; recheck shortly after.
+      setTimeout(update, 60); setTimeout(update, 600);
+      update();
+    });
+  }
+  global.enhanceScrollers = enhanceScrollers;
 
   if (typeof document !== 'undefined') {
     initSentry(); // set up as early as possible so init-time errors are caught

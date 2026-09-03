@@ -428,6 +428,7 @@
       '</div>';
 
     if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'mbScoreUp', 'mbScoreDown', 'mbScoreClear');
+    if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(byId('gameDetails'));
     if (typeof openModal === 'function') openModal('gameModal');
   }
 

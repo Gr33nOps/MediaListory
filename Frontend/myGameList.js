@@ -116,7 +116,9 @@ function initCollectionTab() {
             document.body.setAttribute('data-page', MEDIA_PAGE_KEY[currentMediaFilter] || 'list');
             updateStatistics(filterByMedia(myGamesCache));
             displayMyGames(sortMyGames(myGamesCache));
-            // The category row is shared, so keep the Custom Lists view in sync too.
+            // The category row is shared, so keep the Custom Lists view in sync too:
+            // filter lists by the chosen category, and re-filter an open list's games.
+            if (typeof clRenderAccordion === 'function' && clLists && clLists.length) clRenderAccordion();
             if (clExpandedListId && typeof clRenderAccGames === 'function') {
                 clRenderAccGames(clExpandedListId);
             }
@@ -273,8 +275,8 @@ function updateStatistics(games) {
     var titleEl = document.querySelector('.stats-title');
     if (titleEl) {
         titleEl.textContent = currentMediaFilter === 'all'
-            ? 'Your library at a glance'
-            : MEDIA_TAB_LABEL[currentMediaFilter] + ' status breakdown';
+            ? 'By category'
+            : MEDIA_TAB_LABEL[currentMediaFilter] + ' · by status';
     }
 }
 
@@ -743,11 +745,20 @@ async function clLoadLists() {
 
 function clRenderAccordion() {
     var container = document.getElementById('clAccordion');
+    var visible = (currentMediaFilter === 'all')
+        ? clLists
+        : clLists.filter(function (l) { return l.category === currentMediaFilter; });
+
     if (clLists.length === 0) {
         container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No lists yet</div><p>Hit <strong>+ New List</strong> to create one.</p></div>';
         return;
     }
-    container.innerHTML = clLists.map(function(list) { return clRenderAccordionRow(list); }).join('');
+    if (visible.length === 0) {
+        var lbl = (typeof MEDIA_TAB_LABEL !== 'undefined' && MEDIA_TAB_LABEL[currentMediaFilter]) ? MEDIA_TAB_LABEL[currentMediaFilter] : currentMediaFilter;
+        container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No ' + esc(lbl) + ' lists</div><p>None of your lists are set to ' + esc(lbl) + '. Switch to All to see the rest.</p></div>';
+        return;
+    }
+    container.innerHTML = visible.map(function(list) { return clRenderAccordionRow(list); }).join('');
 
     container.querySelectorAll('.cl-acc-header').forEach(function(header) {
         header.addEventListener('click', function(e) {
@@ -778,9 +789,11 @@ function clRenderAccordion() {
     }
 }
 
+var CL_CAT_LABEL = { movie: 'Movies', series: 'Shows', anime: 'Anime', game: 'Games' };
 function clRenderAccordionRow(list) {
     var count      = list.game_count || 0;
     var isExpanded = clExpandedListId === list.id;
+    var catBadge   = list.category ? '<span class="cl-cat-badge" data-cat="' + list.category + '">' + CL_CAT_LABEL[list.category] + '</span>' : '';
     return '<div class="cl-acc-row ' + (isExpanded ? 'expanded' : '') + '" data-list-id="' + list.id + '">' +
         '<div class="cl-acc-header">' +
             '<div class="cl-acc-header-left">' +
@@ -788,7 +801,8 @@ function clRenderAccordionRow(list) {
                 '<div class="cl-acc-title-group">' +
                     '<div class="cl-acc-title-row">' +
                         '<span class="cl-acc-name">' + esc(list.name) + '</span>' +
-                        '<span class="pill">' + count + ' ' + (count === 1 ? 'game' : 'games') + '</span>' +
+                        catBadge +
+                        '<span class="pill">' + count + ' ' + (count === 1 ? 'title' : 'titles') + '</span>' +
                         '<span class="pill ' + (list.is_public ? 'pill-green' : 'pill-amber') + '">' + (list.is_public ? 'Public' : 'Private') + '</span>' +
                     '</div>' +
                     (list.description ? '<div class="cl-acc-desc">' + esc(list.description) + '</div>' : '') +
@@ -989,6 +1003,7 @@ function clOpenListForm(list) {
     document.getElementById('clListName').value             = list ? list.name : '';
     document.getElementById('clListDesc').value             = list ? (list.description || '') : '';
     document.getElementById('clListPublic').checked         = list ? !!list.is_public : true;
+    document.getElementById('clListCategory').value         = list ? (list.category || '') : '';
     clUpdateCharCount('clListName', 'clListNameCount', 100);
     clUpdateCharCount('clListDesc', 'clListDescCount', 500);
     clOpenModal('clListFormModal');
@@ -999,11 +1014,12 @@ async function clSubmitListForm() {
     var name      = document.getElementById('clListName').value.trim();
     var desc      = document.getElementById('clListDesc').value.trim();
     var is_public = document.getElementById('clListPublic').checked;
+    var category  = document.getElementById('clListCategory').value || null;
     if (!name) { clShowToast('Please enter a list name', 'error'); return; }
     var btn = document.getElementById('clListFormSubmit');
     btn.disabled = true; btn.textContent = 'Saving...';
     try {
-        var body = { name: name, description: desc || null, cover_color: '#3a7bd5', is_public: is_public };
+        var body = { name: name, description: desc || null, cover_color: '#3a7bd5', is_public: is_public, category: category };
         if (clEditingId) { await clApi('PUT',  '/user/lists/' + clEditingId, body); clShowToast('List updated!', 'success'); }
         else             { await clApi('POST', '/user/lists',               body); clShowToast('List created!', 'success'); }
         clCloseModal('clListFormModal');

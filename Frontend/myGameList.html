@@ -24,12 +24,8 @@
         <nav class="navbar" id="appNav" data-active="list" data-brand="MediaListory" data-page-title="My Library" data-page-sub="Everything you are tracking, organized by category."></nav>
         <h1 class="sr-only">My library</h1>
 
-        <div class="library-quicklinks">
-            <a href="stats.html" class="btn btn-secondary">Your Stats</a>
-        </div>
-
         <div class="page-tabs" role="tablist" aria-label="My list sections">
-            <button type="button" class="page-tab active" role="tab" id="tabBtnCollection" data-tab="collection" aria-controls="tab-collection" aria-selected="true">My Collection</button>
+            <button type="button" class="page-tab active" role="tab" id="tabBtnCollection" data-tab="collection" aria-controls="tab-collection" aria-selected="true">Collection</button>
             <button type="button" class="page-tab" role="tab" id="tabBtnLists" data-tab="lists" aria-controls="tab-lists" aria-selected="false" tabindex="-1">Custom Lists</button>
         </div>
 
@@ -43,12 +39,22 @@
 
         <div class="tab-panel active" id="tab-collection" role="tabpanel" aria-labelledby="tabBtnCollection">
 
+            <div class="stats-dashboard" id="collectionOverview">
+                <h2 class="stats-title" id="overviewTitle">By category</h2>
+                <div class="overview-pie-wrap">
+                    <div class="pie-chart-container">
+                        <svg class="pie-chart" viewBox="0 0 200 200" id="pieChartSvg"><circle cx="100" cy="100" r="90" fill="var(--bg-deep)" /></svg>
+                    </div>
+                    <div class="pie-legend" id="pieLegend"></div>
+                </div>
+            </div>
+
             <div class="my-games-section">
                 <div class="list-header">
-                    <h2>My Library</h2>
+                    <h2>Collection</h2>
                     <div class="list-header-actions">
-                        <label class="sr-only" for="myGamesSearch">Search my games</label>
-                        <input type="text" id="myGamesSearch" class="search-input" placeholder="Search your library..." aria-label="Search your library">
+                        <label class="sr-only" for="myGamesSearch">Search your collection</label>
+                        <input type="text" id="myGamesSearch" class="search-input" placeholder="Search your collection..." aria-label="Search your collection">
                         <select id="myGamesSort" class="filter-select">
                             <option value="recently_added">Recently Added</option>
                             <option value="name">Name (A-Z)</option>
@@ -173,6 +179,16 @@
                 <textarea class="cl-form-textarea" id="clListDesc" maxlength="500"
                           placeholder="What is this list about?"></textarea>
                 <div class="cl-char-count" id="clListDescCount">0 / 500</div>
+            </div>
+            <div class="cl-form-group">
+                <label class="cl-form-label" for="clListCategory">Category</label>
+                <select class="cl-form-input" id="clListCategory">
+                    <option value="">Mixed (any)</option>
+                    <option value="movie">Movies</option>
+                    <option value="series">Shows</option>
+                    <option value="anime">Anime</option>
+                    <option value="game">Games</option>
+                </select>
             </div>
             <div class="cl-form-group">
                 <div class="cl-toggle-row">

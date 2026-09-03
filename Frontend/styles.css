@@ -2967,7 +2967,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
 }
 
 .cl-toggle input:checked + .cl-toggle-slider {
-    background: var(--blue);
+    background: #475569; /* neutral, independent of the active category accent */
 }
 
 .cl-toggle input:checked + .cl-toggle-slider::before { transform: translateX(20px); }
@@ -4250,3 +4250,50 @@ body.imp-open { overflow: hidden; }
 .private-notice-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--bg-deep); color: var(--text-muted); margin-bottom: 14px; }
 .private-notice h2 { font-family: var(--font-display); font-size: 1.3rem; color: var(--text-primary); margin: 0 0 8px; }
 .private-notice p { color: var(--text-muted); max-width: 44ch; margin: 0 auto; line-height: 1.6; }
+
+/* ══ Horizontal scrollers: hidden scrollbar + edge fades + arrow buttons ══ */
+.dash-scroller, .detail-cast, .detail-similar { scrollbar-width: none; -ms-overflow-style: none; }
+.dash-scroller::-webkit-scrollbar, .detail-cast::-webkit-scrollbar, .detail-similar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+.scroller { position: relative; }
+.scroller::before, .scroller::after { content: ""; position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s ease; }
+.scroller::before { left: 0; background: linear-gradient(90deg, var(--bg-base) 10%, transparent); }
+.scroller::after  { right: 0; background: linear-gradient(270deg, var(--bg-base) 10%, transparent); }
+.scroller:not(.at-start)::before { opacity: 1; }
+.scroller:not(.at-end):not(.no-scroll)::after { opacity: 1; }
+.scroller-arrow {
+    position: absolute; top: 40%; transform: translateY(-50%); z-index: 3;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 1.4rem; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-card); opacity: 0; transition: opacity 0.2s ease, background 0.18s ease;
+}
+.scroller-arrow:hover { background: var(--bg-card-end); }
+.scroller:hover .scroller-arrow { opacity: 1; }
+.scroller-arrow:focus-visible { opacity: 1; }
+.scroller-arrow-left { left: -8px; }
+.scroller-arrow-right { right: -8px; }
+.scroller.at-start .scroller-arrow-left,
+.scroller.at-end .scroller-arrow-right,
+.scroller.no-scroll .scroller-arrow { display: none; }
+@media (hover: none) { .scroller-arrow { display: none; } } /* touch devices just swipe */
+
+/* Collection overview: a single pie (By category on All, By status per category) */
+.overview-pie-wrap { display: flex; gap: 32px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.overview-pie-wrap .pie-chart-container { width: 200px; flex-shrink: 0; }
+.overview-pie-wrap .pie-legend { max-width: 360px; }
+#collectionOverview .stats-title { font-family: var(--font-display); font-size: 1.5rem; }
+
+/* Custom-list management buttons stay neutral (not the active category accent) */
+#clNewListBtn.btn-primary, #clListFormSubmit.btn-primary { background: #475569; border-color: #475569; color: #fff; box-shadow: none; }
+#clNewListBtn.btn-primary:hover, #clListFormSubmit.btn-primary:hover { filter: brightness(1.14); transform: translateY(-1px); }
+
+/* Category pills on custom lists + a list-category badge */
+.cl-cat-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; }
+.cl-cat-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--cc, var(--text-dim)); }
+.cl-cat-badge[data-cat="movie"]  { --cc: var(--cat-movie-light);  color: var(--cat-movie-light);  background: var(--cat-movie-dim); }
+.cl-cat-badge[data-cat="series"] { --cc: var(--cat-series-light); color: var(--cat-series-light); background: var(--cat-series-dim); }
+.cl-cat-badge[data-cat="anime"]  { --cc: var(--cat-anime-light);  color: var(--cat-anime-light);  background: var(--cat-anime-dim); }
+.cl-cat-badge[data-cat="game"]   { --cc: var(--cat-game-light);   color: var(--cat-game-light);   background: var(--cat-game-dim); }
+.cl-cat-badge[data-cat="mixed"]  { color: var(--text-muted); background: var(--bg-deep); border-color: var(--border-subtle); }

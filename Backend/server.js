@@ -493,7 +493,6 @@ app.get('/moderator.html', (req, res) => res.sendFile(path.join(frontendPath, 'm
 app.get('/terms.html', (req, res) => res.sendFile(path.join(frontendPath, 'terms.html')));
 app.get('/privacy.html', (req, res) => res.sendFile(path.join(frontendPath, 'privacy.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(frontendPath, 'dashboard.html')));
-app.get('/stats.html', (req, res) => res.sendFile(path.join(frontendPath, 'stats.html')));
 app.get('/calendar.html', (req, res) => res.sendFile(path.join(frontendPath, 'calendar.html')));
 app.get('/robots.txt', (req, res) => res.sendFile(path.join(frontendPath, 'robots.txt')));
 

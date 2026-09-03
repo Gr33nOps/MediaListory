@@ -9,6 +9,7 @@ let viewedUser    = null;
 let userGamesCache      = [];
 let currentSort         = 'recently_added';
 let currentStatusFilter = 'all';
+let currentMediaFilter  = 'all';
 let currentSearchTerm   = '';
 
 let upLists          = [];
@@ -127,6 +128,17 @@ function initPage() {
         });
     });
 
+    // Category filter (Movies / Shows / Anime / Games / All)
+    document.querySelectorAll('#upMediaTabs .media-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('#upMediaTabs .media-tab').forEach(function(t) { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+            tab.classList.add('active'); tab.setAttribute('aria-selected', 'true');
+            currentMediaFilter = tab.dataset.media;
+            displayUserGames(sortGames(userGamesCache));
+            if (upLists.length) upRenderAccordion();
+        });
+    });
+
     if (typeof bindModal === 'function') bindModal('gameModal', 'closeModalBtn');
     else document.getElementById('closeModalBtn').addEventListener('click', function() {
         document.getElementById('gameModal').style.display = 'none';
@@ -184,7 +196,7 @@ function displayUserProfile(user) {
         'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&size=200&background=475569&color=fff&bold=true';
 
     document.getElementById('profileTitle').textContent     = name + "'s profile";
-    document.getElementById('gameListTitle').textContent    = name + "'s library";
+    document.getElementById('gameListTitle').textContent    = name + "'s collection";
     document.getElementById('customListsTitle').textContent = name + "'s lists";
     document.getElementById('userAvatar').src               = avatarUrl;
     document.getElementById('displayName').textContent      = name;
@@ -231,7 +243,8 @@ async function loadUserGames() {
         });
         if (r.ok) {
             var d = await r.json();
-            userGamesCache = d.games;
+            userGamesCache = d.games || [];
+            updateUpMediaCounts();
             displayUserGames(sortGames(userGamesCache));
         } else {
             console.error('Failed to load games');
@@ -257,29 +270,39 @@ function sortGames(games) {
     return s;
 }
 
+function updateUpMediaCounts() {
+    var counts = { all: userGamesCache.length, movie: 0, series: 0, anime: 0, game: 0 };
+    userGamesCache.forEach(function (g) { var t = g.media_type || 'game'; if (counts[t] != null) counts[t]++; });
+    document.querySelectorAll('#upMediaTabs .media-tab').forEach(function (tab) {
+        var k = tab.dataset.media;
+        if (tab.querySelector('.mt-count')) tab.querySelector('.mt-count').textContent = counts[k] || 0;
+        else tab.insertAdjacentHTML('beforeend', ' <span class="mt-count">' + (counts[k] || 0) + '</span>');
+    });
+}
+
 function displayUserGames(games) {
     var container = document.getElementById('userGamesList');
     var filtered  = games;
 
+    if (currentMediaFilter !== 'all') {
+        filtered = filtered.filter(function(g) { return (g.media_type || 'game') === currentMediaFilter; });
+    }
     if (currentStatusFilter !== 'all') {
         filtered = filtered.filter(function(g) { return g.status === currentStatusFilter; });
     }
     if (currentSearchTerm) {
-        filtered = filtered.filter(function(g) { return g.name.toLowerCase().includes(currentSearchTerm); });
+        filtered = filtered.filter(function(g) { return (g.name || '').toLowerCase().includes(currentSearchTerm); });
     }
 
     if (filtered.length === 0) {
         var escFn = typeof esc === 'function' ? esc : function (s) { return String(s || ''); };
         var term = escFn(currentSearchTerm);
         var statusLbl = escFn(STATUS_LABEL[currentStatusFilter] || currentStatusFilter);
-        var msg = 'This user has no games in their collection yet.';
-        if (currentSearchTerm && currentStatusFilter !== 'all')
-            msg = 'No games matching "' + term + '" with status "' + statusLbl + '".';
-        else if (currentSearchTerm)
-            msg = 'No games matching "' + term + '".';
-        else if (currentStatusFilter !== 'all')
-            msg = 'No games with status "' + statusLbl + '".';
-        container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No games found</div><p>' + msg + '</p></div>';
+        var msg = 'Nothing here yet.';
+        if (currentSearchTerm) msg = 'No titles matching "' + term + '".';
+        else if (currentStatusFilter !== 'all') msg = 'No titles marked "' + statusLbl + '".';
+        else if (currentMediaFilter !== 'all') msg = 'No ' + (typeof mediaTypeLabel === 'function' ? mediaTypeLabel(currentMediaFilter, true).toLowerCase() : currentMediaFilter) + ' tracked.';
+        container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No titles found</div><p>' + msg + '</p></div>';
         return;
     }
 
@@ -471,11 +494,19 @@ async function upLoadLists() {
 
 function upRenderAccordion() {
     var container = document.getElementById('upAccordion');
+    var visible = (currentMediaFilter === 'all')
+        ? upLists
+        : upLists.filter(function (l) { return l.category === currentMediaFilter; });
     if (upLists.length === 0) {
         container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No lists</div><p>This user has no public lists yet.</p></div>';
         return;
     }
-    container.innerHTML = upLists.map(function(list) { return upRenderAccordionRow(list); }).join('');
+    if (visible.length === 0) {
+        var lbl = UP_CAT_LABEL[currentMediaFilter] || currentMediaFilter;
+        container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">No ' + esc(lbl) + ' lists</div><p>Switch to All to see their other lists.</p></div>';
+        return;
+    }
+    container.innerHTML = visible.map(function(list) { return upRenderAccordionRow(list); }).join('');
 
     container.querySelectorAll('.up-acc-header').forEach(function(header) {
         header.addEventListener('click', function() {
@@ -490,9 +521,11 @@ function upRenderAccordion() {
     }
 }
 
+var UP_CAT_LABEL = { movie: 'Movies', series: 'Shows', anime: 'Anime', game: 'Games' };
 function upRenderAccordionRow(list) {
     var count      = list.game_count || 0;
     var isExpanded = upExpandedListId === list.id;
+    var catBadge   = list.category ? '<span class="cl-cat-badge" data-cat="' + list.category + '">' + UP_CAT_LABEL[list.category] + '</span>' : '';
     return '<div class="cl-acc-row ' + (isExpanded ? 'expanded' : '') + '" data-list-id="' + list.id + '">' +
         '<div class="up-acc-header cl-acc-header">' +
             '<div class="cl-acc-header-left">' +
@@ -500,7 +533,8 @@ function upRenderAccordionRow(list) {
                 '<div class="cl-acc-title-group">' +
                     '<div class="cl-acc-title-row">' +
                         '<span class="cl-acc-name">' + esc(list.name) + '</span>' +
-                        '<span class="pill">' + count + ' ' + (count === 1 ? 'game' : 'games') + '</span>' +
+                        catBadge +
+                        '<span class="pill">' + count + ' ' + (count === 1 ? 'title' : 'titles') + '</span>' +
                     '</div>' +
                     (list.description ? '<div class="cl-acc-desc">' + esc(list.description) + '</div>' : '') +
                 '</div>' +
