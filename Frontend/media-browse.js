@@ -18,7 +18,7 @@
   var currentSort = 'popularity';
   var currentSortOrder = 'desc';
   var currentPage = 1;
-  var perPage = 20;
+  var perPage = 24;
   var isLoading = false;
   var hasMore = true;
   var lastResults = {}; // ref -> normalized media object (for add-to-library)

@@ -17,8 +17,6 @@ Disallow: /myGameList.html
 Disallow: /profile.html
 Disallow: /friends.html
 Disallow: /userProfile.html
-Disallow: /admin.html
-Disallow: /moderator.html
 Disallow: /api/
 
 Sitemap: https://medialistory.onrender.com/sitemap.xml

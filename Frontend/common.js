@@ -675,12 +675,6 @@
         '<div class="nav-menu-name" aria-hidden="true">' + esc(nameStr) + '</div>' +
         '<a role="menuitem" href="myGameList.html" class="nav-menu-item' + (active === 'list' ? ' active' : '') + '">My Library</a>' +
         '<a role="menuitem" href="profile.html" class="nav-menu-item' + (active === 'profile' ? ' active' : '') + '">My profile</a>';
-      if (user && (user.is_moderator || user.is_admin)) {
-        menuItems += '<a role="menuitem" href="moderator.html" class="nav-menu-item' + (active === 'moderator' ? ' active' : '') + '">Moderate</a>';
-      }
-      if (user && user.is_admin) {
-        menuItems += '<a role="menuitem" href="admin.html" class="nav-menu-item' + (active === 'admin' ? ' active' : '') + '">Admin</a>';
-      }
       menuItems += '<button type="button" role="menuitem" class="nav-menu-item nav-menu-danger" id="navLogoutBtn">Log out</button>';
 
       userArea =

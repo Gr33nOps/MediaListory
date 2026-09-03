@@ -174,7 +174,7 @@ body {
     /* Category-themed backdrop: an accent glow at the top that recolors per page
        (and when switching category tabs), over a deep base gradient. */
     background:
-        radial-gradient(1600px 1000px at 50% -80px, var(--accent-glow) 0%, transparent 58%),
+        radial-gradient(1900px 1300px at 50% -120px, var(--accent-glow) 0%, transparent 66%),
         linear-gradient(180deg, var(--bg-base) 0%, var(--bg-grad-mid) 55%, var(--bg-grad-end) 100%);
     background-attachment: fixed;
     min-height: 100vh;
@@ -813,11 +813,16 @@ select.update-status-select option,
     text-align: center;
 }
 
+/* Fixed columns so the 24 results per page fill complete rows with no trailing
+   gaps. 24 divides evenly by 6 / 4 / 3 / 2, so every breakpoint stays full. */
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 30px 20px;
 }
+@media (max-width: 1180px) { .games-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px)  { .games-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px)  { .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Poster-first tile: the artwork is the object, not a boxed SaaS card.
    No surface/border/shadow on the card itself — the poster carries it, and
@@ -3437,7 +3442,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a12
     .search-input { width: 100%; }
     .filter-group { grid-template-columns: 1fr; }
     .filter-section { padding: 14px; }
-    .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .games-grid { gap: 16px 12px; }
     .game-info { padding: 12px; }
     .game-title { font-size: 0.92rem; margin-bottom: 8px; }
     .pagination {
@@ -3766,10 +3771,10 @@ a:focus-visible {
 
 /* Per-page accent — drives page headers, nav active state, focus rings.
    body[data-page] / [data-cat] is set by common.js from the nav's data-active. */
-body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); --accent-glow: rgba(59,130,246,0.32); }
-body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.28); }
-body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.30); }
-body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.28); }
+body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); --accent-glow: rgba(59,130,246,0.50); }
+body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.46); }
+body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.48); }
+body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
 /* My Library, Following, and Profile stay neutral (inherit :root) and only
    pick up a category color when a category filter is chosen inside the page. */
 

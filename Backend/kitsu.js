@@ -176,42 +176,68 @@ module.exports = (verifyToken, checkBanned, db) => {
         return res.json(payload);
       }
 
-      const limit = clampInt(body.limit, 1, 20, 20); // Kitsu max page size is 20
+      const limit = clampInt(body.limit, 1, 50, 20);
       const offset = clampInt(body.offset, 0, 5000, 0);
       const search = sanitizeToken(body.search, 80);
       const sortKey = body.sort || 'popularity';
       const comingSoon = !!body.comingSoon || sortKey === 'coming';
       const trending = !!body.trending && !search && !comingSoon;
 
-      const params = ['include=categories', `page[limit]=${limit}`, `page[offset]=${offset}`];
+      // Filter/sort params shared across the paged requests (page[*] added below).
+      const baseParams = ['include=categories'];
       if (search) {
-        params.push(`filter[text]=${encodeURIComponent(search)}`);
+        baseParams.push(`filter[text]=${encodeURIComponent(search)}`);
       } else {
-        params.push(`sort=${encodeURIComponent(comingSoon ? 'startDate' : kitsuSort(sortKey, body.sortOrder))}`);
-        if (comingSoon) params.push('filter[status]=upcoming');
+        baseParams.push(`sort=${encodeURIComponent(comingSoon ? 'startDate' : kitsuSort(sortKey, body.sortOrder))}`);
+        if (comingSoon) baseParams.push('filter[status]=upcoming');
       }
       const genre = sanitizeToken(body.genre, 60);
       if (genre) {
         try {
-          const cats = await getCategories();
-          const slug = cats.titleToSlug[genre.toLowerCase()] || genre.toLowerCase().replace(/\s+/g, '-');
-          params.push(`filter[categories]=${encodeURIComponent(slug)}`);
+          const gcats = await getCategories();
+          const slug = gcats.titleToSlug[genre.toLowerCase()] || genre.toLowerCase().replace(/\s+/g, '-');
+          baseParams.push(`filter[categories]=${encodeURIComponent(slug)}`);
         } catch (_) {}
       }
 
-      // Kitsu exposes a dedicated, genuinely-trending feed at /trending/anime.
-      const listPath = trending
-        ? `/trending/anime?include=categories`
-        : `/anime?${params.join('&')}`;
-      const response = await kitsuFetch(listPath);
-      const data = await response.json();
-      if (!response.ok) {
+      // Kitsu caps a page at 20 items but the grid wants up to 24, so page
+      // through enough requests. The /trending feed is a single fixed list.
+      let rawData = [];
+      let rawIncluded = [];
+      let ok = false;
+      if (trending) {
+        const response = await kitsuFetch('/trending/anime?include=categories');
+        if (response.ok) {
+          ok = true;
+          const d = await response.json();
+          rawData = Array.isArray(d.data) ? d.data.slice(0, limit) : [];
+          rawIncluded = d.included || [];
+        }
+      } else {
+        const pages = Math.ceil(limit / 20);
+        for (let i = 0; i < pages; i++) {
+          const pLimit = Math.min(20, limit - i * 20);
+          if (pLimit <= 0) break;
+          const qp = baseParams.concat([`page[limit]=${pLimit}`, `page[offset]=${offset + i * 20}`]);
+          const response = await kitsuFetch(`/anime?${qp.join('&')}`);
+          if (!response.ok) break;
+          ok = true;
+          const d = await response.json();
+          const chunk = Array.isArray(d.data) ? d.data : [];
+          rawData = rawData.concat(chunk);
+          rawIncluded = rawIncluded.concat(d.included || []);
+          if (chunk.length < pLimit) break; // reached the end
+        }
+        rawData = rawData.slice(0, limit);
+      }
+
+      if (!ok) {
         const degraded = await loadListFromDb(body);
         if (degraded && degraded.length) { res.setHeader('X-Cache', 'DEGRADED'); return res.json(degraded); }
-        return res.status(response.status).json({ error: 'Kitsu API error' });
+        return res.status(502).json({ error: 'Kitsu API error' });
       }
-      const cats = categoriesFromIncluded(data.included);
-      const normalized = (data.data || []).map((it) => normalizeKitsuAnime(it, cats)).filter(Boolean);
+      const cats = categoriesFromIncluded(rawIncluded);
+      const normalized = rawData.map((it) => normalizeKitsuAnime(it, cats)).filter(Boolean);
       cache.set(cacheKey, normalized, TTL.list);
       persist(normalized).catch(() => {});
       res.setHeader('X-Cache', 'MISS');

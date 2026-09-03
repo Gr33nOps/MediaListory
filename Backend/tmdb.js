@@ -162,6 +162,26 @@ module.exports = (verifyToken, checkBanned, db) => {
     return { params, limit };
   }
 
+  // TMDB serves 20 results per page. The grid asks for up to 24, so fetch the
+  // page(s) that cover [offset, offset+limit) and return exactly that window.
+  async function fetchTmdbWindow(pathPart, baseParams, offset, limit) {
+    const startPage = Math.floor(offset / 20) + 1;
+    const endPage = Math.floor((offset + limit - 1) / 20) + 1;
+    let all = [];
+    let ok = false;
+    for (let p = startPage; p <= endPage; p++) {
+      const resp = await tmdbFetch(pathPart, Object.assign({}, baseParams, { page: String(p) }));
+      if (!resp.ok) { if (!ok) return { ok: false, results: [] }; break; }
+      ok = true;
+      const d = await resp.json();
+      const chunk = Array.isArray(d.results) ? d.results : [];
+      all = all.concat(chunk);
+      if (chunk.length < 20) break; // reached the last page
+    }
+    const start = offset % 20;
+    return { ok, results: all.slice(start, start + limit) };
+  }
+
   async function loadListFromDb(mediaType, body) {
     if (!db) return null;
     try {
@@ -313,36 +333,31 @@ module.exports = (verifyToken, checkBanned, db) => {
       const maps = await getGenreMaps(mediaType).catch(() => ({ byId: {}, byName: {} }));
       const search = sanitizeToken(body.search, 80);
 
-      let response;
-      let limit;
+      const offset = clampInt(body.offset, 0, 5000, 0);
+      let window;
       if (search) {
-        const offset = clampInt(body.offset, 0, 5000, 0);
-        const page = Math.floor(offset / 20) + 1;
-        limit = clampInt(body.limit, 1, 50, 20);
-        response = await tmdbFetch(`/search/${endpoint}`, {
+        const limit = clampInt(body.limit, 1, 50, 20);
+        window = await fetchTmdbWindow(`/search/${endpoint}`, {
           query: search,
           include_adult: 'false',
-          language: 'en-US',
-          page: String(page)
-        });
+          language: 'en-US'
+        }, offset, limit);
       } else {
         const built = buildDiscoverParams(mediaType, body, maps.byName);
-        limit = built.limit;
-        response = await tmdbFetch(`/discover/${endpoint}`, built.params);
+        const base = Object.assign({}, built.params);
+        delete base.page; // the window helper drives pagination
+        window = await fetchTmdbWindow(`/discover/${endpoint}`, base, offset, built.limit);
       }
 
-      const data = await response.json();
-      if (!response.ok) {
+      if (!window.ok) {
         const degraded = await serveDegradedList(res, mediaType, body, cacheKey);
         if (degraded) return;
-        return res.status(response.status).json({ error: 'TMDB API error' });
+        return res.status(502).json({ error: 'TMDB API error' });
       }
 
-      const results = Array.isArray(data.results) ? data.results : [];
-      const normalized = results
+      const normalized = window.results
         .map((item) => normalizeTmdb(mediaType, item, maps.byId))
-        .filter(Boolean)
-        .slice(0, limit);
+        .filter(Boolean);
 
       cache.set(cacheKey, normalized, TTL.list);
       persistMedia(normalized).catch(() => {});
