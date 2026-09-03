@@ -939,7 +939,7 @@
   // wrap it with edge fades + prev/next arrows. Idempotent; call after render.
   function enhanceScrollers(root) {
     var scope = root || document;
-    scope.querySelectorAll('.dash-scroller, .detail-cast, .detail-similar').forEach(function (sc) {
+    scope.querySelectorAll('.dash-scroller, .detail-cast, .detail-similar, .detail-shots').forEach(function (sc) {
       if (sc.parentNode && sc.parentNode.classList.contains('scroller')) return;
       var wrap = document.createElement('div');
       wrap.className = 'scroller';

@@ -245,18 +245,9 @@ function updateStatistics(games) {
         on_hold:      games.filter(function(g) { return g.status === 'on_hold'; }).length,
         dropped:      games.filter(function(g) { return g.status === 'dropped'; }).length
     };
-    var pct = function(k) { return stats.total > 0 ? (stats[k] / stats.total * 100).toFixed(1) : 0; };
-    updateBarChart({
-        playing:      pct('playing'),
-        completed:    pct('completed'),
-        plan_to_play: pct('plan_to_play'),
-        on_hold:      pct('on_hold'),
-        dropped:      pct('dropped')
-    }, stats);
-
-    // Pie + legend: on "All" show how the library splits across the four
-    // categories (each treated individually); inside a category show its
-    // own status breakdown.
+    // Pie + bars share one set of segments: on "All" show how the library
+    // splits across the four categories; inside a category show its own status
+    // breakdown. Bars sit on the left, the pie on the right (classic layout).
     var segments;
     if (currentMediaFilter === 'all') {
         var all = myGamesCache || [];
@@ -269,8 +260,15 @@ function updateStatistics(games) {
             return { label: s.label, color: s.color, count: stats[s.key] };
         });
     }
+    var segTotal = segments.reduce(function(s, x) { return s + x.count; }, 0);
+    drawBars(segments, segTotal);
     drawPie(segments);
-    drawPieLegend(segments);
+
+    var totalEl = document.getElementById('overviewTotal');
+    if (totalEl) {
+        totalEl.innerHTML = '<span class="ov-total-num">' + segTotal + '</span>' +
+            '<span class="ov-total-lbl">' + (segTotal === 1 ? 'title' : 'titles') + '</span>';
+    }
 
     var titleEl = document.querySelector('.stats-title');
     if (titleEl) {
@@ -278,6 +276,29 @@ function updateStatistics(games) {
             ? 'By category'
             : MEDIA_TAB_LABEL[currentMediaFilter] + ' · by status';
     }
+}
+
+// Horizontal bars, one per segment, coloured to match the pie slices.
+function drawBars(segments, total) {
+    var el = document.getElementById('overviewBars');
+    if (!el) return;
+    total = total || segments.reduce(function(s, x) { return s + x.count; }, 0);
+    el.innerHTML = segments.map(function(s) {
+        var pctNum = total > 0 ? (s.count / total * 100) : 0;
+        var pctLabel = total > 0 ? Math.round(pctNum) : 0;
+        return '<div class="ov-bar-row">' +
+            '<div class="ov-bar-head">' +
+                '<span class="ov-bar-dot" style="background:' + s.color + ';"></span>' +
+                '<span class="ov-bar-label">' + s.label + '</span>' +
+                '<span class="ov-bar-count">' + s.count + '<span class="ov-bar-pct"> · ' + pctLabel + '%</span></span>' +
+            '</div>' +
+            '<div class="ov-bar-track"><div class="ov-bar-fill" style="width:0;background:' + s.color + ';" data-w="' + pctNum.toFixed(1) + '"></div></div>' +
+        '</div>';
+    }).join('');
+    // Animate widths in after paint so the bars grow from zero.
+    requestAnimationFrame(function() {
+        el.querySelectorAll('.ov-bar-fill').forEach(function(f) { f.style.width = f.dataset.w + '%'; });
+    });
 }
 
 var CAT_META = [
@@ -293,23 +314,6 @@ var STATUS_META = [
     { key: 'on_hold',      label: 'On Hold',            color: '#f39c12' },
     { key: 'dropped',      label: 'Dropped',            color: '#e74c3c' }
 ];
-
-function updateBarChart(percentages, stats) {
-    [
-        { id: 'playingBar',   pct: 'playingPercent',   val: percentages.playing,      cnt: stats.playing },
-        { id: 'completedBar', pct: 'completedPercent', val: percentages.completed,    cnt: stats.completed },
-        { id: 'planBar',      pct: 'planPercent',      val: percentages.plan_to_play, cnt: stats.plan_to_play },
-        { id: 'onholdBar',    pct: 'onholdPercent',    val: percentages.on_hold,      cnt: stats.on_hold },
-        { id: 'droppedBar',   pct: 'droppedPercent',   val: percentages.dropped,      cnt: stats.dropped }
-    ].forEach(function(b) {
-        var barEl = document.getElementById(b.id);
-        var pctEl = document.getElementById(b.pct);
-        if (barEl && pctEl) {
-            setTimeout(function() { barEl.style.width = b.val + '%'; }, 100);
-            pctEl.textContent = b.val + '% (' + b.cnt + ')';
-        }
-    });
-}
 
 function drawPie(segments) {
     var svg = document.getElementById('pieChartSvg');
@@ -336,20 +340,6 @@ function drawPie(segments) {
         cur += angle;
     });
     svg.innerHTML = paths;
-}
-
-function drawPieLegend(segments) {
-    var el = document.getElementById('pieLegend');
-    if (!el) return;
-    var total = segments.reduce(function(s, x) { return s + x.count; }, 0);
-    el.innerHTML = segments.map(function(s) {
-        var pctNum = total > 0 ? Math.round(s.count / total * 100) : 0;
-        return '<div class="legend-item">' +
-            '<span style="width:14px;height:14px;border-radius:4px;flex-shrink:0;background:' + s.color + ';"></span>' +
-            '<span style="flex:1;color:var(--text-secondary);">' + s.label + '</span>' +
-            '<span style="font-weight:700;color:var(--text-primary);">' + s.count + (total > 0 ? ' (' + pctNum + '%)' : '') + '</span>' +
-            '</div>';
-    }).join('');
 }
 
 function filterByMedia(games) {

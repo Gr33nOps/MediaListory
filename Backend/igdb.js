@@ -15,7 +15,9 @@ const GAME_FIELDS =
   'involved_companies.publisher, involved_companies.developer';
 
 const DETAIL_FIELDS =
-  GAME_FIELDS + ', screenshots.url';
+  GAME_FIELDS + ', storyline, screenshots.url, videos.video_id, videos.name, ' +
+  'game_modes.name, player_perspectives.name, ' +
+  'similar_games.name, similar_games.cover.url, similar_games.total_rating';
 
 const ALLOWED_SORT = {
   release: 'first_release_date',

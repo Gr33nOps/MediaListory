@@ -41,11 +41,14 @@
 
             <div class="stats-dashboard" id="collectionOverview">
                 <h2 class="stats-title" id="overviewTitle">By category</h2>
-                <div class="overview-pie-wrap">
-                    <div class="pie-chart-container">
-                        <svg class="pie-chart" viewBox="0 0 200 200" id="pieChartSvg"><circle cx="100" cy="100" r="90" fill="var(--bg-deep)" /></svg>
+                <div class="overview-split">
+                    <div class="overview-bars" id="overviewBars"></div>
+                    <div class="overview-pie-col">
+                        <div class="pie-chart-container">
+                            <svg class="pie-chart" viewBox="0 0 200 200" id="pieChartSvg"><circle cx="100" cy="100" r="90" fill="var(--bg-deep)" /></svg>
+                        </div>
+                        <div class="overview-total" id="overviewTotal"></div>
                     </div>
-                    <div class="pie-legend" id="pieLegend"></div>
                 </div>
             </div>
 

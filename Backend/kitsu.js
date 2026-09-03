@@ -138,6 +138,31 @@ module.exports = (verifyToken, checkBanned, db) => {
         if (!res2.ok || !data.data) return res.status(res2.status).json({ error: 'Kitsu API error' });
         const cats = categoriesFromIncluded(data.included);
         const normalized = normalizeKitsuAnime(data.data, cats);
+        if (normalized) {
+          // Characters ("cast") give anime the same richness as movies/shows.
+          // A failure here must never break the detail response.
+          try {
+            const cRes = await kitsuFetch(`/anime/${detailId}/characters?include=character&page[limit]=12&sort=-favoritesCount`);
+            const cJson = await cRes.json();
+            if (cRes.ok && Array.isArray(cJson.data)) {
+              const chars = {};
+              (cJson.included || []).forEach((r) => {
+                if (r && r.type === 'characters' && r.id) chars[r.id] = r.attributes || {};
+              });
+              normalized.cast = cJson.data.map((mc) => {
+                const rel = mc.relationships && mc.relationships.character && mc.relationships.character.data;
+                const c = rel && chars[rel.id];
+                if (!c || !c.name) return null;
+                const img = c.image || {};
+                return {
+                  name: c.name,
+                  character: (mc.attributes && mc.attributes.role === 'main') ? 'Main character' : 'Supporting',
+                  image: img.original || img.large || img.medium || null
+                };
+              }).filter(Boolean).slice(0, 12);
+            }
+          } catch (_) {}
+        }
         const payload = normalized ? [normalized] : [];
         cache.set(cacheKey, payload, TTL.detail);
         persist(payload).catch(() => {});

@@ -85,6 +85,12 @@ let dbReady = false;
 
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
+  // Helmet defaults Referrer-Policy to "no-referrer", which strips the Referer
+  // header from the YouTube trailer <iframe>. YouTube uses that header to verify
+  // the embedding domain and, when it is missing, refuses to play with a
+  // "Video player configuration error (153)". Sending just the origin restores
+  // playback without leaking full URLs.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   contentSecurityPolicy: {
     useDefaults: true,
     directives: {

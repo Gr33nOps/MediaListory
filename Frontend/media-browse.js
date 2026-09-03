@@ -24,6 +24,11 @@
   var lastResults = {}; // ref -> normalized media object (for add-to-library)
   var userCustomLists = [];
 
+  var ANIME_STATUS_LABEL = {
+    finished: 'Finished airing', current: 'Currently airing',
+    upcoming: 'Upcoming', tba: 'To be announced', unreleased: 'Unreleased'
+  };
+
   function byId(id) { return document.getElementById(id); }
 
   function guest() { return typeof getToken === 'function' ? !getToken() : true; }
@@ -102,7 +107,7 @@
       if (trailerEl && trailerEl.dataset.yt) {
         var key = trailerEl.dataset.yt;
         trailerEl.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(key) +
-          '?autoplay=1&rel=0" title="Trailer" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>';
+          '?autoplay=1&rel=0&modestbranding=1&playsinline=1" title="Trailer" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>';
         trailerEl.classList.add('playing');
         return;
       }
@@ -295,6 +300,9 @@
       (MEDIA_TYPE === 'series' && media.number_of_seasons) ? { label: 'Seasons', value: String(media.number_of_seasons) } : null,
       ((MEDIA_TYPE === 'series' || MEDIA_TYPE === 'anime') && media.number_of_episodes) ? { label: 'Episodes', value: String(media.number_of_episodes) } : null,
       (MEDIA_TYPE === 'anime' && media.subtype) ? { label: 'Type', value: String(media.subtype) } : null,
+      (MEDIA_TYPE === 'anime' && media.episode_length) ? { label: 'Episode length', value: media.episode_length + ' min' } : null,
+      (MEDIA_TYPE === 'anime' && media.status) ? { label: 'Status', value: ANIME_STATUS_LABEL[media.status] || media.status } : null,
+      (MEDIA_TYPE === 'anime' && media.age_rating) ? { label: 'Rating', value: String(media.age_rating) } : null,
       (MEDIA_TYPE === 'movie' && media.runtime) ? { label: 'Runtime', value: media.runtime + ' min' } : null
     ].filter(Boolean);
 
@@ -338,9 +346,11 @@
     var trailerHtml = (media.trailer && media.trailer.key)
       ? '<div class="detail-section"><h3 class="detail-h">Trailer</h3>' +
           '<div class="detail-trailer" data-yt="' + esc(media.trailer.key) + '">' +
-            '<img src="https://i.ytimg.com/vi/' + esc(media.trailer.key) + '/hqdefault.jpg" alt="Play trailer" loading="lazy" onerror="this.style.display=\'none\'">' +
+            '<img src="https://i.ytimg.com/vi/' + esc(media.trailer.key) + '/hqdefault.jpg" alt="Play trailer" loading="lazy" onerror="this.src=\'https://i.ytimg.com/vi/' + esc(media.trailer.key) + '/hqdefault.jpg\'">' +
             '<span class="detail-trailer-play" aria-hidden="true"></span>' +
-          '</div></div>'
+          '</div>' +
+          '<a class="detail-trailer-fallback" href="https://www.youtube.com/watch?v=' + esc(media.trailer.key) + '" target="_blank" rel="noopener noreferrer">Trouble playing? Watch on YouTube ↗</a>' +
+        '</div>'
       : '';
     var castHtml = (media.cast && media.cast.length)
       ? '<div class="detail-section"><h3 class="detail-h">Cast</h3><div class="detail-cast">' +

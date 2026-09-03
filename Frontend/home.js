@@ -239,6 +239,23 @@ function initPage() {
     }
 
     document.addEventListener('click', function(e) {
+        // Play the game trailer inline (swap facade for a lazy YouTube embed).
+        var trailerEl = e.target.closest('.detail-trailer');
+        if (trailerEl && trailerEl.dataset.yt && !trailerEl.classList.contains('playing')) {
+            var key = trailerEl.dataset.yt;
+            trailerEl.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(key) +
+                '?autoplay=1&rel=0&modestbranding=1&playsinline=1" title="Trailer" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>';
+            trailerEl.classList.add('playing');
+            return;
+        }
+        // "More like this" opens that game's detail.
+        var simEl = e.target.closest('.detail-similar-card');
+        if (simEl && simEl.dataset.similarRef) {
+            var modalBody = document.querySelector('#gameModal .modal-content');
+            if (modalBody) modalBody.scrollTop = 0;
+            showGameDetails(simEl.dataset.similarRef);
+            return;
+        }
         if (e.target.classList.contains('show-more-btn')) {
             e.stopPropagation();
             var wrap = e.target.closest('.game-card-desc, .game-detail-desc');
@@ -626,6 +643,10 @@ async function showGameDetails(gameId) {
                     igdbScore     = Math.round(igdbGame.aggregated_rating);
                 }
 
+                // Pick the first "Trailer" video, else the first video of any kind.
+                var vids = igdbGame.videos || [];
+                var vid = vids.find(function (v) { return /trailer/i.test(v.name || ''); }) || vids[0];
+
                 game = {
                     id:               gameId,
                     igdb_id:          igdbGame.id,
@@ -647,7 +668,20 @@ async function showGameDetails(gameId) {
                     genres:           igdbGame.genres    || [],
                     platforms:        igdbGame.platforms || [],
                     publishers:       publishers,
-                    developers:       developers
+                    developers:       developers,
+                    game_modes:       (igdbGame.game_modes || []).map(function (m) { return m.name; }).filter(Boolean),
+                    perspectives:     (igdbGame.player_perspectives || []).map(function (p) { return p.name; }).filter(Boolean),
+                    trailer:          vid && vid.video_id ? { key: vid.video_id } : null,
+                    screenshots:      (igdbGame.screenshots || []).slice(0, 8).map(function (s) {
+                        return 'https:' + s.url.replace('t_thumb', 't_screenshot_big');
+                    }),
+                    similar:          (igdbGame.similar_games || []).filter(function (s) { return s.cover; }).slice(0, 12).map(function (s) {
+                        return {
+                            id: 'igdb_' + s.id,
+                            name: s.name,
+                            background_image: 'https:' + s.cover.url.replace('t_thumb', 't_cover_big')
+                        };
+                    })
                 };
             }
         } else {
@@ -686,6 +720,12 @@ async function showGameDetails(gameId) {
                     : null,
                 game.platforms && game.platforms.length
                     ? { label: 'Platforms', value: game.platforms.map(function(p) { return p.name; }).join(' · ') }
+                    : null,
+                game.game_modes && game.game_modes.length
+                    ? { label: 'Modes', value: game.game_modes.join(' · ') }
+                    : null,
+                game.perspectives && game.perspectives.length
+                    ? { label: 'Perspective', value: game.perspectives.join(' · ') }
                     : null
             ].filter(Boolean);
 
@@ -733,6 +773,36 @@ async function showGameDetails(gameId) {
                 }
             }
 
+            var trailerHtml = (game.trailer && game.trailer.key)
+                ? '<div class="detail-section"><h3 class="detail-h">Trailer</h3>' +
+                    '<div class="detail-trailer" data-yt="' + esc(game.trailer.key) + '">' +
+                      '<img src="https://i.ytimg.com/vi/' + esc(game.trailer.key) + '/hqdefault.jpg" alt="Play trailer" loading="lazy">' +
+                      '<span class="detail-trailer-play" aria-hidden="true"></span>' +
+                    '</div>' +
+                    '<a class="detail-trailer-fallback" href="https://www.youtube.com/watch?v=' + esc(game.trailer.key) + '" target="_blank" rel="noopener noreferrer">Trouble playing? Watch on YouTube ↗</a>' +
+                  '</div>'
+                : '';
+
+            var shotsHtml = (game.screenshots && game.screenshots.length)
+                ? '<div class="detail-section"><h3 class="detail-h">Screenshots</h3><div class="detail-shots">' +
+                    game.screenshots.map(function (u) {
+                        return '<a class="detail-shot" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' +
+                            '<img src="' + esc(u) + '" alt="Screenshot" loading="lazy" onerror="this.closest(\'.detail-shot\').style.display=\'none\'"></a>';
+                    }).join('') +
+                  '</div></div>'
+                : '';
+
+            var similarHtml = (game.similar && game.similar.length)
+                ? '<div class="detail-section"><h3 class="detail-h">More like this</h3><div class="detail-similar">' +
+                    game.similar.map(function (s) {
+                        return '<button type="button" class="detail-similar-card" data-similar-ref="' + esc(s.id) + '" title="' + esc(s.name) + '">' +
+                            '<img src="' + esc(s.background_image) + '" alt="' + esc(s.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+                            '<span class="ds-name">' + esc(s.name) + '</span>' +
+                        '</button>';
+                    }).join('') +
+                  '</div></div>'
+                : '';
+
             document.getElementById('gameDetails').innerHTML =
                 '<div class="game-detail-hero">' +
                     '<img src="' + esc(heroBg) + '" alt="' + esc(game.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
@@ -748,6 +818,8 @@ async function showGameDetails(gameId) {
                     genreTagsHtml +
                     infoGridHtml +
                     descHtml +
+                    trailerHtml +
+                    shotsHtml +
                     '<div class="add-to-list">' +
                         '<h3>Add to My Library</h3>' +
                         '<div style="margin-bottom:12px;">' +
@@ -788,12 +860,14 @@ async function showGameDetails(gameId) {
                             '<span id="addGameMessage" style="font-size:13px;font-weight:600;"></span>' +
                         '</div>' +
                     '</div>' +
+                    similarHtml +
                 '</div>';
 
             if (typeof openModal === 'function') openModal('gameModal');
             else document.getElementById('gameModal').style.display = 'flex';
 
             if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'scoreUpBtn', 'scoreDownBtn', 'scoreClearBtn');
+            if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(document.getElementById('gameDetails'));
         }
     } catch (error) {
         console.error('Show game details error:', error);

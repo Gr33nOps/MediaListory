@@ -3969,11 +3969,22 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .detail-similar-card:hover img { transform: translateY(-3px); border-color: var(--accent); }
 .ds-name { font-size: 0.76rem; font-weight: 600; margin-top: 6px; line-height: 1.25; color: var(--text-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
+/* Game screenshots gallery — a horizontal strip, same scroller treatment as cast. */
+.detail-shots { display: grid; grid-auto-flow: column; grid-auto-columns: 280px; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+.detail-shot { display: block; scroll-snap-align: start; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-deep); }
+.detail-shot img { width: 280px; aspect-ratio: 16 / 9; object-fit: cover; display: block; transition: transform 0.18s; }
+.detail-shot:hover img { transform: scale(1.03); }
+
+.detail-trailer-fallback { display: inline-block; margin-top: 10px; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); text-decoration: none; }
+.detail-trailer-fallback:hover { color: var(--accent-light); text-decoration: underline; }
+
 @media (max-width: 600px) {
     .detail-cast-card { flex-basis: 84px; }
     .detail-cast-card img { width: 84px; height: 108px; }
     .detail-similar { grid-auto-columns: 104px; }
     .detail-similar-card img { width: 104px; height: 154px; }
+    .detail-shots { grid-auto-columns: 240px; }
+    .detail-shot img { width: 240px; }
 }
 
 /* Rating chip on browse cards */
@@ -4252,13 +4263,16 @@ body.imp-open { overflow: hidden; }
 .private-notice p { color: var(--text-muted); max-width: 44ch; margin: 0 auto; line-height: 1.6; }
 
 /* ══ Horizontal scrollers: hidden scrollbar + edge fades + arrow buttons ══ */
-.dash-scroller, .detail-cast, .detail-similar { scrollbar-width: none; -ms-overflow-style: none; }
-.dash-scroller::-webkit-scrollbar, .detail-cast::-webkit-scrollbar, .detail-similar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.dash-scroller, .detail-cast, .detail-similar, .detail-shots { scrollbar-width: none; -ms-overflow-style: none; }
+.dash-scroller::-webkit-scrollbar, .detail-cast::-webkit-scrollbar, .detail-similar::-webkit-scrollbar, .detail-shots::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 .scroller { position: relative; }
 .scroller::before, .scroller::after { content: ""; position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s ease; }
-.scroller::before { left: 0; background: linear-gradient(90deg, var(--bg-base) 10%, transparent); }
-.scroller::after  { right: 0; background: linear-gradient(270deg, var(--bg-base) 10%, transparent); }
+.scroller::before { left: 0; background: linear-gradient(90deg, var(--scroller-fade, var(--bg-base)), transparent); }
+.scroller::after  { right: 0; background: linear-gradient(270deg, var(--scroller-fade, var(--bg-base)), transparent); }
+/* Inside a detail modal the strip sits on the card surface, not the page base,
+   so the fade must match that surface instead of bleeding to near-black. */
+.modal-content { --scroller-fade: var(--bg-card); }
 .scroller:not(.at-start)::before { opacity: 1; }
 .scroller:not(.at-end):not(.no-scroll)::after { opacity: 1; }
 .scroller-arrow {
@@ -4279,10 +4293,31 @@ body.imp-open { overflow: hidden; }
 .scroller.no-scroll .scroller-arrow { display: none; }
 @media (hover: none) { .scroller-arrow { display: none; } } /* touch devices just swipe */
 
-/* Collection overview: a single pie (By category on All, By status per category) */
-.overview-pie-wrap { display: flex; gap: 32px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.overview-pie-wrap .pie-chart-container { width: 200px; flex-shrink: 0; }
-.overview-pie-wrap .pie-legend { max-width: 360px; }
+/* Collection overview: bars on the left, pie on the right.
+   By category on the All tab, By status inside a category. */
+.overview-split { display: flex; gap: 40px; align-items: center; flex-wrap: wrap; }
+.overview-bars { flex: 1 1 320px; min-width: 260px; display: flex; flex-direction: column; gap: 16px; }
+.overview-pie-col { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.overview-pie-col .pie-chart-container { width: 190px; margin: 0; }
+
+.ov-bar-row { display: flex; flex-direction: column; gap: 7px; }
+.ov-bar-head { display: flex; align-items: center; gap: 9px; font-size: 0.9rem; }
+.ov-bar-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.ov-bar-label { color: var(--text-secondary); font-weight: 600; }
+.ov-bar-count { margin-left: auto; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ov-bar-pct { color: var(--text-muted); font-weight: 600; }
+.ov-bar-track { height: 9px; border-radius: var(--radius-pill); background: var(--bg-deep); overflow: hidden; border: 1px solid var(--border-subtle); }
+.ov-bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+
+.overview-total { text-align: center; line-height: 1.1; }
+.ov-total-num { display: block; font-family: var(--font-display, inherit); font-size: 1.7rem; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ov-total-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); font-weight: 600; }
+
+@media (max-width: 640px) {
+    .overview-split { gap: 24px; justify-content: center; }
+    .overview-pie-col { order: -1; }
+    .overview-pie-col .pie-chart-container { width: 150px; }
+}
 #collectionOverview .stats-title { font-family: var(--font-display); font-size: 1.5rem; }
 
 /* Custom-list management buttons stay neutral (not the active category accent) */

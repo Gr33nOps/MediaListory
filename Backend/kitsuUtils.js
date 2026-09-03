@@ -58,9 +58,14 @@ function normalizeKitsuAnime(item, categoriesById) {
     rating,
     metacritic_score,
     number_of_episodes: a.episodeCount != null ? a.episodeCount : null,
+    episode_length: a.episodeLength != null ? a.episodeLength : null, // minutes/episode
     subtype: a.subtype || null,      // TV | movie | OVA | ONA | special | music
     status: a.status || null,        // finished | current | upcoming | ...
+    age_rating: a.ageRating || null, // G | PG | R | R18
+    ended: a.endDate || null,
+    trailer: a.youtubeVideoId ? { key: a.youtubeVideoId } : null,
     genres,
+    cast: [],
     developers: [],
     publishers: []
   };
