@@ -3508,8 +3508,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
     .list-game-actions { width: 100%; flex-direction: column; }
     .list-game-actions .btn { width: 100%; }
     .profile-avatar-section { flex-direction: column; }
-    .profile-stats { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .profile-stats .stat-item { padding: 14px 10px; }
+    .profile-stats { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .profile-stats .stat-item { padding: 14px 8px; }
     .profile-media-breakdown { justify-content: center; }
     .friend-item { flex-wrap: wrap; padding: 16px; gap: 14px; }
     .friend-avatar { width: 56px; height: 56px; }
