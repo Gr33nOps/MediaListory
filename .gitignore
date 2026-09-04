@@ -38,3 +38,10 @@ scripts/
 .playwright-mcp/
 test-results/
 playwright-report/
+
+# Local learning doc (not for the repo)
+MediaListory-Learning-Guide.pdf
+
+# Local screenshots (audit captures)
+/m[0-9]*.png
+/n[0-9]*.png
