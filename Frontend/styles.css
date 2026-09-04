@@ -684,18 +684,23 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #fff
     margin-top: 30px;
 }
 
+/* Search, sort and filters all live on ONE row: [ input ][ Sort ][ Filters ][ Search ].
+   The two wrappers use display:contents so their children become flex items of
+   the container, ordered explicitly. */
 .search-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
     margin-bottom: 28px;
 }
-
-.search-bar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-}
+.search-bar, .search-filters { display: contents; }
+.search-container .search-input { order: 1; flex: 1 1 260px; min-width: 200px; }
+.search-container #sortBy      { order: 2; }
+.search-container #filterBtn   { order: 3; }
+.search-container #searchBtn   { order: 4; }
 
 .search-input {
-    flex: 1;
     padding: 14px 18px;
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -712,8 +717,6 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #fff
 }
 
 .search-input::placeholder { color: rgba(226, 232, 240, 0.5); }
-
-.search-filters { display: flex; gap: 12px; }
 
 .filter-select {
     padding: 12px 40px 12px 16px;
@@ -3477,13 +3480,13 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
     body.nav-drawer-open { overflow: hidden; }
 
     .page-tabs { flex-direction: column; }
-    .search-container { gap: 12px; }
-    .search-bar { flex-direction: column; }
-    .search-filters { flex-direction: column; width: 100%; }
-    .search-filters .filter-select,
-    .search-filters .btn,
-    .search-bar .btn,
-    .search-input { width: 100%; }
+    /* Search input takes the full first row; sort + Filters + Search share the
+       next row (the container wraps). */
+    .search-container { gap: 10px; }
+    .search-container .search-input { flex: 1 1 100%; }
+    .search-container #sortBy,
+    .search-container #filterBtn,
+    .search-container #searchBtn { flex: 1 1 auto; }
     .filter-group { grid-template-columns: 1fr; }
     .filter-section { padding: 14px; }
     .games-grid { gap: 16px 12px; }
@@ -4453,11 +4456,14 @@ body.imp-open { overflow: hidden; }
 
 /* Blob palette per page: the active category's colour dominates (--au-1),
    with two harmonising brand hues. Neutral pages use the multi-media trio. */
-:root { --au-1: #3b82f6; --au-2: #ec4899; --au-3: #10b981; --aurora-blur: 72px; }
-body[data-page="movies"] { --au-1: #3b82f6; --au-2: #6366f1; --au-3: #06b6d4; }
-body[data-page="series"] { --au-1: #10b981; --au-2: #06b6d4; --au-3: #3b82f6; }
-body[data-page="anime"]  { --au-1: #ec4899; --au-2: #8b5cf6; --au-3: #3b82f6; }
-body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f43f5e; --au-3: #8b5cf6; }
+/* ONE colour per context — all three blobs share a single hue so the background
+   is a single-colour moving glow, never a multi-colour mix. Default/neutral
+   pages (dashboard, library, following, profile, user profile) use plain grey. */
+:root { --au-1: #64748b; --au-2: #64748b; --au-3: #64748b; --aurora-blur: 72px; }
+body[data-page="movies"] { --au-1: #3b82f6; --au-2: #3b82f6; --au-3: #3b82f6; }
+body[data-page="series"] { --au-1: #10b981; --au-2: #10b981; --au-3: #10b981; }
+body[data-page="anime"]  { --au-1: #ec4899; --au-2: #ec4899; --au-3: #ec4899; }
+body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 
 .aurora {
     position: fixed;
