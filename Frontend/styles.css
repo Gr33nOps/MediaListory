@@ -3494,11 +3494,11 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
     .game-info { padding: 12px; }
     .game-title { font-size: 0.92rem; margin-bottom: 8px; }
     .pagination {
-        flex-wrap: wrap;
-        gap: 10px;
+        gap: 18px;
         justify-content: center;
     }
-    .pagination .btn { flex: 1 1 120px; }
+    /* Keep the circular arrow buttons — don't let them stretch into pills. */
+    .pagination .btn { flex: 0 0 auto; }
 
     .list-header { flex-direction: column; gap: 15px; align-items: flex-start; }
     .list-header-actions { width: 100%; flex-wrap: wrap; }
