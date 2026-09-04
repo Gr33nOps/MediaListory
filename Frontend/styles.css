@@ -292,7 +292,7 @@ img, video, canvas, svg {
     color: #ffffff;
     box-shadow: 0 2px 10px var(--accent-dim);
 }
-body[data-page="games"] .page-tab.active { color: #1a1206; }
+body[data-page="games"] .page-tab.active { color: #fff; }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
@@ -396,7 +396,7 @@ body[data-page="games"] .page-tab.active { color: #1a1206; }
     transition: filter 0.18s ease;
 }
 .nav-cta:hover { filter: brightness(1.12); }
-body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #1a1206; }
+body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #fff; }
 
 /* Profile dropdown (holds My profile, admin links, and Log out). */
 .nav-menu { position: relative; }
@@ -818,29 +818,33 @@ select.update-status-select option,
     font-variant-numeric: tabular-nums;
 }
 
-/* Prev / Next: consistent bordered pills (the bare .btn had no surface and fell
-   back to the browser default). Next carries the accent as the forward action. */
+/* Prev / Next: circular arrow buttons matching the scroller nav, tinted to the
+   page's category (visible label kept for screen readers via the button text). */
 .pagination .btn {
-    background: var(--bg-deep);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-pill);
-    padding: 10px 22px;
+    width: 48px; height: 48px; min-width: 48px; min-height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;                 /* hide the "Previous"/"Next" text visually */
+    display: inline-flex; align-items: center; justify-content: center;
     box-shadow: none;
+    transition: transform 0.15s ease, filter 0.15s ease, background 0.2s ease, border-color 0.2s ease;
 }
-.pagination .btn:hover:not(:disabled) {
-    border-color: var(--accent-border);
-    color: var(--text-primary);
-    transform: translateY(-1px);
+.pagination .btn::before { font-size: 1.7rem; line-height: 1; font-weight: 400; }
+.pagination #prevPageBtn::before { content: '\2039'; }   /* ‹ */
+.pagination #nextPageBtn::before { content: '\203A'; }   /* › */
+.pagination #prevPageBtn {
+    background: transparent;
+    border: 1px solid var(--accent-border);
+    color: var(--accent-light);
 }
 .pagination #nextPageBtn {
     background: var(--accent);
-    border-color: var(--accent);
+    border: 1px solid var(--accent);
     color: #fff;
 }
-.pagination #nextPageBtn:hover:not(:disabled) { filter: brightness(1.1); color: #fff; }
-.pagination .btn:disabled { opacity: 0.45; background: var(--bg-deep); color: var(--text-dim); }
-body[data-page="games"] .pagination #nextPageBtn { color: #1a1206; }
+.pagination .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+.pagination #prevPageBtn:hover:not(:disabled) { background: var(--accent-dim); color: var(--text-primary); }
+.pagination .btn:disabled { opacity: 0.4; }
 
 /* Fixed columns so the 24 results per page fill complete rows with no trailing
    gaps. 24 divides evenly by 6 / 4 / 3 / 2, so every breakpoint stays full. */
@@ -1740,7 +1744,7 @@ body[data-page="games"] .pagination #nextPageBtn { color: #1a1206; }
     filter: brightness(1.12);
     transform: translateY(-1px);
 }
-body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #1a1206; }
+body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff; }
 
 .score-clear-btn {
     background: transparent;
@@ -3814,35 +3818,14 @@ a:focus-visible {
 body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); --accent-glow: rgba(59,130,246,0.50); }
 body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.46); }
 body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.48); }
-body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
+/* Games: solid-fill accent is a deeper amber (#b45309) so buttons carry WHITE
+   text at AA instead of black-on-yellow; the bright amber stays as text/among
+   the Aurora via --accent-light and --cat-game. */
+body[data-page="games"],  [data-cat="games"]  { --accent: #b45309;   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
 
-/* Dark theme only: warm the surfaces (nav, cards, inputs, panels) toward the
-   active category so the whole page belongs to that colour instead of sitting
-   as navy islands on the wash. Light theme keeps its clean white surfaces. */
-:root:not([data-theme="light"]) body[data-page="movies"] {
-    --bg-base: color-mix(in srgb, var(--cat-movie) 10%, #0a0c12);
-    --bg-card: color-mix(in srgb, var(--cat-movie) 12%, #1c2432);
-    --bg-deep: color-mix(in srgb, var(--cat-movie) 11%, #0e1119);
-    --border-subtle: color-mix(in srgb, var(--cat-movie) 22%, rgba(71,85,105,0.3));
-}
-:root:not([data-theme="light"]) body[data-page="series"] {
-    --bg-base: color-mix(in srgb, var(--cat-series) 10%, #0a0c12);
-    --bg-card: color-mix(in srgb, var(--cat-series) 12%, #1c2432);
-    --bg-deep: color-mix(in srgb, var(--cat-series) 11%, #0e1119);
-    --border-subtle: color-mix(in srgb, var(--cat-series) 22%, rgba(71,85,105,0.3));
-}
-:root:not([data-theme="light"]) body[data-page="anime"] {
-    --bg-base: color-mix(in srgb, var(--cat-anime) 10%, #0a0c12);
-    --bg-card: color-mix(in srgb, var(--cat-anime) 12%, #1c2432);
-    --bg-deep: color-mix(in srgb, var(--cat-anime) 11%, #0e1119);
-    --border-subtle: color-mix(in srgb, var(--cat-anime) 22%, rgba(71,85,105,0.3));
-}
-:root:not([data-theme="light"]) body[data-page="games"] {
-    --bg-base: color-mix(in srgb, var(--cat-game) 10%, #0a0c12);
-    --bg-card: color-mix(in srgb, var(--cat-game) 12%, #1c2432);
-    --bg-deep: color-mix(in srgb, var(--cat-game) 11%, #0e1119);
-    --border-subtle: color-mix(in srgb, var(--cat-game) 22%, rgba(71,85,105,0.3));
-}
+/* Surfaces stay a single neutral dark on every page — the category colour now
+   comes ONLY from the Aurora nebula behind them, so there is one cohesive space
+   gradient per page instead of a flat surface tint clashing with the wash. */
 /* My Library, Following, and Profile stay neutral (inherit :root) and only
    pick up a category color when a category filter is chosen inside the page. */
 
@@ -3893,7 +3876,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 .nav-actions .btn[data-cat="movies"].active { background: linear-gradient(135deg, var(--cat-movie) 0%, #1d4ed8 100%); box-shadow: var(--shadow-btn) var(--cat-movie-dim); }
 .nav-actions .btn[data-cat="series"].active { background: linear-gradient(135deg, var(--cat-series) 0%, var(--green-dark) 100%); box-shadow: var(--shadow-btn) var(--cat-series-dim); }
 .nav-actions .btn[data-cat="anime"].active  { background: linear-gradient(135deg, var(--cat-anime) 0%, #be185d 100%); box-shadow: var(--shadow-btn) var(--cat-anime-dim); }
-.nav-actions .btn[data-cat="games"].active  { background: linear-gradient(135deg, var(--cat-game) 0%, var(--amber-dark) 100%); color: #1a1206; box-shadow: var(--shadow-btn) var(--cat-game-dim); }
+.nav-actions .btn[data-cat="games"].active  { background: #b45309; color: #fff; box-shadow: var(--shadow-btn) var(--cat-game-dim); }
 .nav-actions .btn[data-cat].active::before { background: #fff; box-shadow: none; }
 
 /* ── Collection category tabs (My Library) — colored per category ─────── */
@@ -3954,7 +3937,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 body[data-page="games"] .btn-primary,
 body[data-page="games"] .search-container .btn-primary,
 body[data-page="games"] .nav-actions .btn.active {
-    color: #1a1206;
+    color: #fff;
 }
 
 /* ── Mobile navigation drawer polish ──────────────────────────────────── */
@@ -4177,7 +4160,7 @@ body.gsearch-open { overflow: hidden; }
 .year-chip { padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition-fast); }
 .year-chip:hover { border-color: var(--accent-border); color: var(--text-primary); }
 .year-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-body[data-page="games"] .year-chip.active { color: #1a1206; }
+body[data-page="games"] .year-chip.active { color: #fff; }
 
 .stats-loading, .stats-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .stats-empty p { margin-bottom: 8px; font-size: 1.05rem; color: var(--text-secondary); }
@@ -4256,7 +4239,7 @@ body[data-page="games"] .year-chip.active { color: #1a1206; }
 .cal-chip { padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition-fast); }
 .cal-chip:hover { border-color: var(--accent-border); color: var(--text-primary); }
 .cal-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-body[data-page="games"] .cal-chip.active { color: #1a1206; }
+body[data-page="games"] .cal-chip.active { color: #fff; }
 
 .cal-watchlist { margin-bottom: 26px; }
 .cal-month { margin-bottom: 26px; }
