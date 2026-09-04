@@ -698,7 +698,8 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #fff
 .search-container .search-input { order: 1; flex: 1 1 260px; min-width: 200px; }
 .search-container #sortBy      { order: 2; }
 .search-container #filterBtn   { order: 3; }
-.search-container #searchBtn   { order: 4; }
+.search-container #searchBtn,
+.search-container #searchUsersBtn { order: 4; }   /* Search button always on the right */
 
 .search-input {
     padding: 14px 18px;
@@ -4343,14 +4344,9 @@ body.imp-open { overflow: hidden; }
 .dash-scroller::-webkit-scrollbar, .detail-cast::-webkit-scrollbar, .detail-similar::-webkit-scrollbar, .detail-shots::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 .scroller { position: relative; }
-.scroller::before, .scroller::after { content: ""; position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.2s ease; }
-.scroller::before { left: 0; background: linear-gradient(90deg, var(--scroller-fade, var(--bg-base)), transparent); }
-.scroller::after  { right: 0; background: linear-gradient(270deg, var(--scroller-fade, var(--bg-base)), transparent); }
-/* Inside a detail modal the strip sits on the card surface, not the page base,
-   so the fade must match that surface instead of bleeding to near-black. */
-.modal-content { --scroller-fade: var(--bg-card); }
-.scroller:not(.at-start)::before { opacity: 1; }
-.scroller:not(.at-end):not(.no-scroll)::after { opacity: 1; }
+/* Edge fade removed — it read as a dark smudge over the Aurora; the arrow
+   buttons alone signal there's more to scroll. */
+.scroller::before, .scroller::after { display: none; }
 .scroller-arrow {
     position: absolute; top: 40%; transform: translateY(-50%); z-index: 3;
     width: 38px; height: 38px; border-radius: 50%;
