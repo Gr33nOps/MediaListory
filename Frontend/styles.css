@@ -3818,10 +3818,10 @@ a:focus-visible {
 body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); --accent-glow: rgba(59,130,246,0.50); }
 body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.46); }
 body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.48); }
-/* Games: solid-fill accent is a deeper amber (#b45309) so buttons carry WHITE
-   text at AA instead of black-on-yellow; the bright amber stays as text/among
-   the Aurora via --accent-light and --cat-game. */
-body[data-page="games"],  [data-cat="games"]  { --accent: #b45309;   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
+/* Games keeps its vibrant brand amber for fills; white button text stays legible
+   via a soft warm shadow (see the games text-shadow rule) — no burnt-orange, no
+   harsh black-on-yellow. */
+body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
 
 /* Surfaces stay a single neutral dark on every page — the category colour now
    comes ONLY from the Aurora nebula behind them, so there is one cohesive space
@@ -3876,7 +3876,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: #b45309;   --accent-li
 .nav-actions .btn[data-cat="movies"].active { background: linear-gradient(135deg, var(--cat-movie) 0%, #1d4ed8 100%); box-shadow: var(--shadow-btn) var(--cat-movie-dim); }
 .nav-actions .btn[data-cat="series"].active { background: linear-gradient(135deg, var(--cat-series) 0%, var(--green-dark) 100%); box-shadow: var(--shadow-btn) var(--cat-series-dim); }
 .nav-actions .btn[data-cat="anime"].active  { background: linear-gradient(135deg, var(--cat-anime) 0%, #be185d 100%); box-shadow: var(--shadow-btn) var(--cat-anime-dim); }
-.nav-actions .btn[data-cat="games"].active  { background: #b45309; color: #fff; box-shadow: var(--shadow-btn) var(--cat-game-dim); }
+.nav-actions .btn[data-cat="games"].active  { background: var(--cat-game); color: #fff; text-shadow: 0 1px 2px rgba(66,32,0,0.55); box-shadow: var(--shadow-btn) var(--cat-game-dim); }
 .nav-actions .btn[data-cat].active::before { background: #fff; box-shadow: none; }
 
 /* ── Collection category tabs (My Library) — colored per category ─────── */
@@ -3934,10 +3934,20 @@ body[data-page="games"],  [data-cat="games"]  { --accent: #b45309;   --accent-li
     transition: box-shadow 0.25s ease, border-color 0.25s ease;
 }
 /* Amber (Games) needs dark text for legible contrast on its fills. */
+/* White button text on the vibrant amber stays legible with a soft warm shadow
+   (keeps the bright brand gold instead of a burnt deep amber or harsh black). */
 body[data-page="games"] .btn-primary,
 body[data-page="games"] .search-container .btn-primary,
-body[data-page="games"] .nav-actions .btn.active {
+body[data-page="games"] .nav-actions .btn.active,
+body[data-page="games"] .pagination #nextPageBtn,
+body[data-page="games"] .nav-cta,
+body[data-page="games"] .score-btn,
+[data-cat="games"] .score-btn,
+body[data-page="games"] .page-tab.active,
+body[data-page="games"] .year-chip.active,
+body[data-page="games"] .cal-chip.active {
     color: #fff;
+    text-shadow: 0 1px 2px rgba(66, 32, 0, 0.6);
 }
 
 /* ── Mobile navigation drawer polish ──────────────────────────────────── */
