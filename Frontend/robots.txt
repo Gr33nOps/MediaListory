@@ -19,4 +19,4 @@ Disallow: /friends.html
 Disallow: /userProfile.html
 Disallow: /api/
 
-Sitemap: https://medialistory.onrender.com/sitemap.xml
+Sitemap: https://medialistory.vercel.app/sitemap.xml

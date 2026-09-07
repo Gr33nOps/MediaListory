@@ -3683,6 +3683,70 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
 .toast-info { border-color: var(--blue); }
 .toast-out { opacity: 0; transition: opacity 0.2s ease; }
 
+/* "Waking the server" notice (Render cold start). Shares the toast/card surface
+   language; pinned bottom-centre so it reports status without blocking the page. */
+.backend-wake {
+    position: fixed;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    transform: translateX(-50%);
+    z-index: 11000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(460px, calc(100vw - 24px));
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-modal);
+}
+.backend-wake[data-state="ready"] { border-color: var(--green); }
+.backend-wake[data-state="error"] { border-color: var(--red); }
+
+.backend-wake-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.backend-wake-title { font-size: 0.92rem; font-weight: 650; line-height: 1.25; }
+.backend-wake-msg { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+.backend-wake[data-state="ready"] .backend-wake-title { color: var(--green-light); }
+.backend-wake[data-state="error"] .backend-wake-title { color: var(--red-light); }
+
+/* A real activity spinner while the server boots; a solid status dot once it
+   resolves (green connected / red unreachable). */
+.backend-wake-ind {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: var(--radius-circle);
+    border: 2px solid var(--border-subtle);
+    border-top-color: var(--accent-light);
+    animation: backend-wake-spin 0.8s linear infinite;
+}
+.backend-wake[data-state="ready"] .backend-wake-ind { animation: none; border: 0; background: var(--green); }
+.backend-wake[data-state="error"] .backend-wake-ind { animation: none; border: 0; background: var(--red); }
+@keyframes backend-wake-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .backend-wake-ind { animation: none; }
+}
+
+.backend-wake-retry {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+.backend-wake-retry:hover { border-color: var(--accent-light); }
+.backend-wake-retry:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+    .backend-wake { left: 12px; right: 12px; transform: none; max-width: none; }
+}
+
 /* Shared confirm dialog (confirmAction) */
 .mgl-confirm-modal .mgl-confirm-dialog {
     max-width: 420px;

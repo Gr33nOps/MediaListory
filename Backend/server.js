@@ -111,9 +111,21 @@ app.use(helmet({
 app.use(compression());
 app.use(morgan(IS_PROD ? 'combined' : 'dev'));
 
+// Extra browser origins allowed to call the API (comma-separated), e.g. Vercel
+// preview deployments. FRONTEND_URL is always allowed on top of these.
+const EXTRA_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((s) => normalizeFrontendUrl(s))
+  .filter((s) => /^https?:\/\//i.test(s));
+const ALLOWED_ORIGINS = new Set([FRONTEND_URL, ...EXTRA_ORIGINS]);
+
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || origin === FRONTEND_URL || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    if (!origin ||
+        ALLOWED_ORIGINS.has(origin) ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));

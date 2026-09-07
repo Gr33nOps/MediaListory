@@ -101,9 +101,28 @@ async function handleOAuthReturn() {
 
     showOAuthWorking();
     try {
-        // Our server already set the httpOnly session cookie; hydrate from it (same-origin).
         var restored = null;
-        if (typeof ensureSession === 'function') restored = await ensureSession();
+
+        // Cross-origin (Vercel frontend → Render API): the session cookie the
+        // callback set lives on the API origin and SameSite=Lax won't send it
+        // here, so the callback also hands back a single-use code. Exchange it
+        // for the JWT and store it (same mechanism as email/password login).
+        var code = urlParams.get('code');
+        if (code) {
+            var ex = await fetch(API_BASE + '/auth/oauth/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                cache: 'no-store',
+                body: JSON.stringify({ code: code })
+            });
+            if (ex.ok) restored = await ex.json();
+        }
+
+        // Same-origin fallback (local dev, or Render self-serving): hydrate from
+        // the httpOnly session cookie.
+        if (!restored || !restored.token) {
+            if (typeof ensureSession === 'function') restored = await ensureSession();
+        }
         if (!restored || !restored.token) {
             var r = await fetch(API_BASE + '/auth/session', { credentials: 'same-origin', cache: 'no-store' });
             if (r.ok) restored = await r.json();
