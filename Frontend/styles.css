@@ -4541,3 +4541,167 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 @media (prefers-reduced-motion: reduce) {
     .aurora-blob { animation: none !important; }
 }
+
+/* Phone layouts: keep desktop rules above intact. */
+@media (max-width: 600px) {
+    .container { padding: 12px; }
+
+    /* Keep the brand, account and menu on one row. Secondary utilities
+       belong inside the expanded menu, where they have room to tap. */
+    .navbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        padding: 8px 10px;
+        margin-bottom: 22px;
+    }
+    .nav-brand { grid-area: 1 / 1; font-size: 1.1rem; }
+    .nav-right { display: contents; }
+    .nav-right > .nav-menu,
+    .nav-right > .nav-cta { grid-area: 1 / 2; }
+    .nav-toggle { grid-area: 1 / 3; width: 44px; height: 44px; }
+    .nav-menu-trigger { min-width: 44px; min-height: 44px; justify-content: center; }
+    .nav-cta { min-height: 44px; display: inline-flex; align-items: center; }
+    .nav-right > .nav-icon-btn { display: none; }
+    .navbar.is-open .nav-primary {
+        grid-area: 2 / 1 / auto / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .navbar.is-open .nav-icon-btn { display: inline-flex; min-width: 44px; height: 44px; }
+    .navbar.is-open #navSearchBtn { grid-area: 3 / 1; width: 100%; justify-content: flex-start; padding: 0 14px; gap: 10px; }
+    .navbar.is-open #navSearchBtn::after { content: "Search"; font-family: var(--font-body); font-size: 0.95rem; }
+    .navbar.is-open #navPeopleBtn { grid-area: 3 / 2; }
+    .navbar.is-open #navThemeBtn { grid-area: 3 / 3; }
+    .nav-menu-pop { max-width: calc(100vw - 80px); }
+    .nav-menu-item { min-height: 44px; }
+    /* The menu expands in document flow; allow scrolling on short screens. */
+    body.nav-drawer-open:not(.gsearch-open) { overflow: auto; }
+
+    .page-header { margin-bottom: 20px; padding: 0 4px; }
+    .page-header-title { font-size: 1.65rem; line-height: 1.2; }
+    .page-header-sub { max-width: 36ch; }
+    .search-container { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-bottom: 22px; }
+    .search-container .search-bar, .search-container .search-filters { display: contents; }
+    .search-container .search-input { grid-area: 1 / 1; width: 100%; min-width: 0; }
+    .search-container #searchBtn { grid-area: 1 / 2; }
+    .search-container #sortBy { grid-area: 2 / 1; width: 100%; }
+    .search-container #filterBtn { grid-area: 2 / 2; }
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select, textarea { font-size: 16px; }
+    .search-input, .filter-select, .form-input { min-width: 0; max-width: 100%; font-size: 16px; }
+    .container select.filter-select { font-size: 16px; }
+    .cl-modal-box select, .cl-modal-box textarea, .cl-modal-box input { font-size: 16px; }
+    .gsearch-bar input { min-width: 0; }
+    .btn, .filter-select, .media-tab, .page-tab, .oauth-btn { min-height: 44px; }
+    .search-filters { min-width: 0; }
+    .filter-actions { display: flex; gap: 8px; }
+    .filter-actions .btn { flex: 1; }
+    .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 12px; }
+    .game-info { padding: 10px 2px; }
+    .game-title { font-size: 0.92rem; line-height: 1.35; }
+
+    .page-tabs, .media-tabs { min-width: 0; }
+    .media-tabs { flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 4px; scrollbar-width: none; }
+    .media-tabs::-webkit-scrollbar { display: none; }
+    .media-tab { flex: 0 0 auto; white-space: nowrap; }
+    .page-tab { min-width: 0; }
+    .list-header, .profile-header { padding: 18px 16px; }
+    .list-header h2 { font-size: 1.2rem; }
+    .list-header-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+    .list-header-actions .search-input, .list-header-actions .filter-select { grid-column: 1 / -1; }
+    .list-header-actions .search-input { flex: 1 1 100%; width: 100%; }
+    .list-header-actions .filter-select { flex: 1 1 140px; }
+    .stats-dashboard { padding: 18px 16px; }
+    .stats-dashboard .stats-title { margin-bottom: 16px; }
+    .overview-split { flex-wrap: nowrap; gap: 16px; align-items: center; }
+    .overview-bars { flex: 1; min-width: 0; gap: 12px; }
+    .overview-pie-col { flex: 0 0 80px; gap: 8px; }
+    .overview-pie-col .pie-chart-container { width: 80px; }
+    .ov-total-num { font-size: 1.35rem; }
+    .ov-bar-head { gap: 6px; font-size: 0.8rem; }
+    .my-games-list.as-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .coll-item, .my-games-list:not(.as-grid) .coll-item.list-item, .my-games-list:not(.as-grid) .coll-item.cl-list-item { padding: 14px 16px; }
+    .my-games-list:not(.as-grid) .coll-item.list-item .coll-item-body,
+    .my-games-list:not(.as-grid) .coll-item.cl-list-item .coll-item-body { flex-direction: column; align-items: stretch; gap: 8px; }
+    .container .my-games-section .status-tabs, .container .cl-acc-status-tabs { flex-wrap: nowrap; padding-inline: 12px; }
+    .coll-item-body, .coll-item-main, .coll-item-right { min-width: 0; }
+    .coll-item-meta, .coll-item-right { flex-wrap: wrap; }
+
+    .profile-content { padding: 20px 16px; }
+    .profile-avatar-section { gap: 16px; margin-bottom: 20px; }
+    .profile-avatar { width: 88px; height: 88px; }
+    #profileDisplay .profile-avatar-section {
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1fr);
+        gap: 12px;
+    }
+    #profileDisplay .profile-avatar { width: 72px; height: 72px; }
+    #profileDisplay .profile-media-breakdown { grid-column: 1 / -1; }
+    .profile-avatar-section > div { min-width: 0; max-width: 100%; }
+    .profile-stats { gap: 4px; }
+    .profile-stats .stat-item { padding: 8px 0; }
+    .stat-item .stat-value { font-size: 1.5rem; }
+    .stat-item .stat-label { font-size: 0.75rem; }
+    .profile-details { grid-template-columns: minmax(0, 1fr); gap: 0; margin-bottom: 18px; }
+    .detail-item { padding: 12px 0; }
+    .detail-item label { margin-bottom: 5px; }
+    .detail-value { font-size: 1rem; overflow-wrap: anywhere; }
+    .profile-actions { flex-wrap: wrap; gap: 8px; }
+    .profile-actions .btn { flex: 1 1 120px; padding-inline: 10px; white-space: normal; }
+    .edit-avatar-section { display: flex; flex-direction: column; align-items: stretch; gap: 16px; margin-bottom: 20px; }
+    .edit-avatar-section .profile-avatar { align-self: center; }
+    .avatar-input-group { min-width: 0; }
+    .friend-name, .friend-username { overflow-wrap: anywhere; }
+    .data-export { min-width: 0; }
+    .data-export .filter-select { min-width: 0; }
+
+    .modal, .update-modal, .remove-modal, .cl-modal-overlay, .cl-game-modal-overlay { padding: 10px; }
+    .modal-content, .update-modal-content, .remove-modal-content,
+    .cl-modal-box, .cl-game-modal-box {
+        width: 100%;
+        max-width: 100%;
+        max-height: calc(100dvh - 20px);
+        border-radius: 16px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .update-modal-content, .remove-modal-content { padding: 22px 16px; }
+    .score-input-container { flex-wrap: wrap; }
+    .score-input-container .score-input { min-width: 0; }
+    .score-input-container .score-controls { flex-direction: row; gap: 6px; }
+    .score-input-container .score-btn { width: 44px; height: 44px; }
+    .score-input-container .score-clear-btn { flex: 1 1 100%; }
+    .cl-modal-box { padding: 22px 16px; }
+    .cl-modal-box h3 { padding-right: 44px; }
+    .close-btn, .cl-modal-close, .cl-game-modal-close-btn { width: 44px; height: 44px; }
+    .cl-modal-close { top: 10px; right: 10px; }
+    .game-detail-body { padding: 0 16px 20px; }
+    .game-detail-title-row { flex-direction: row; align-items: flex-end; gap: 12px; }
+    .game-detail-title { font-size: 1.2rem; overflow-wrap: anywhere; }
+    .game-detail-cover { width: 72px; height: 96px; }
+    .game-detail-info-label { min-width: 72px; }
+    .game-detail-info-value { min-width: 0; overflow-wrap: anywhere; }
+    .cl-modal-actions { flex-wrap: wrap; gap: 8px; }
+    .cl-modal-actions .btn { flex: 1; }
+    .gsearch, .imp-overlay { padding: 12px; }
+    .gsearch-box, .imp-box { max-height: calc(100dvh - 24px); }
+    .dash-upnext { grid-template-columns: minmax(0, 1fr); }
+    .dash-hero-sub { line-height: 1.55; font-size: 0.95rem; }
+    .dash-hero-cta { gap: 10px; }
+    .dash-hero-cta .btn { flex: 1 1 100%; }
+
+    .site-footer { margin-top: 36px; padding-top: 28px; }
+    .footer-inner { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+    .footer-brand { grid-column: 1 / -1; }
+    .footer-brand p { max-width: 38ch; }
+    .footer-col { min-width: 0; }
+    .footer-col ul { gap: 0; }
+    .footer-col ul li a { display: inline-flex; align-items: center; min-height: 44px; color: var(--text-muted); }
+    .footer-bottom-links { flex-wrap: wrap; gap: 4px 16px; }
+    .footer-bottom-links a { display: inline-flex; align-items: center; min-height: 44px; }
+    .footer-igdb { align-items: flex-start; }
+    .footer-igdb-text { min-width: 0; overflow-wrap: anywhere; }
+    .toast-host { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); max-width: none; }
+}
