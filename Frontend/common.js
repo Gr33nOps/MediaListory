@@ -182,6 +182,9 @@
   var backendReady = false;
   var _resolveReady;
   var backendReadyPromise = new Promise(function (r) { _resolveReady = r; });
+  var pendingApiCalls = 0;      // in-flight apiFetch requests
+  var apiFetchStarted = false;  // has this page made any real data call yet
+  var _onApiActivity = null;    // mountBackendWake hooks this to react to data calls
   function markBackendReady() {
     if (backendReady) return;
     backendReady = true;
@@ -301,17 +304,29 @@
     // Only idempotent GETs are safe to auto-retry, and only when the caller isn't
     // managing its own abort signal (retrying a spent controller would fail).
     var canRetry = method === 'GET' && !opts.signal && apiIsCrossOrigin();
+    // Track real data activity so the cold-start panel only appears on pages that
+    // actually wait on the API (not static pages like About/Terms).
+    apiFetchStarted = true;
+    pendingApiCalls++;
+    if (_onApiActivity) { try { _onApiActivity(); } catch (_) {} }
+    var settled = false;
+    function fin() { if (settled) return; settled = true; pendingApiCalls = Math.max(0, pendingApiCalls - 1); }
     return fetch(API_BASE + path, opts).then(function (res) {
       if (res && res.ok) markBackendReady();
+      fin();
       return res;
     }).catch(function (err) {
       // A network failure while the backend hasn't answered yet almost always
       // means Render is still cold. Wait for it to wake, then retry once so the
-      // page recovers on its own instead of flashing an error.
-      if (!canRetry || backendReady) throw err;
+      // page recovers on its own instead of flashing an error. Keep the request
+      // counted as pending while we wait, so the "starting" panel stays up.
+      if (!canRetry || backendReady) { fin(); throw err; }
       return waitForBackend(75000).then(function (ready) {
-        if (!ready) throw err;
-        return fetch(API_BASE + path, opts);
+        if (!ready) { fin(); throw err; }
+        return fetch(API_BASE + path, opts).then(
+          function (r) { fin(); return r; },
+          function (e) { fin(); throw e; }
+        );
       });
     });
   }
@@ -1120,12 +1135,15 @@
 
     var GRACE_MS = 1200, MAX_MS = 75000, POLL_MS = 2500;
     var startedAt = Date.now();
-    var el = null, hideTimer = null, stopped = false;
+    var el = null, hideTimer = null, elapsedTimer = null, stopped = false;
 
     var COPY = {
-      waking: { t: 'Waking the server', m: 'The free API sleeps when idle, so the first load can take up to a minute.' },
-      ready:  { t: 'Connected', m: '' },
-      error:  { t: 'Can’t reach the server', m: 'This is taking longer than usual. Check your connection, then try again.' }
+      waking: {
+        t: 'Starting the server',
+        m: 'The API goes to sleep when it isn’t being used. It’s waking up now — the first visit usually takes 30 to 60 seconds, then your page fills in on its own.'
+      },
+      ready: { t: 'Server ready', m: 'Loading your page…' },
+      error: { t: 'Still can’t reach the server', m: 'This is taking longer than usual. Check your connection, then try again.' }
     };
 
     function build() {
@@ -1137,33 +1155,64 @@
       el.setAttribute('aria-live', 'polite');
       el.hidden = true;
       el.innerHTML =
-        '<span class="backend-wake-ind" aria-hidden="true"></span>' +
-        '<div class="backend-wake-txt">' +
-          '<strong class="backend-wake-title"></strong>' +
-          '<span class="backend-wake-msg"></span>' +
-        '</div>' +
-        '<button type="button" class="backend-wake-retry" hidden>Try again</button>';
+        '<div class="backend-wake-panel">' +
+          '<span class="backend-wake-ind" aria-hidden="true"></span>' +
+          '<div class="backend-wake-body">' +
+            '<strong class="backend-wake-title"></strong>' +
+            '<span class="backend-wake-msg"></span>' +
+            '<div class="backend-wake-bar" aria-hidden="true"><span></span></div>' +
+            '<span class="backend-wake-meta">Waking up… <span class="backend-wake-elapsed">0s</span></span>' +
+            '<button type="button" class="backend-wake-retry" hidden>Try again</button>' +
+          '</div>' +
+        '</div>';
       document.body.appendChild(el);
       el.querySelector('.backend-wake-retry').addEventListener('click', function () {
         startedAt = Date.now(); stopped = false; setState('waking'); poll();
       });
       return el;
     }
+    function startElapsed() {
+      if (elapsedTimer) return;
+      var span = el.querySelector('.backend-wake-elapsed');
+      var upd = function () { if (span) span.textContent = Math.max(0, Math.round((Date.now() - startedAt) / 1000)) + 's'; };
+      upd();
+      elapsedTimer = setInterval(upd, 1000);
+    }
+    function stopElapsed() { if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; } }
     function setState(state) {
       build();
       var c = COPY[state] || COPY.waking;
       el.hidden = false;
       el.setAttribute('data-state', state);
+      el.classList.remove('is-out');
       el.querySelector('.backend-wake-title').textContent = c.t;
-      el.querySelector('.backend-wake-msg').textContent = c.m;
-      el.querySelector('.backend-wake-msg').hidden = !c.m;
+      var msg = el.querySelector('.backend-wake-msg');
+      msg.textContent = c.m; msg.hidden = !c.m;
+      el.querySelector('.backend-wake-bar').hidden = (state !== 'waking');
+      el.querySelector('.backend-wake-meta').hidden = (state !== 'waking');
       el.querySelector('.backend-wake-retry').hidden = (state !== 'error');
+      if (state === 'waking') startElapsed(); else stopElapsed();
     }
-    function hide() { if (el) { el.hidden = true; el.removeAttribute('data-state'); } }
+    function hide() {
+      stopElapsed();
+      if (!el) return;
+      el.classList.add('is-out');
+      setTimeout(function () { if (el) { el.hidden = true; el.removeAttribute('data-state'); el.classList.remove('is-out'); } }, 350);
+    }
+    // Show the panel only when this page is genuinely waiting on the API and the
+    // backend hasn't answered within the grace window — so static pages never see it.
+    function maybeShow() {
+      if (stopped || backendReady || el && !el.hidden && el.getAttribute('data-state') === 'waking') return;
+      if (apiFetchStarted && (Date.now() - startedAt > GRACE_MS)) setState('waking');
+    }
     function onReady() {
       stopped = true;
       if (hideTimer) clearTimeout(hideTimer);
-      if (el && !el.hidden) { setState('ready'); hideTimer = setTimeout(hide, 1600); }
+      stopElapsed();
+      if (el && !el.hidden && el.getAttribute('data-state') !== 'ready') {
+        setState('ready');
+        hideTimer = setTimeout(hide, 900);
+      }
     }
     function poll() {
       if (stopped || backendReady) { onReady(); return; }
@@ -1171,13 +1220,14 @@
         if (backendReady || ok) { onReady(); return; }
         if (stopped) return;
         if (Date.now() - startedAt > MAX_MS) { setState('error'); return; }
+        maybeShow();
         setTimeout(poll, POLL_MS);
       });
     }
 
+    _onApiActivity = maybeShow;        // react the moment a data call starts
     document.addEventListener('mgl:backend-ready', onReady);
-    // Reveal the notice only if the backend is still quiet after the grace window.
-    setTimeout(function () { if (!backendReady && !stopped) setState('waking'); }, GRACE_MS);
+    setTimeout(maybeShow, GRACE_MS);   // catch pages that fetch before the first poll
     poll();
   }
   global.mountBackendWake = mountBackendWake;

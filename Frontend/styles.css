@@ -3683,40 +3683,45 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
 .toast-info { border-color: var(--blue); }
 .toast-out { opacity: 0; transition: opacity 0.2s ease; }
 
-/* "Waking the server" notice (Render cold start). Shares the toast/card surface
-   language; pinned bottom-centre so it reports status without blocking the page. */
+/* Cold-start state (Render free tier). Replaces the endless skeleton shimmer with
+   a calm, centred "the server is starting, it will load" panel. A light scrim
+   settles the shimmer behind it; nav stays clickable (scrim is pointer-events:none). */
 .backend-wake {
     position: fixed;
-    left: 50%;
-    bottom: max(16px, env(safe-area-inset-bottom, 16px));
-    transform: translateX(-50%);
+    inset: 0;
     z-index: 11000;
     display: flex;
     align-items: center;
-    gap: 12px;
-    max-width: min(460px, calc(100vw - 24px));
-    padding: 12px 14px;
+    justify-content: center;
+    padding: 24px;
+    background: color-mix(in srgb, var(--bg-base) 62%, transparent);
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.35s ease;
+}
+.backend-wake.is-out { opacity: 0; }
+
+.backend-wake-panel {
+    pointer-events: auto;
+    width: min(440px, 100%);
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 22px 24px;
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    background: var(--bg-card);
-    color: var(--text-primary);
     box-shadow: var(--shadow-modal);
 }
-.backend-wake[data-state="ready"] { border-color: var(--green); }
-.backend-wake[data-state="error"] { border-color: var(--red); }
+.backend-wake[data-state="ready"] .backend-wake-panel { border-color: var(--green); }
+.backend-wake[data-state="error"] .backend-wake-panel { border-color: var(--red); }
 
-.backend-wake-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.backend-wake-title { font-size: 0.92rem; font-weight: 650; line-height: 1.25; }
-.backend-wake-msg { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
-.backend-wake[data-state="ready"] .backend-wake-title { color: var(--green-light); }
-.backend-wake[data-state="error"] .backend-wake-title { color: var(--red-light); }
-
-/* A real activity spinner while the server boots; a solid status dot once it
-   resolves (green connected / red unreachable). */
+/* Spinner while booting; solid status dot once resolved (green ready / red error). */
 .backend-wake-ind {
-    width: 18px;
-    height: 18px;
     flex-shrink: 0;
+    margin-top: 2px;
+    width: 22px;
+    height: 22px;
     border-radius: var(--radius-circle);
     border: 2px solid var(--border-subtle);
     border-top-color: var(--accent-light);
@@ -3725,14 +3730,39 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
 .backend-wake[data-state="ready"] .backend-wake-ind { animation: none; border: 0; background: var(--green); }
 .backend-wake[data-state="error"] .backend-wake-ind { animation: none; border: 0; background: var(--red); }
 @keyframes backend-wake-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-    .backend-wake-ind { animation: none; }
+
+.backend-wake-body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.backend-wake-title { font-size: 1rem; font-weight: 700; line-height: 1.25; }
+.backend-wake[data-state="ready"] .backend-wake-title { color: var(--green-light); }
+.backend-wake[data-state="error"] .backend-wake-title { color: var(--red-light); }
+.backend-wake-msg { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* Indeterminate progress — signals it's actively working, not frozen. */
+.backend-wake-bar {
+    position: relative;
+    height: 5px;
+    margin-top: 2px;
+    border-radius: 999px;
+    background: var(--bg-deep);
+    overflow: hidden;
 }
+.backend-wake-bar > span {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 40%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    animation: backend-wake-slide 1.4s ease-in-out infinite;
+}
+@keyframes backend-wake-slide { 0% { left: -42%; } 100% { left: 100%; } }
+.backend-wake-meta { font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 .backend-wake-retry {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    font-size: 0.82rem;
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 7px 14px;
+    font-size: 0.83rem;
     font-weight: 600;
     color: var(--text-primary);
     background: transparent;
@@ -3743,8 +3773,12 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
 .backend-wake-retry:hover { border-color: var(--accent-light); }
 .backend-wake-retry:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
 
+@media (prefers-reduced-motion: reduce) {
+    .backend-wake-ind { animation: none; }
+    .backend-wake-bar > span { animation: none; left: 0; width: 100%; opacity: 0.5; }
+}
 @media (max-width: 520px) {
-    .backend-wake { left: 12px; right: 12px; transform: none; max-width: none; }
+    .backend-wake-panel { width: 100%; }
 }
 
 /* Shared confirm dialog (confirmAction) */
