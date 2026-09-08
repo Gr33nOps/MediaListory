@@ -460,7 +460,7 @@
           '</div>' +
           '<div class="atl-note">' +
             '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
-            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Jot a quick review or note — or leave it blank."></textarea>' +
+            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Jot a quick review or note, or leave it blank."></textarea>' +
           '</div>' +
           '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
         '</div>' +

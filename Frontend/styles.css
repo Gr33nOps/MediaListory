@@ -1,8 +1,8 @@
-/* Type: Bricolage Grotesque (display — brand, headings) + Hanken Grotesk (UI/body).
+/* Type: Bricolage Grotesque (display - brand, headings) + Hanken Grotesk (UI/body).
    A deliberate pairing chosen over a system stack: the grotesque display gives the
    personal-collection brand some editorial character; Hanken keeps dense lists legible.
    The font <link>s live in each page <head> (before this file) so they load in
-   parallel — an @import here would block this stylesheet from applying, flashing
+   parallel - an @import here would block this stylesheet from applying, flashing
    raw HTML on a slow fetch. */
 
 :root {
@@ -72,7 +72,7 @@
     --cat-game-dim:      rgba(245, 158, 11, 0.14);
     --cat-game-border:   rgba(245, 158, 11, 0.40);
 
-    /* Active page accent. Neutral by default — only the four category pages
+    /* Active page accent. Neutral by default - only the four category pages
        (Movies / Shows / Anime / Games) get a real color, set per-page below.
        --accent is dark enough to carry white text on button/tab fills;
        --accent-light stays light enough to read as text on the dark page. */
@@ -102,7 +102,7 @@
 
 /* ══ Light theme ═════════════════════════════════════════════════════════
    Opt-in via <html data-theme="light"> (toggle in nav, saved to localStorage).
-   Only surfaces, text, borders, shadows and the accent *shades* change — the
+   Only surfaces, text, borders, shadows and the accent *shades* change - the
    four category identities stay recognizable, deepened for contrast on white.
    Everything else is token-driven, so it recolors automatically. */
 :root[data-theme="light"] {
@@ -122,7 +122,7 @@
     --text-muted:        #5b6b7a;
     --text-dim:          #667085;
 
-    /* Category identities — deepened for contrast on white so fills carry
+    /* Category identities - deepened for contrast on white so fills carry
        their text and the -light shade reads as colored text on a white ground.
        Games stays amber-600 because its buttons/tabs use forced dark text. */
     --cat-movie:         #2563eb;  --cat-movie-light:  #1d4ed8;
@@ -131,7 +131,7 @@
     --cat-game:          #d97706;  --cat-game-light:   #b45309;
 
     /* Semantic light tints double as link/emphasis text in generic
-       components — deepen them so they read on a white ground. */
+       components - deepen them so they read on a white ground. */
     --blue-light:        #2563eb;
     --green-light:       #059669;
     --purple-light:      #7c3aed;
@@ -167,7 +167,7 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     /* The deep base gradient lives on the root (the canvas), so the Aurora layer
-       — a negative-z-index child of body — paints ABOVE it. If the gradient sat
+       - a negative-z-index child of body - paints ABOVE it. If the gradient sat
        on body it would repaint over the Aurora and hide it entirely. */
     background: linear-gradient(180deg, var(--bg-base) 0%, var(--bg-grad-mid) 55%, var(--bg-grad-end) 100%) fixed;
 }
@@ -181,7 +181,7 @@ body {
     padding-left: env(safe-area-inset-left, 0);
     padding-right: env(safe-area-inset-right, 0);
 }
-/* Light theme keeps a clean, still base with a whisper of the page accent —
+/* Light theme keeps a clean, still base with a whisper of the page accent -
    Aurora is a dark-environment effect and does not render on light. */
 :root[data-theme="light"] html {
     background:
@@ -326,7 +326,7 @@ body[data-page="games"] .page-tab.active { color: #fff; }
 
 .nav-sep { display: none; }
 
-/* Category tabs — one connected group, centered in the bar. */
+/* Category tabs - one connected group, centered in the bar. */
 .nav-primary { display: flex; align-items: center; gap: 2px; min-width: 0; justify-self: center; }
 .nav-tab {
     display: inline-flex;
@@ -354,7 +354,7 @@ body[data-page="games"] .page-tab.active { color: #fff; }
 .nav-tab[data-cat="anime"]  { --cat-color: var(--cat-anime-light); }
 .nav-tab[data-cat="games"]  { --cat-color: var(--cat-game-light); }
 .nav-tab:hover { background: var(--bg-deep); color: var(--text-primary); }
-/* Only the active tab is filled — tinted in its own category color. */
+/* Only the active tab is filled - tinted in its own category color. */
 .nav-tab[data-cat="movies"].active { background: var(--cat-movie-dim); color: var(--cat-movie-light); }
 .nav-tab[data-cat="series"].active { background: var(--cat-series-dim); color: var(--cat-series-light); }
 .nav-tab[data-cat="anime"].active  { background: var(--cat-anime-dim);  color: var(--cat-anime-light); }
@@ -864,7 +864,7 @@ select.update-status-select option,
 @media (max-width: 620px)  { .games-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Poster-first tile: the artwork is the object, not a boxed SaaS card.
-   No surface/border/shadow on the card itself — the poster carries it, and
+   No surface/border/shadow on the card itself - the poster carries it, and
    the title + year sit as plain text beneath. */
 .game-card {
     background: none;
@@ -1271,7 +1271,7 @@ select.update-status-select option,
     flex-shrink: 0;
 }
 
-/* The user's score is category-agnostic, so the badge is neutral — not tied
+/* The user's score is category-agnostic, so the badge is neutral - not tied
    to the movies-blue colour on every row. */
 .coll-score-badge {
     font-size: 1.05rem;
@@ -3575,7 +3575,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
         gap: 18px;
         justify-content: center;
     }
-    /* Keep the circular arrow buttons — don't let them stretch into pills. */
+    /* Keep the circular arrow buttons - don't let them stretch into pills. */
     .pagination .btn { flex: 0 0 auto; }
 
     .list-header { flex-direction: column; gap: 15px; align-items: flex-start; }
@@ -3810,7 +3810,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
 .backend-wake[data-state="error"] .backend-wake-title { color: var(--red-light); }
 .backend-wake-msg { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
 
-/* Indeterminate progress — signals it's actively working, not frozen. */
+/* Indeterminate progress - signals it's actively working, not frozen. */
 .backend-wake-bar {
     position: relative;
     height: 5px;
@@ -4001,23 +4001,23 @@ a:focus-visible {
    CATEGORY THEMING · PAGE IDENTITY · NAV · SEARCH  (redesign layer)
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Per-page accent — drives page headers, nav active state, focus rings.
+/* Per-page accent - drives page headers, nav active state, focus rings.
    body[data-page] / [data-cat] is set by common.js from the nav's data-active. */
 body[data-page="movies"], [data-cat="movies"] { --accent: var(--cat-movie);  --accent-light: var(--cat-movie-light);  --accent-dim: var(--cat-movie-dim);  --accent-border: var(--cat-movie-border); --accent-glow: rgba(59,130,246,0.50); }
 body[data-page="series"], [data-cat="series"] { --accent: var(--cat-series); --accent-light: var(--cat-series-light); --accent-dim: var(--cat-series-dim); --accent-border: var(--cat-series-border); --accent-glow: rgba(16,185,129,0.46); }
 body[data-page="anime"],  [data-cat="anime"]  { --accent: var(--cat-anime);  --accent-light: var(--cat-anime-light);  --accent-dim: var(--cat-anime-dim);  --accent-border: var(--cat-anime-border); --accent-glow: rgba(236,72,153,0.48); }
 /* Games keeps its vibrant brand amber for fills; white button text stays legible
-   via a soft warm shadow (see the games text-shadow rule) — no burnt-orange, no
+   via a soft warm shadow (see the games text-shadow rule) - no burnt-orange, no
    harsh black-on-yellow. */
 body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --accent-light: var(--cat-game-light);   --accent-dim: var(--cat-game-dim);   --accent-border: var(--cat-game-border); --accent-glow: rgba(245,158,11,0.46); }
 
-/* Surfaces stay a single neutral dark on every page — the category colour now
+/* Surfaces stay a single neutral dark on every page - the category colour now
    comes ONLY from the Aurora nebula behind them, so there is one cohesive space
    gradient per page instead of a flat surface tint clashing with the wash. */
 /* My Library, Following, and Profile stay neutral (inherit :root) and only
    pick up a category color when a category filter is chosen inside the page. */
 
-/* ── Page header (every primary page) — clean, centered, no icons/bars ──── */
+/* ── Page header (every primary page) - clean, centered, no icons/bars ──── */
 .page-header {
     margin: 6px 0 28px;
     text-align: center;
@@ -4067,7 +4067,7 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
 .nav-actions .btn[data-cat="games"].active  { background: var(--cat-game); color: #fff; text-shadow: 0 1px 2px rgba(66,32,0,0.55); box-shadow: var(--shadow-btn) var(--cat-game-dim); }
 .nav-actions .btn[data-cat].active::before { background: #fff; box-shadow: none; }
 
-/* ── Collection category tabs (My Library) — colored per category ─────── */
+/* ── Collection category tabs (My Library) - colored per category ─────── */
 .media-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
 .media-tab {
     display: inline-flex; align-items: center; gap: 7px;
@@ -4217,7 +4217,7 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .detail-similar-card:hover img { transform: translateY(-3px); border-color: var(--accent); }
 .ds-name { font-size: 0.76rem; font-weight: 600; margin-top: 6px; line-height: 1.25; color: var(--text-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
-/* Game screenshots gallery — a horizontal strip, same scroller treatment as cast. */
+/* Game screenshots gallery - a horizontal strip, same scroller treatment as cast. */
 .detail-shots { display: grid; grid-auto-flow: column; grid-auto-columns: 280px; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
 .detail-shot { display: block; scroll-snap-align: start; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-deep); }
 .detail-shot img { width: 280px; aspect-ratio: 16 / 9; object-fit: cover; display: block; transition: transform 0.18s; }
@@ -4342,7 +4342,7 @@ body.gsearch-open { overflow: hidden; }
 .gsearch-item:hover, .gsearch-item.active { background: var(--accent-dim); }
 @media (max-width: 600px) {
     .gsearch { padding-top: 6vh; }
-    /* No physical Esc key on touch — drop the badge so the placeholder isn't clipped. */
+    /* No physical Esc key on touch - drop the badge so the placeholder isn't clipped. */
     .gsearch-esc { display: none; }
     .gsearch-bar input { font-size: 1rem; }
 }
@@ -4356,7 +4356,7 @@ body.gsearch-open { overflow: hidden; }
 :root[data-theme="light"] .footer-col ul li a,
 :root[data-theme="light"] .footer-bottom,
 :root[data-theme="light"] .footer-bottom-links a { color: var(--text-muted); }
-/* The IGDB attribution stays a dark card (its text is light) — good on both. */
+/* The IGDB attribution stays a dark card (its text is light) - good on both. */
 
 /* ══ Stats / Year in Review ══════════════════════════════════════════════ */
 .stats-yearrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 22px; }
@@ -4424,7 +4424,7 @@ body[data-page="games"] .year-chip.active { color: #fff; }
 
 .library-quicklinks { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: -6px 0 20px; }
 
-/* ══ Following — activity feed ═══════════════════════════════════════════ */
+/* ══ Following - activity feed ═══════════════════════════════════════════ */
 .activity-feed { display: flex; flex-direction: column; gap: 4px; }
 .activity-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--radius-md); text-decoration: none; transition: var(--transition-fast); }
 .activity-item:hover { background: var(--accent-dim); }
@@ -4533,7 +4533,7 @@ body.imp-open { overflow: hidden; }
 .dash-scroller::-webkit-scrollbar, .detail-cast::-webkit-scrollbar, .detail-similar::-webkit-scrollbar, .detail-shots::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 .scroller { position: relative; }
-/* Edge fade removed — it read as a dark smudge over the Aurora; the arrow
+/* Edge fade removed - it read as a dark smudge over the Aurora; the arrow
    buttons alone signal there's more to scroll. */
 .scroller::before, .scroller::after { display: none; }
 .scroller-arrow {
@@ -4609,7 +4609,7 @@ body.imp-open { overflow: hidden; }
 /* (left accent bar removed per request) */
 
 @media (prefers-reduced-motion: no-preference) {
-    /* A grid of freshly-loaded results fades in once as a group — no per-card
+    /* A grid of freshly-loaded results fades in once as a group - no per-card
        upward slide (rule 51). Entrance is opacity only, and slight. */
     @keyframes fade-in-soft { from { opacity: 0; } to { opacity: 1; } }
     .games-grid { animation: fade-in-soft 0.4s ease both; }
@@ -4633,15 +4633,15 @@ body.imp-open { overflow: hidden; }
     .data-export .filter-select { flex: 1; }
 }
 
-/* ══ AURORA — animated gradient-blob atmosphere ═════════════════════════════
+/* ══ AURORA - animated gradient-blob atmosphere ═════════════════════════════
    Moving luminous light in the brand's own colours (the four media hues), used
-   as an environmental background behind content — not inside cards. One reusable
+   as an environmental background behind content - not inside cards. One reusable
    system (mountAurora injects the layer + sets intensity per page). Dark theme
    only; light theme keeps its clean base. See ~/.claude/skills/aurora. */
 
 /* Blob palette per page: the active category's colour dominates (--au-1),
    with two harmonising brand hues. Neutral pages use the multi-media trio. */
-/* ONE colour per context — all three blobs share a single hue so the background
+/* ONE colour per context - all three blobs share a single hue so the background
    is a single-colour moving glow, never a multi-colour mix. Default/neutral
    pages (dashboard, library, following, profile, user profile) use plain grey. */
 :root { --au-1: #64748b; --au-2: #64748b; --au-3: #64748b; --aurora-blur: 72px; }
@@ -4657,7 +4657,7 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
     overflow: hidden;
     pointer-events: none;
     /* Screen-blend the whole layer onto the dark base so the colour reads as
-       emitted light. (The blend must live here, not on the blobs — the layer's
+       emitted light. (The blend must live here, not on the blobs - the layer's
        own stacking context would otherwise trap it.) */
     mix-blend-mode: screen;
     --aurora-mult: 0.55;               /* default = subtle (app/content pages) */
@@ -4700,7 +4700,7 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
     100% { transform: translate3d(0, 0, 0); }
 }
 
-/* Mobile: recompose (not a cropped desktop) — fewer/softer, lower blur, no overflow. */
+/* Mobile: recompose (not a cropped desktop) - fewer/softer, lower blur, no overflow. */
 @media (max-width: 640px) {
     .aurora { --aurora-blur: 48px; }
     .aurora-blob-1 { width: 78vw; height: 78vw; top: -12%; left: -18%; }

@@ -1,5 +1,5 @@
 // The TV category is labelled "Shows" everywhere in the UI (internally still
-// media_type 'series' / series.html — those must not leak into the UI text).
+// media_type 'series' / series.html - those must not leak into the UI text).
 const { test, expect } = require('@playwright/test');
 
 test('nav shows "Shows", never "Series"', async ({ page }) => {

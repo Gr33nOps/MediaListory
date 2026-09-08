@@ -1,4 +1,4 @@
-// List import — bring a collection in from a CSV (e.g. Letterboxd, a MAL/Trakt
+// List import - bring a collection in from a CSV (e.g. Letterboxd, a MAL/Trakt
 // CSV export) or from a MediaListory JSON export. Everything runs client-side:
 // each row is matched against the right provider, previewed, then added through
 // the normal POST /user/games endpoint. No new backend surface.
@@ -171,7 +171,7 @@
       var row = parsedRows[i];
       if (progress) progress.textContent = 'Matching ' + (i + 1) + ' of ' + parsedRows.length + '…';
       if (row.ref) {
-        // Trusted MediaListory ref — no search needed.
+        // Trusted MediaListory ref - no search needed.
         matches.push({ row: row, candidates: [], selected: 0, match: { name: row.title }, gameData: { media_type: row.type, name: row.title, game_id: row.ref } });
       } else {
         var cands = await searchMany(row.type, row.title);
@@ -207,7 +207,7 @@
                 '<option value="movie">Movies only</option><option value="series">Shows only</option>' +
                 '<option value="anime">Anime only</option><option value="game">Games only</option>' +
               '</select></label>' +
-            '<p class="imp-help" style="margin-top:-4px;">Importing from a single-category site (Letterboxd → Movies, MAL → Anime, a games export → Games)? Pick that category. A mixed export (e.g. movies + shows, or a MediaListory backup) can use Auto-detect — each title still lands in its own category.</p>' +
+            '<p class="imp-help" style="margin-top:-4px;">Importing from a single-category site (Letterboxd → Movies, MAL → Anime, a games export → Games)? Pick that category. A mixed export (e.g. movies + shows, or a MediaListory backup) can use Auto-detect, and each title still lands in its own category.</p>' +
             '<textarea id="impText" class="form-input imp-textarea" placeholder="Paste CSV or JSON here…"></textarea>' +
             '<div class="imp-orfile"><input type="file" id="impFile" accept=".csv,.json,.txt"></div>' +
             '<div id="impInputMsg" class="imp-msg"></div>' +
@@ -329,7 +329,7 @@
         matchCell = '';
       }
       return '<tr class="' + (ok ? '' : 'imp-row-miss') + '" data-idx="' + idx + '">' +
-        '<td class="imp-c-status">' + (ok ? '<span class="imp-ok">✓</span>' : '<span class="imp-miss">—</span>') + '</td>' +
+        '<td class="imp-c-status">' + (ok ? '<span class="imp-ok">✓</span>' : '<span class="imp-miss">-</span>') + '</td>' +
         '<td class="imp-c-title"><span class="imp-title-in">' + esc(m.row.title) + '</span>' + matchCell + '</td>' +
         '<td><span class="cal-badge cal-badge-' + cat + '">' + (CAT_LABEL[cat] || '') + '</span></td>' +
         '<td class="imp-c-meta">' + esc(global.statusLabel ? global.statusLabel(m.row.status, cat) : m.row.status) +

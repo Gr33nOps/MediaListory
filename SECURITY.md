@@ -19,7 +19,7 @@ window to fix the issue before any public disclosure.
 ## Scope
 
 In scope: this repository and the live app at
-[medialistory.onrender.com](https://medialistory.onrender.com) — for example
+[medialistory.onrender.com](https://medialistory.onrender.com) - for example
 authentication/session handling, access control between users, injection, or
 data exposure.
 

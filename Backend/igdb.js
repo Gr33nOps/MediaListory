@@ -472,7 +472,7 @@ module.exports = (verifyToken, checkBanned, db) => {
       let response = await igdbFetch('/games', buildGamesQuery(body));
       let data = await response.json();
 
-      // Native search found nothing — retry once with the punctuation-tolerant
+      // Native search found nothing - retry once with the punctuation-tolerant
       // substring token fallback before giving up (still full-catalog, filtered).
       if (response.ok && searchTerm && Array.isArray(data) && data.length === 0) {
         const fbResp = await igdbFetch('/games', buildGamesQuery(body, { mode: 'substring' }));
@@ -497,7 +497,7 @@ module.exports = (verifyToken, checkBanned, db) => {
       }
 
       // Promote exact / prefix title matches to the top when searching. This
-      // re-orders the fetched results only — it never removes any of them.
+      // re-orders the fetched results only - it never removes any of them.
       if (searchTerm && Array.isArray(data)) {
         data = rankSearchResults(data, searchTerm, (g) => g && g.name);
       }

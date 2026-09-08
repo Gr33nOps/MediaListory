@@ -249,7 +249,7 @@ async function loadUserGames() {
             updateUpMediaCounts();
             displayUserGames(sortGames(userGamesCache));
         } else {
-            // Never leave the skeleton spinning — always resolve to a real state.
+            // Never leave the skeleton spinning - always resolve to a real state.
             var msg = r.status === 403 ? 'This collection is private.' : 'Could not load this collection.';
             if (container) container.innerHTML = '<div class="coll-empty-state"><div class="coll-empty-icon">' + msg + '</div><p>Please try again in a moment.</p></div>';
         }

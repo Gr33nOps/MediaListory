@@ -1,6 +1,6 @@
 # API ID contracts (clients)
 
-**Product decision:** MediaListory covers four media types — **movies** and **series** (TMDB), **anime** (Kitsu), **games** (IGDB / Twitch). Do not send `rawg_id` or assume RAWG payloads.
+**Product decision:** MediaListory covers four media types - **movies** and **series** (TMDB), **anime** (Kitsu), **games** (IGDB / Twitch). Do not send `rawg_id` or assume RAWG payloads.
 
 ## Media types
 
@@ -10,7 +10,7 @@ Every catalog item has a `media_type`: `movie` | `series` | `anime` | `game`, an
 |------------|----------|--------------------------|-------------------|
 | `movie`  | `tmdb`  | `tmdb_movie_<id>`  | `tmdb_id` |
 | `series` | `tmdb`  | `tmdb_series_<id>` | `tmdb_id` |
-| `anime`  | `kitsu` | `kitsu_<id>`       | — (`provider_id`) |
+| `anime`  | `kitsu` | `kitsu_<id>`       | - (`provider_id`) |
 | `game`   | `igdb`  | `igdb_<id>`        | `igdb_id` |
 
 A unique index on `(provider, media_type, provider_id)` guarantees IDs from different providers can never collide, even when two providers reuse the same numeric id.
@@ -40,11 +40,11 @@ A unique index on `(provider, media_type, provider_id)` guarantees IDs from diff
 
 ## Media proxies
 
-- `POST /api/igdb/games` — games list/search/detail (structured filters: `id`, `search`, `genre`, `platform`, `publisher`, `developer`, `sort`, `sortOrder`, `comingSoon`, `limit`, `offset`). Returns raw IGDB shape.
-- `POST /api/tmdb/movies` and `POST /api/tmdb/series` — movies/series list/search/detail (structured filters: `id`, `search`, `genre`, `sort`, `sortOrder`, `comingSoon`, `limit`, `offset`). Returns MediaListory-normalized objects (`id`, `media_type`, `provider`, `provider_id`, `tmdb_id`, `name`, `background_image`, `backdrop_image`, `released`, `rating`, `genres`, `developers`, `publishers`, ...).
-- `POST /api/tmdb/genres` — body `{ media_type: "movie" | "series" }`, returns `[{ id, name }]`.
-- `POST /api/kitsu/anime` — anime list/search/detail (structured filters: `id`, `search`, `genre`, `sort` (`popularity`/`rating`/`release`), `sortOrder`, `comingSoon`, `limit`, `offset`). Returns normalized objects (`id: kitsu_<id>`, `media_type: "anime"`, `provider: "kitsu"`, `provider_id`, `name`, `background_image`, `backdrop_image`, `released`, `rating`, `metacritic_score`, `number_of_episodes`, `subtype`, `status`, `genres`, ...).
-- `POST /api/kitsu/genres` — Kitsu categories, returns `[{ id, name }]`.
+- `POST /api/igdb/games` - games list/search/detail (structured filters: `id`, `search`, `genre`, `platform`, `publisher`, `developer`, `sort`, `sortOrder`, `comingSoon`, `limit`, `offset`). Returns raw IGDB shape.
+- `POST /api/tmdb/movies` and `POST /api/tmdb/series` - movies/series list/search/detail (structured filters: `id`, `search`, `genre`, `sort`, `sortOrder`, `comingSoon`, `limit`, `offset`). Returns MediaListory-normalized objects (`id`, `media_type`, `provider`, `provider_id`, `tmdb_id`, `name`, `background_image`, `backdrop_image`, `released`, `rating`, `genres`, `developers`, `publishers`, ...).
+- `POST /api/tmdb/genres` - body `{ media_type: "movie" | "series" }`, returns `[{ id, name }]`.
+- `POST /api/kitsu/anime` - anime list/search/detail (structured filters: `id`, `search`, `genre`, `sort` (`popularity`/`rating`/`release`), `sortOrder`, `comingSoon`, `limit`, `offset`). Returns normalized objects (`id: kitsu_<id>`, `media_type: "anime"`, `provider: "kitsu"`, `provider_id`, `name`, `background_image`, `backdrop_image`, `released`, `rating`, `metacritic_score`, `number_of_episodes`, `subtype`, `status`, `genres`, ...).
+- `POST /api/kitsu/genres` - Kitsu categories, returns `[{ id, name }]`.
 - All proxies require a session or run guest-friendly (read-only) and write results through to the shared catalog. TMDB needs `TMDB_ACCESS_TOKEN` (v4) or `TMDB_API_KEY` (v3); **Kitsu needs no key**. When a provider is unconfigured its endpoints return `503`/`500` and the other media types are unaffected.
 
 ## Auth
@@ -53,10 +53,10 @@ A unique index on `(provider, media_type, provider_id)` guarantees IDs from diff
 - JWT payload: `{ userId, tv }` (`tv` = `token_version`)
 - Sessions: ~7d default, 30d with remember-me
 - `GET /api/auth/session` - restore session from httpOnly cookie when localStorage is empty
-- Social sign-in (direct, same-origin OAuth2 — first-party cookies):
-  - `GET /api/auth/oauth/:provider/start` (`google` | `github`) — sets a signed state cookie and redirects to the provider's consent screen. Optional `?remember=1`.
-  - `GET /api/auth/oauth/:provider/callback` — verifies state, exchanges the code, maps identity to a local user (by `provider:sub` or verified email; creates on first sign-in), sets the `mgl_token` cookie, and redirects to `<FRONTEND_URL>/auth.html?oauth=done` (errors → `?oauth_error=...`).
-  - `GET /api/auth/public-config` — returns `{ providers: [...] }` (only providers whose client id/secret are configured), so the UI shows the right buttons.
+- Social sign-in (direct, same-origin OAuth2 - first-party cookies):
+  - `GET /api/auth/oauth/:provider/start` (`google` | `github`) - sets a signed state cookie and redirects to the provider's consent screen. Optional `?remember=1`.
+  - `GET /api/auth/oauth/:provider/callback` - verifies state, exchanges the code, maps identity to a local user (by `provider:sub` or verified email; creates on first sign-in), sets the `mgl_token` cookie, and redirects to `<FRONTEND_URL>/auth.html?oauth=done` (errors → `?oauth_error=...`).
+  - `GET /api/auth/public-config` - returns `{ providers: [...] }` (only providers whose client id/secret are configured), so the UI shows the right buttons.
   - Register redirect URIs on each provider: `<FRONTEND_URL>/api/auth/oauth/google/callback` and `<FRONTEND_URL>/api/auth/oauth/github/callback`.
 - `POST /api/auth/oauth/complete` - legacy token-based path (`{ access_token, rememberMe? }`); retained for compatibility, superseded by the redirect flow above.
 - `PUT /api/auth/username` - claim username after OAuth (auth required)

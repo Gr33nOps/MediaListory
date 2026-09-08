@@ -218,7 +218,7 @@ module.exports = (verifyToken, checkBanned, db) => {
         } catch (_) {}
       }
 
-      // Advanced filters — whitelisted so only real Kitsu enum values are sent.
+      // Advanced filters - whitelisted so only real Kitsu enum values are sent.
       const year = clampInt(body.year, 1907, new Date().getFullYear() + 2, 0);
       if (year) baseParams.push(`filter[seasonYear]=${year}`);
 

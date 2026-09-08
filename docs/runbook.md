@@ -14,13 +14,13 @@ If `/ready` is 503, fix `DATABASE_URL` / network / Neon project status before de
 ## Neon backups / branching
 
 1. Neon Console → Project → **Backups / Restore** (point-in-time within the plan's history window).
-2. Neon **branches** are cheap copy-on-write clones — branch `production` for a staging/test copy before risky changes.
+2. Neon **branches** are cheap copy-on-write clones - branch `production` for a staging/test copy before risky changes.
 3. Schema source of truth: `DB/schema.postgres.sql` + ordered files in `DB/README.md` (apply via `neon psql` or the Neon SQL editor).
 4. Do **not** restore `DB/legacy/legacy-mysql-igdb.dump.sql` into Postgres.
 
 ## Auth notes
 
-Identity is **Neon Auth** (Better Auth). The backend verifies credentials with Neon Auth (email/password via `/sign-in/email`, OAuth via a JWKS-verified JWT) and then mints the app's own JWT (`{ userId, tv }`, HS256) — also set as the httpOnly `mgl_token` cookie. `public.users` (keyed by the Neon Auth user id, also stored in `auth_id`) is the source of truth for username, roles, and ban state. Email/password sign-in is configured with **verification not required**, so register signs the user in immediately.
+Identity is **Neon Auth** (Better Auth). The backend verifies credentials with Neon Auth (email/password via `/sign-in/email`, OAuth via a JWKS-verified JWT) and then mints the app's own JWT (`{ userId, tv }`, HS256) - also set as the httpOnly `mgl_token` cookie. `public.users` (keyed by the Neon Auth user id, also stored in `auth_id`) is the source of truth for username, roles, and ban state. Email/password sign-in is configured with **verification not required**, so register signs the user in immediately.
 
 Manage with the CLI: `neon neon-auth status|config|oauth-provider|domain|user --project-id <id> --branch production`.
 
@@ -82,7 +82,7 @@ After JWT rotation, bump is automatic (new signatures). After password change fo
 1. [TMDB → Settings → API](https://www.themoviedb.org/settings/api).
 2. Set **either** `TMDB_ACCESS_TOKEN` (v4 Read Access Token, preferred) **or** `TMDB_API_KEY` (v3) in `.env`.
 3. Movies/series proxies live in `Backend/tmdb.js`; genre lists are cached 24h.
-4. If TMDB is unset, `/api/tmdb/*` returns `503`/`500` and the Movies/Series pages show an error — **games are unaffected**.
+4. If TMDB is unset, `/api/tmdb/*` returns `503`/`500` and the Movies/Series pages show an error - **games are unaffected**.
 5. Requires the `add-media-types` DB migration (adds `media_type` + `tmdb_id`); without it, movie/series writes fail.
 
 ## Degraded mode

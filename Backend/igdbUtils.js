@@ -28,7 +28,7 @@ function normalizeForSearch(value) {
 // Re-rank an already-fetched list so obvious title matches surface first,
 // WITHOUT dropping anything (never filters). Ties keep the API's own order,
 // so this only promotes exact/prefix/word hits over the provider's relevance
-// ranking — it never replaces good API results with worse local guesses.
+// ranking - it never replaces good API results with worse local guesses.
 function rankSearchResults(items, term, getName) {
   // Ignore a leading article so "dark knight" still matches "The Dark Knight".
   const dropArticle = (s) => s.replace(/^(the|an|a) /, '') || s;

@@ -233,7 +233,7 @@ module.exports = (verifyToken, checkBanned, db) => {
     const language = sanitizeToken(body.language, 12).replace(/[^a-zA-Z-]/g, '');
     if (language) params.with_original_language = language;
 
-    // Runtime buckets (movies only — TV runtime is per-episode and misleading).
+    // Runtime buckets (movies only - TV runtime is per-episode and misleading).
     if (mediaType === 'movie' && RUNTIME_BUCKETS[body.runtime]) {
       const b = RUNTIME_BUCKETS[body.runtime];
       if (b.gte != null) params['with_runtime.gte'] = String(b.gte);

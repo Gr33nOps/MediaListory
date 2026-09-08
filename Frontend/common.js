@@ -153,7 +153,7 @@
       });
       var pageTag = (document.body && document.body.getAttribute('data-page')) || location.pathname;
       S.setTag('page', pageTag);
-      if (user && user.id) S.setUser({ id: String(user.id) }); // id only — no email/PII
+      if (user && user.id) S.setUser({ id: String(user.id) }); // id only - no email/PII
     };
 
     var s = document.createElement('script');
@@ -683,7 +683,7 @@
     }).join('');
   }
 
-  // Wire a score field: +/- steppers, a "clear" (No Score), and — importantly —
+  // Wire a score field: +/- steppers, a "clear" (No Score), and - importantly -
   // reject letters so only 1–10 or empty can be entered (type=number still lets
   // e/+/-/. through, hence the guards). Pass element ids (or the input node).
   function bindScoreInput(input, upId, downId, clearId) {
@@ -966,7 +966,7 @@
 
   // ── Shared footer ───────────────────────────────────────────────────────
   // One canonical footer for every app page (pages used to bake their own, and
-  // they had drifted — some credited only IGDB, the dashboard had none at all).
+  // they had drifted - some credited only IGDB, the dashboard had none at all).
   function mountAppFooter() {
     if (!document.getElementById('appNav')) return; // main app pages only
     // Drop any page-baked footer so exactly one, consistent footer shows.
@@ -1130,14 +1130,14 @@
   // Only runs when the API is cross-origin (Vercel → Render). The page is already
   // interactive; this is a quiet, honest status line that appears only if the
   // backend doesn't answer within a short grace window, and clears itself the
-  // moment it does. No full-screen blocker — the frontend never waits on it.
+  // moment it does. No full-screen blocker - the frontend never waits on it.
   function mountBackendWake() {
     if (typeof document === 'undefined' || !document.body) return;
     if (API_BASE.charAt(0) === '/') { markBackendReady(); return; } // same-origin: already up
     if (document.getElementById('backendWake')) return;
 
     // If the backend answered recently (this browser), treat it as still warm and
-    // skip the panel entirely — otherwise every page navigation re-checks from
+    // skip the panel entirely - otherwise every page navigation re-checks from
     // scratch and the cross-origin latency flashes "Server ready" each time.
     try {
       var readyAt = parseInt(localStorage.getItem('mgl:backendReadyAt') || '0', 10);
@@ -1151,7 +1151,7 @@
     var COPY = {
       waking: {
         t: 'Starting the server',
-        m: 'The API goes to sleep when it isn’t being used. It’s waking up now — the first visit usually takes 30 to 60 seconds, then your page fills in on its own.'
+        m: 'The API goes to sleep when it isn’t being used. It’s waking up now. The first visit usually takes 30 to 60 seconds, then your page fills in on its own.'
       },
       ready: { t: 'Server ready', m: 'Loading your page…' },
       error: { t: 'Still can’t reach the server', m: 'This is taking longer than usual. Check your connection, then try again.' }
@@ -1211,7 +1211,7 @@
       setTimeout(function () { if (el) { el.hidden = true; el.removeAttribute('data-state'); el.classList.remove('is-out'); } }, 350);
     }
     // Show the panel only when this page is genuinely waiting on the API and the
-    // backend hasn't answered within the grace window — so static pages never see it.
+    // backend hasn't answered within the grace window - so static pages never see it.
     function maybeShow() {
       if (stopped || backendReady || el && !el.hidden && el.getAttribute('data-state') === 'waking') return;
       if (apiFetchStarted && (Date.now() - startedAt > GRACE_MS)) setState('waking');
@@ -1250,7 +1250,7 @@
   // One reusable environmental light layer behind all content (dark theme only,
   // via CSS). Colours come from the page's category (CSS --au-* on body[data-page]);
   // intensity is stronger on marketing/auth, moderate on the dashboard, subtle in
-  // the content-dense app — content always dominates. See ~/.claude/skills/aurora.
+  // the content-dense app - content always dominates. See ~/.claude/skills/aurora.
   function mountAurora() {
     if (typeof document === 'undefined' || !document.body) return;
     if (document.querySelector('.aurora')) return;

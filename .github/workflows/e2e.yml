@@ -1,6 +1,6 @@
 name: E2E (Playwright)
 
-# Post-deploy smoke tests against the live site. Runs on demand and daily —
+# Post-deploy smoke tests against the live site. Runs on demand and daily -
 # not on every push (Render deploys asynchronously, so a push-triggered run
 # could hit the old build).
 on:

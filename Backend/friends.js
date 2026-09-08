@@ -163,7 +163,7 @@ module.exports = (db, verifyToken, checkBanned) => {
   router.delete('/follow/:userId', verifyToken, checkBanned, async (req, res) => {
     try {
       const targetId = req.params.userId;
-      // Unfollow, or cancel a pending request — whichever exists.
+      // Unfollow, or cancel a pending request - whichever exists.
       const deletedFollow = await db('user_follows')
         .where({ follower_id: req.userId, following_id: targetId }).delete();
       const deletedReq = await db('user_follow_requests')
