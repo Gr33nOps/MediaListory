@@ -105,6 +105,7 @@ module.exports = (db, verifyToken, checkBanned) => {
           'games.playtime',
           'user_game_lists.status',
           'user_game_lists.score',
+          'user_game_lists.notes',
           'user_game_lists.progress_hours',
           'user_game_lists.created_at as date_added',
           'user_game_lists.updated_at'

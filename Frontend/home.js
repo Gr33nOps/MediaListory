@@ -27,11 +27,14 @@ let isVerifying  = false;
 
 let userCustomLists = [];
 
+// Filter dropdown options come from enumerable IGDB resources only (genres,
+// platforms, game modes). Publisher/developer were dropped from the UI because
+// their option lists were built from the currently-loaded page — an incomplete,
+// misleading set — and IGDB has no lightweight companies list to back them.
 let allFilterOptions = {
     genres:     new Set(),
     platforms:  new Set(),
-    publishers: new Set(),
-    developers: new Set()
+    gameModes:  new Set()
 };
 
 function logout() {
@@ -358,10 +361,32 @@ async function loadIGDBFilters() {
             platforms.forEach(function(platform) { allFilterOptions.platforms.add(platform.name); });
         }
 
+        var modesResponse = await fetch(`${API_BASE}/igdb/game_modes`, {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: '{}'
+        });
+        if (modesResponse.ok) {
+            var modes = await modesResponse.json();
+            modes.forEach(function(mode) { if (mode && mode.name) allFilterOptions.gameModes.add(mode.name); });
+        }
+
+        populateYearOptions();
         populateFilterOptions();
     } catch (error) {
         console.error('Error loading filters:', error);
     }
+}
+
+function populateYearOptions() {
+    var yearSelect = document.getElementById('year');
+    if (!yearSelect || yearSelect.options.length > 1) return;
+    var now = new Date().getFullYear();
+    var opts = '<option value="">Any year</option>';
+    for (var y = now; y >= 1958; y--) {
+        opts += '<option value="' + y + '">' + y + '</option>';
+    }
+    yearSelect.innerHTML = opts;
 }
 
 function skeletonCards(n) {
@@ -398,8 +423,9 @@ async function fetchGames(replace) {
                 search: currentFilters.search || undefined,
                 genre: currentFilters.genre || undefined,
                 platform: currentFilters.platform || undefined,
-                publisher: currentFilters.publisher || undefined,
-                developer: currentFilters.developer || undefined,
+                gameMode: currentFilters.gameMode || undefined,
+                year: currentFilters.year || undefined,
+                minRating: currentFilters.minRating || undefined,
                 sort: sortKey,
                 sortOrder: currentSortOrder,
                 comingSoon: isComingSoon,
@@ -527,10 +553,8 @@ async function fetchGames(replace) {
 
 function collectFilterOptions(games) {
     games.forEach(function(game) {
-        if (game.genres)     game.genres.forEach(function(g) { allFilterOptions.genres.add(g.name); });
-        if (game.platforms)  game.platforms.forEach(function(p) { allFilterOptions.platforms.add(p.name); });
-        if (game.publishers) game.publishers.forEach(function(p) { allFilterOptions.publishers.add(p.name); });
-        if (game.developers) game.developers.forEach(function(d) { allFilterOptions.developers.add(d.name); });
+        if (game.genres)    game.genres.forEach(function(g) { allFilterOptions.genres.add(g.name); });
+        if (game.platforms) game.platforms.forEach(function(p) { allFilterOptions.platforms.add(p.name); });
     });
     populateFilterOptions();
 }
@@ -837,6 +861,10 @@ async function showGameDetails(gameId) {
                             '</div>' +
                             '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + game.id + '" data-game-data="' + gameDataStr + '">Add to Library</button>' +
                         '</div>' +
+                        '<div class="atl-note">' +
+                            '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
+                            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Jot a quick review or note — or leave it blank."></textarea>' +
+                        '</div>' +
                         '<div id="customListNote" style="display:none;margin-top:12px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:var(--radius-md);font-size:0.82rem;color:var(--accent-light);">' +
                             'The game will be added to your selected custom list with the status above.' +
                         '</div>' +
@@ -871,8 +899,10 @@ async function addToList(gameId, gameData) {
     var listSelect   = document.getElementById('gameListSelect');
     var messageEl    = document.getElementById('addGameMessage');
     var listValue    = listSelect   ? listSelect.value   : 'default';
+    var noteInput    = document.getElementById('gameNote');
     var status       = statusSelect ? statusSelect.value : 'plan_to_play';
     var score        = scoreInput   ? scoreInput.value   : '';
+    var note         = noteInput    ? noteInput.value.trim() : '';
 
     if (score && (parseInt(score) < 1 || parseInt(score) > 10)) {
         showInlineMsg(messageEl, 'Score must be between 1 and 10.', 'error');
@@ -892,7 +922,8 @@ async function addToList(gameId, gameData) {
                     game_id:   gameId,
                     game_data: gameData,
                     status:    status,
-                    score:     score ? parseInt(score) : null
+                    score:     score ? parseInt(score) : null,
+                    notes:     note || undefined
                 })
             });
             var d = await r.json();
@@ -967,7 +998,7 @@ async function addToList(gameId, gameData) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken}`
                 },
-                body: JSON.stringify({ game_id: matchedGame.game_id, status: status, score: score ? parseInt(score) : null })
+                body: JSON.stringify({ game_id: matchedGame.game_id, status: status, score: score ? parseInt(score) : null, note: note || undefined })
             });
             var listData = await listResp.json();
 
@@ -1000,46 +1031,47 @@ function showInlineMsg(el, text, type) {
 }
 
 function populateFilterOptions() {
-    var currentGenre     = document.getElementById('genre').value;
-    var currentPlatform  = document.getElementById('platform').value;
-    var currentPublisher = document.getElementById('publisher').value;
-    var currentDeveloper = document.getElementById('developer').value;
-
     var genreSelect = document.getElementById('genre');
-    genreSelect.innerHTML = '<option value="">All Genres</option>';
-    Array.from(allFilterOptions.genres).sort().forEach(function(genre) {
-        genreSelect.innerHTML += '<option value="' + esc(genre) + '"' + (currentGenre === genre ? ' selected' : '') + '>' + esc(genre) + '</option>';
-    });
+    if (genreSelect) {
+        var currentGenre = genreSelect.value;
+        genreSelect.innerHTML = '<option value="">All Genres</option>';
+        Array.from(allFilterOptions.genres).sort().forEach(function(genre) {
+            genreSelect.innerHTML += '<option value="' + esc(genre) + '"' + (currentGenre === genre ? ' selected' : '') + '>' + esc(genre) + '</option>';
+        });
+    }
 
     var platformSelect = document.getElementById('platform');
-    platformSelect.innerHTML = '<option value="">All Platforms</option>';
-    Array.from(allFilterOptions.platforms).sort().forEach(function(plat) {
-        platformSelect.innerHTML += '<option value="' + esc(plat) + '"' + (currentPlatform === plat ? ' selected' : '') + '>' + esc(plat) + '</option>';
-    });
+    if (platformSelect) {
+        var currentPlatform = platformSelect.value;
+        platformSelect.innerHTML = '<option value="">All Platforms</option>';
+        Array.from(allFilterOptions.platforms).sort().forEach(function(plat) {
+            platformSelect.innerHTML += '<option value="' + esc(plat) + '"' + (currentPlatform === plat ? ' selected' : '') + '>' + esc(plat) + '</option>';
+        });
+    }
 
-    var publisherSelect = document.getElementById('publisher');
-    publisherSelect.innerHTML = '<option value="">All Publishers</option>';
-    Array.from(allFilterOptions.publishers).sort().forEach(function(pub) {
-        publisherSelect.innerHTML += '<option value="' + esc(pub) + '"' + (currentPublisher === pub ? ' selected' : '') + '>' + esc(pub) + '</option>';
-    });
-
-    var developerSelect = document.getElementById('developer');
-    developerSelect.innerHTML = '<option value="">All Developers</option>';
-    Array.from(allFilterOptions.developers).sort().forEach(function(dev) {
-        developerSelect.innerHTML += '<option value="' + esc(dev) + '"' + (currentDeveloper === dev ? ' selected' : '') + '>' + esc(dev) + '</option>';
-    });
+    var modeSelect = document.getElementById('gameMode');
+    if (modeSelect) {
+        var currentMode = modeSelect.value;
+        modeSelect.innerHTML = '<option value="">All Modes</option>';
+        Array.from(allFilterOptions.gameModes).sort().forEach(function(mode) {
+            modeSelect.innerHTML += '<option value="' + esc(mode) + '"' + (currentMode === mode ? ' selected' : '') + '>' + esc(mode) + '</option>';
+        });
+    }
 }
 
 function toggleFilterSection() {
     document.getElementById('filterSection').classList.toggle('hidden');
 }
 
+function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+
 function applyFilters() {
     currentFilters = {
-        genre:     document.getElementById('genre').value,
-        platform:  document.getElementById('platform').value,
-        publisher: document.getElementById('publisher').value,
-        developer: document.getElementById('developer').value,
+        genre:     val('genre'),
+        platform:  val('platform'),
+        gameMode:  val('gameMode'),
+        year:      val('year'),
+        minRating: val('minRating'),
         search:    currentFilters.search || ''
     };
     currentPage  = 1;
@@ -1050,13 +1082,14 @@ function applyFilters() {
     fetchGames(true);
 }
 
+// Reset clears only the filter controls; the search box and sort are left alone.
 function resetFilters() {
-    document.getElementById('genre').value       = '';
-    document.getElementById('platform').value    = '';
-    document.getElementById('publisher').value   = '';
-    document.getElementById('developer').value   = '';
-    document.getElementById('searchInput').value = '';
-    currentFilters = {};
+    ['genre', 'platform', 'gameMode', 'year', 'minRating'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    var keptSearch = currentFilters.search || '';
+    currentFilters = keptSearch ? { search: keptSearch } : {};
     currentPage    = 1;
     allGames       = [];
     hasMoreGames   = true;

@@ -331,6 +331,7 @@ function renderCollectionRow(game) {
                     '<span class="status-dot-inline" style="background:' + statusColor + ';"></span>' +
                     '<span class="coll-item-status">' + esc(statusText) + '</span>' +
                 '</div>' +
+                (game.notes ? '<div class="coll-note" title="Review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right">' +
                 '<div class="coll-score-badge">' + (game.score ? game.score : '-') + '</div>' +
@@ -688,6 +689,7 @@ function upRenderGameRow(g) {
             '<div class="coll-item-main">' +
                 '<div class="coll-item-name">' + esc(g.name) + '</div>' +
                 '<div class="coll-item-meta">' + statusMetaHtml + '</div>' +
+                (g.note ? '<div class="coll-note" title="Review or note">' + esc(g.note) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right"><div class="coll-score-badge">' + score + '</div></div>' +
         '</div>' +

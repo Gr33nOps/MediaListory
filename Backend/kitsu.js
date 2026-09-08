@@ -2,7 +2,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const crypto = require('crypto');
 const { createTtlCache } = require('./cache');
-const { sanitizeToken, clampInt } = require('./igdbUtils');
+const { sanitizeToken, clampInt, rankSearchResults } = require('./igdbUtils');
 const { mediaToRow } = require('./tmdbUtils');
 const { normalizeKitsuAnime, categoriesFromIncluded } = require('./kitsuUtils');
 
@@ -13,10 +13,16 @@ const TTL = { genres: 24 * 60 * 60 * 1000, list: 3 * 60 * 1000, detail: 30 * 60 
 // Our sort keys -> Kitsu sort params.
 function kitsuSort(sortKey, sortOrder) {
   if (sortKey === 'rating') return '-averageRating';
-  if (sortKey === 'name') return 'canonicalTitle';
+  if (sortKey === 'name') return sortOrder === 'desc' ? '-canonicalTitle' : 'canonicalTitle';
   if (sortKey === 'release') return sortOrder === 'asc' ? 'startDate' : '-startDate';
   return '-userCount'; // popularity (default)
 }
+
+// Whitelisted enum filter values (exact strings the Kitsu API expects).
+const KITSU_SEASONS = new Set(['winter', 'spring', 'summer', 'fall']);
+const KITSU_SUBTYPES = new Set(['TV', 'movie', 'OVA', 'ONA', 'special', 'music']);
+const KITSU_STATUSES = new Set(['current', 'finished', 'tba', 'unreleased', 'upcoming']);
+const KITSU_AGE_RATINGS = new Set(['G', 'PG', 'R', 'R18']);
 
 module.exports = (verifyToken, checkBanned, db) => {
   const router = express.Router();
@@ -184,13 +190,19 @@ module.exports = (verifyToken, checkBanned, db) => {
       const trending = !!body.trending && !search && !comingSoon;
 
       // Filter/sort params shared across the paged requests (page[*] added below).
+      // Kitsu applies filter[text], every filter[...] and sort together (verified),
+      // so search + filters + sort all combine server-side.
       const baseParams = ['include=categories'];
       if (search) {
         baseParams.push(`filter[text]=${encodeURIComponent(search)}`);
+        // Relevance-ordered text search still honours an explicit sort choice.
+        if (sortKey && sortKey !== 'popularity') {
+          baseParams.push(`sort=${encodeURIComponent(kitsuSort(sortKey, body.sortOrder))}`);
+        }
       } else {
         baseParams.push(`sort=${encodeURIComponent(comingSoon ? 'startDate' : kitsuSort(sortKey, body.sortOrder))}`);
-        if (comingSoon) baseParams.push('filter[status]=upcoming');
       }
+
       const genre = sanitizeToken(body.genre, 60);
       if (genre) {
         try {
@@ -199,6 +211,24 @@ module.exports = (verifyToken, checkBanned, db) => {
           baseParams.push(`filter[categories]=${encodeURIComponent(slug)}`);
         } catch (_) {}
       }
+
+      // Advanced filters — whitelisted so only real Kitsu enum values are sent.
+      const year = clampInt(body.year, 1907, new Date().getFullYear() + 2, 0);
+      if (year) baseParams.push(`filter[seasonYear]=${year}`);
+
+      const season = sanitizeToken(body.season, 12).toLowerCase();
+      if (KITSU_SEASONS.has(season)) baseParams.push(`filter[season]=${season}`);
+
+      const subtype = sanitizeToken(body.subtype, 12);
+      if (KITSU_SUBTYPES.has(subtype)) baseParams.push(`filter[subtype]=${subtype}`);
+
+      const ageRating = sanitizeToken(body.ageRating, 4).toUpperCase();
+      if (KITSU_AGE_RATINGS.has(ageRating)) baseParams.push(`filter[ageRating]=${ageRating}`);
+
+      // Explicit status filter wins; otherwise "coming soon" implies upcoming.
+      const statusFilter = sanitizeToken(body.status, 12).toLowerCase();
+      if (KITSU_STATUSES.has(statusFilter)) baseParams.push(`filter[status]=${statusFilter}`);
+      else if (comingSoon && !search) baseParams.push('filter[status]=upcoming');
 
       // Kitsu caps a page at 20 items but the grid wants up to 24, so page
       // through enough requests. The /trending feed is a single fixed list.
@@ -237,7 +267,12 @@ module.exports = (verifyToken, checkBanned, db) => {
         return res.status(502).json({ error: 'Kitsu API error' });
       }
       const cats = categoriesFromIncluded(rawIncluded);
-      const normalized = rawData.map((it) => normalizeKitsuAnime(it, cats)).filter(Boolean);
+      let normalized = rawData.map((it) => normalizeKitsuAnime(it, cats)).filter(Boolean);
+
+      // Kitsu's text filter is typo-tolerant and relevance-ranked; this only
+      // promotes exact / prefix title matches above near-matches (nothing dropped).
+      if (search) normalized = rankSearchResults(normalized, search, (m) => m && m.name);
+
       cache.set(cacheKey, normalized, TTL.list);
       persist(normalized).catch(() => {});
       res.setHeader('X-Cache', 'MISS');

@@ -5,6 +5,7 @@ const { createTtlCache } = require('./cache');
 const {
   sanitizeToken,
   clampInt,
+  rankSearchResults,
   mapIgdbToRow
 } = require('./igdbUtils');
 
@@ -174,7 +175,7 @@ module.exports = (verifyToken, checkBanned, db) => {
     return res.status(500).json(body);
   }
 
-  function buildGamesQuery(body) {
+  function buildGamesQuery(body, opts = {}) {
     const id = clampInt(body.id, 1, Number.MAX_SAFE_INTEGER, 0);
     if (id) {
       return `fields ${DETAIL_FIELDS}; where id = ${id};`;
@@ -187,6 +188,9 @@ module.exports = (verifyToken, checkBanned, db) => {
     const platform = sanitizeToken(body.platform, 60);
     const publisher = sanitizeToken(body.publisher, 80);
     const developer = sanitizeToken(body.developer, 80);
+    const gameMode = sanitizeToken(body.gameMode, 60);
+    const year = clampInt(body.year, 1958, new Date().getFullYear() + 10, 0);
+    const minRating = clampInt(body.minRating, 1, 100, 0);
     const sortKey = ALLOWED_SORT[body.sort] ? body.sort : 'release';
     const sortField = ALLOWED_SORT[sortKey];
     const sortOrder = body.sortOrder === 'asc' ? 'asc' : 'desc';
@@ -211,6 +215,14 @@ module.exports = (verifyToken, checkBanned, db) => {
       // "Trending": recently-released titles that already have real traction.
       where.push(`first_release_date != null & first_release_date >= ${now - TRENDING_WINDOW} & first_release_date <= ${now}`);
       where.push('total_rating_count != null & total_rating_count >= 3');
+    } else if (year) {
+      // Explicit year bounds the release window to that calendar year (UTC).
+      const start = Math.floor(Date.UTC(year, 0, 1) / 1000);
+      const end = Math.floor(Date.UTC(year + 1, 0, 1) / 1000) - 1;
+      where.push(`first_release_date >= ${start} & first_release_date <= ${end}`);
+      if (sortKey === 'popularity' && !search) {
+        where.push('total_rating_count != null & total_rating_count >= 5');
+      }
     } else {
       where.push(`first_release_date != null & first_release_date <= ${now}`);
       if (sortKey === 'popularity' && !search) {
@@ -218,9 +230,24 @@ module.exports = (verifyToken, checkBanned, db) => {
       }
     }
 
-    if (search) where.push(`name ~ *"${search}"*`);
+    // Rating sort is meaningless on a couple of votes — require real support.
+    if (sortKey === 'rating') where.push('total_rating_count != null & total_rating_count >= 5');
+
+    // Text search: prefer IGDB's native `search` (handles multi-word titles,
+    // punctuation and relevance far better than a raw substring match). The
+    // substring fallback (opts.mode === 'substring') is an order-independent,
+    // punctuation-tolerant token match used only when native search finds nothing.
+    const useNativeSearch = !!search && opts.mode !== 'substring';
+    if (search && !useNativeSearch) {
+      const tokens = search.split(/\s+/).filter((t) => t.length >= 2).slice(0, 6);
+      where.push(tokens.length
+        ? '(' + tokens.map((t) => `name ~ *"${t}"*`).join(' & ') + ')'
+        : `name ~ *"${search}"*`);
+    }
     if (genre) where.push(`genres.name = "${genre}"`);
     if (platform) where.push(`platforms.name = "${platform}"`);
+    if (gameMode) where.push(`game_modes.name = "${gameMode}"`);
+    if (minRating) where.push(`total_rating >= ${minRating}`);
     if (publisher) {
       where.push(
         `involved_companies.company.name = "${publisher}" & involved_companies.publisher = true`
@@ -242,13 +269,13 @@ module.exports = (verifyToken, checkBanned, db) => {
       finalSortOrder = 'desc';
     }
 
-    return [
-      `fields ${GAME_FIELDS};`,
-      `limit ${limit};`,
-      `offset ${offset};`,
-      `where ${where.join(' & ')};`,
-      `sort ${finalSortField} ${finalSortOrder};`
-    ].join(' ');
+    const parts = [`fields ${GAME_FIELDS};`];
+    // Native search carries its own relevance order and rejects an explicit
+    // `sort` (IGDB returns 406), so the sort clause is omitted in that mode.
+    if (useNativeSearch) parts.push(`search "${search}";`);
+    parts.push(`limit ${limit};`, `offset ${offset};`, `where ${where.join(' & ')};`);
+    if (!useNativeSearch) parts.push(`sort ${finalSortField} ${finalSortOrder};`);
+    return parts.join(' ');
   }
 
   async function persistGames(games) {
@@ -366,9 +393,17 @@ module.exports = (verifyToken, checkBanned, db) => {
       // screenshots, similar games, modes). The stored DB row only has the
       // browse-level columns, so it is a fallback for when IGDB is unavailable,
       // not the primary source.
-      const query = buildGamesQuery(body);
-      const response = await igdbFetch('/games', query);
-      const data = await response.json();
+      const searchTerm = detailId ? '' : sanitizeToken(body.search, 80);
+      let response = await igdbFetch('/games', buildGamesQuery(body));
+      let data = await response.json();
+
+      // Native search found nothing — retry once with the punctuation-tolerant
+      // substring token fallback before giving up (still full-catalog, filtered).
+      if (response.ok && searchTerm && Array.isArray(data) && data.length === 0) {
+        const fbResp = await igdbFetch('/games', buildGamesQuery(body, { mode: 'substring' }));
+        const fbData = await fbResp.json();
+        if (fbResp.ok && Array.isArray(fbData) && fbData.length) { response = fbResp; data = fbData; }
+      }
 
       if (!response.ok) {
         if (detailId) {
@@ -384,6 +419,12 @@ module.exports = (verifyToken, checkBanned, db) => {
           if (degraded) return;
         }
         return res.status(response.status).json({ error: 'IGDB API error' });
+      }
+
+      // Promote exact / prefix title matches to the top when searching. This
+      // re-orders the fetched results only — it never removes any of them.
+      if (searchTerm && Array.isArray(data)) {
+        data = rankSearchResults(data, searchTerm, (g) => g && g.name);
       }
 
       cache.set(cacheKey, data, detailId ? TTL.detail : TTL.list);
@@ -457,6 +498,29 @@ module.exports = (verifyToken, checkBanned, db) => {
       res.json(data);
     } catch (error) {
       sendError(res, error, 'Failed to fetch platforms from IGDB');
+    }
+  });
+
+  router.post('/game_modes', async (req, res) => {
+    try {
+      const cached = cache.get('game_modes');
+      if (cached) {
+        res.setHeader('X-Cache', 'HIT');
+        return res.json(cached);
+      }
+
+      const response = await igdbFetch('/game_modes', 'fields name; limit 50; sort name asc;');
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: 'IGDB API error' });
+      }
+
+      cache.set('game_modes', data, TTL.genres);
+      res.setHeader('X-Cache', 'MISS');
+      res.json(data);
+    } catch (error) {
+      sendError(res, error, 'Failed to fetch game modes from IGDB');
     }
   });
 

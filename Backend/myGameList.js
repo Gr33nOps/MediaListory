@@ -18,6 +18,14 @@ module.exports = (db, verifyToken, checkBanned) => {
     return value || [];
   }
 
+  // Optional per-item review/note: trim and cap length; empty becomes null.
+  const NOTE_MAX = 2000;
+  function cleanNote(value) {
+    if (value == null) return null;
+    const t = String(value).trim().slice(0, NOTE_MAX);
+    return t.length ? t : null;
+  }
+
   // Resolve the media identity from an add/list payload. Supports games (IGDB),
   // movies/series (TMDB), and anime (Kitsu). Returns
   // { media_type, provider, external_id, ref } or null. IDs are kept separate per
@@ -139,7 +147,7 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   router.post('/games', verifyToken, checkBanned, async (req, res) => {
     try {
-      const { game_id, game_data, status, score } = req.body;
+      const { game_id, game_data, status, score, notes } = req.body;
       let dbGameId;
 
       if (game_data) {
@@ -159,7 +167,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         user_id: req.userId,
         game_id: dbGameId,
         status:  status || 'plan_to_play',
-        score:   score  || null
+        score:   score  || null,
+        notes:   cleanNote(notes)
       });
 
       res.status(201).json({ message: 'Game added successfully', game_id: dbGameId });
@@ -235,7 +244,7 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   router.put('/games/:gameId', verifyToken, checkBanned, async (req, res) => {
     try {
-      const { status, score, progress } = req.body;
+      const { status, score, progress, notes } = req.body;
       const userGame = await db('user_game_lists')
         .where({ user_id: req.userId, game_id: req.params.gameId })
         .first();
@@ -246,6 +255,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         score:      score  !== undefined ? score  : userGame.score,
         updated_at: db.fn.now()
       };
+      if (notes !== undefined) update.notes = cleanNote(notes);
       // Episode/step progress (series/anime). Clamp to >= 0.
       if (progress !== undefined) {
         const p = parseInt(progress, 10);
@@ -520,7 +530,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         list_id:  list.id,
         game_id:  dbGameId,
         user_id:  req.userId,
-        note:     note   ? note.trim() : null,
+        note:     cleanNote(note),
         position,
         status:   status || null,
         score:    score  || null
@@ -552,7 +562,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       }
 
       const updateData = {};
-      if (note   !== undefined) updateData.note   = note   ? note.trim() : null;
+      if (note   !== undefined) updateData.note   = cleanNote(note);
       if (status !== undefined) updateData.status = status || null;
       if (score  !== undefined) updateData.score  = score  || null;
 

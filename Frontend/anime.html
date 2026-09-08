@@ -50,6 +50,8 @@
                     <option value="rating-desc">Top Rated</option>
                     <option value="release-desc">Newest</option>
                     <option value="release-asc">Oldest</option>
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
                     <option value="coming-soon">Coming Soon</option>
                 </select>
                 <button id="filterBtn" class="btn btn-secondary">Filters</button>
@@ -58,8 +60,42 @@
 
         <div id="filterSection" class="filter-section hidden">
             <div class="filter-group">
-                <select id="genre" class="filter-select">
-                    <option value="">All Genres</option>
+                <select id="genre" class="filter-select" aria-label="Filter by category">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="year" class="filter-select" aria-label="Filter by year">
+                    <option value="">Any year</option>
+                </select>
+                <select id="season" class="filter-select" aria-label="Filter by season">
+                    <option value="">Any season</option>
+                    <option value="winter">Winter</option>
+                    <option value="spring">Spring</option>
+                    <option value="summer">Summer</option>
+                    <option value="fall">Fall</option>
+                </select>
+                <select id="subtype" class="filter-select" aria-label="Filter by format">
+                    <option value="">Any format</option>
+                    <option value="TV">TV</option>
+                    <option value="movie">Movie</option>
+                    <option value="OVA">OVA</option>
+                    <option value="ONA">ONA</option>
+                    <option value="special">Special</option>
+                    <option value="music">Music</option>
+                </select>
+                <select id="statusFilter" class="filter-select" aria-label="Filter by status">
+                    <option value="">Any status</option>
+                    <option value="current">Currently airing</option>
+                    <option value="finished">Finished</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="tba">To be announced</option>
+                    <option value="unreleased">Unreleased</option>
+                </select>
+                <select id="ageRating" class="filter-select" aria-label="Filter by age rating">
+                    <option value="">Any age rating</option>
+                    <option value="G">G</option>
+                    <option value="PG">PG</option>
+                    <option value="R">R</option>
+                    <option value="R18">R18</option>
                 </select>
             </div>
             <div class="filter-actions">

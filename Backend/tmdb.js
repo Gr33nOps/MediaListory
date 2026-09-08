@@ -2,7 +2,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const crypto = require('crypto');
 const { createTtlCache } = require('./cache');
-const { sanitizeToken, clampInt } = require('./igdbUtils');
+const { sanitizeToken, clampInt, rankSearchResults } = require('./igdbUtils');
 const {
   tmdbEndpointFor,
   normalizeTmdb,
@@ -123,6 +123,13 @@ module.exports = (verifyToken, checkBanned, db) => {
     return maps;
   }
 
+  // Runtime buckets -> with_runtime.gte / .lte (minutes). Server-side on discover.
+  const RUNTIME_BUCKETS = {
+    short:  { lte: 90 },              // under 1h30
+    medium: { gte: 90, lte: 120 },    // 1h30 - 2h
+    long:   { gte: 120 }              // over 2h
+  };
+
   function buildDiscoverParams(mediaType, body, genreNameToId) {
     const limit = clampInt(body.limit, 1, 50, 20); // TMDB pages are 20 items.
     const offset = clampInt(body.offset, 0, 5000, 0);
@@ -151,12 +158,46 @@ module.exports = (verifyToken, checkBanned, db) => {
       params.sort_by = `${field}.${order}`;
       params[`${dateField}.lte`] = today;
       if (sortKey === 'popularity') params['vote_count.gte'] = '50';
+      // Rating sort on a handful of votes is meaningless — require real support.
+      if (sortKey === 'rating') params['vote_count.gte'] = '200';
     }
 
     const genre = sanitizeToken(body.genre, 60);
     if (genre && genreNameToId) {
       const id = genreNameToId[genre.toLowerCase()];
       if (id) params.with_genres = String(id);
+    }
+
+    // ── Advanced filters (discover-only; TMDB /search ignores these) ──────────
+    const year = clampInt(body.year, 1874, new Date().getFullYear() + 10, 0);
+    if (year) {
+      params[mediaType === 'series' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
+    }
+
+    const minRating = Number(body.minRating);
+    if (!Number.isNaN(minRating) && minRating > 0 && minRating <= 10) {
+      params['vote_average.gte'] = String(minRating);
+      // Keep a floor of votes so the rating threshold is meaningful.
+      if (!params['vote_count.gte']) params['vote_count.gte'] = '50';
+    }
+
+    // ISO 639-1 language code (letters only, e.g. "en", "ja").
+    const language = sanitizeToken(body.language, 12).replace(/[^a-zA-Z-]/g, '');
+    if (language) params.with_original_language = language;
+
+    // Runtime buckets (movies only — TV runtime is per-episode and misleading).
+    if (mediaType === 'movie' && RUNTIME_BUCKETS[body.runtime]) {
+      const b = RUNTIME_BUCKETS[body.runtime];
+      if (b.gte != null) params['with_runtime.gte'] = String(b.gte);
+      if (b.lte != null) params['with_runtime.lte'] = String(b.lte);
+    }
+
+    // Series-only: with_status (0-5) and with_type (0-6).
+    if (mediaType === 'series') {
+      const status = clampInt(body.status, 0, 5, -1);
+      if (status >= 0) params.with_status = String(status);
+      const type = clampInt(body.type, 0, 6, -1);
+      if (type >= 0) params.with_type = String(type);
     }
 
     return { params, limit };
@@ -355,9 +396,13 @@ module.exports = (verifyToken, checkBanned, db) => {
         return res.status(502).json({ error: 'TMDB API error' });
       }
 
-      const normalized = window.results
+      let normalized = window.results
         .map((item) => normalizeTmdb(mediaType, item, maps.byId))
         .filter(Boolean);
+
+      // TMDB search already tolerates typos and ranks by relevance; this only
+      // lifts exact / prefix title matches above near-matches (no results dropped).
+      if (search) normalized = rankSearchResults(normalized, search, (m) => m && m.name);
 
       cache.set(cacheKey, normalized, TTL.list);
       persistMedia(normalized).catch(() => {});
@@ -385,6 +430,33 @@ module.exports = (verifyToken, checkBanned, db) => {
       res.json(maps.list);
     } catch (error) {
       sendError(res, error, 'Failed to fetch genres from TMDB');
+    }
+  });
+
+  // Original-language options for the discover filter, sourced from TMDB itself
+  // (not hardcoded). Trimmed to the languages that back real catalogue volume.
+  const LANGUAGE_ALLOW = new Set([
+    'en', 'ja', 'ko', 'zh', 'fr', 'es', 'de', 'it', 'pt', 'ru',
+    'hi', 'th', 'tr', 'sv', 'da', 'no', 'nl', 'pl', 'fi', 'ar'
+  ]);
+  router.post('/languages', async (req, res) => {
+    try {
+      const cached = cache.get('languages');
+      if (cached) { res.setHeader('X-Cache', 'HIT'); return res.json(cached); }
+      const response = await tmdbFetch('/configuration/languages', {});
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data)) {
+        return res.status(502).json({ error: 'TMDB API error' });
+      }
+      const list = data
+        .filter((l) => l && l.iso_639_1 && LANGUAGE_ALLOW.has(l.iso_639_1))
+        .map((l) => ({ code: l.iso_639_1, name: l.english_name || l.name || l.iso_639_1 }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      cache.set('languages', list, TTL.genres);
+      res.setHeader('X-Cache', 'MISS');
+      res.json(list);
+    } catch (error) {
+      sendError(res, error, 'Failed to fetch languages from TMDB');
     }
   });
 

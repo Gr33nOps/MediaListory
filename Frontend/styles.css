@@ -796,9 +796,11 @@ select.update-status-select option,
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
+/* Filter panel grid: up to 3 columns on desktop, 2 on tablet, 1 on mobile
+   (tablet/mobile overrides live in the 900px and 600px media queries). */
 .filter-group {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 15px;
 }
@@ -1690,6 +1692,77 @@ select.update-status-select option,
 @media (max-width: 520px) {
     .atl-field-status { flex-basis: 100%; }
     .atl-add { flex: 1 1 100%; }
+}
+
+/* Optional per-item review / note. Full-width row under the controls. */
+.atl-note { margin-top: 14px; }
+.atl-optional {
+    font-weight: 500;
+    color: var(--text-dim);
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.68rem;
+    margin-left: 4px;
+}
+.atl-note-input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 70px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: var(--transition);
+}
+.atl-note-input::placeholder { color: var(--text-dim); opacity: 0.8; }
+.atl-note-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* Saved review/note shown on collection cards and profile library items. */
+.item-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--accent-border);
+    background: var(--accent-dim);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.item-note-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+}
+
+/* Compact review/note preview inside a collection row (clamped to 2 lines). */
+.coll-note {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    font-style: italic;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .score-input-container {
@@ -3493,7 +3566,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
     .search-container #sortBy,
     .search-container #filterBtn,
     .search-container #searchBtn { flex: 1 1 auto; }
-    .filter-group { grid-template-columns: 1fr; }
+    .filter-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .filter-section { padding: 14px; }
     .games-grid { gap: 16px 12px; }
     .game-info { padding: 12px; }
@@ -4643,6 +4716,9 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 /* Phone layouts: keep desktop rules above intact. */
 @media (max-width: 600px) {
     .container { padding: 12px; }
+
+    /* Filter panel collapses to a single column on phones. */
+    .filter-group { grid-template-columns: 1fr; }
 
     /* Keep the brand, account and menu on one row. Secondary utilities
        belong inside the expanded menu, where they have room to tap. */

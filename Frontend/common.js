@@ -188,6 +188,9 @@
   function markBackendReady() {
     if (backendReady) return;
     backendReady = true;
+    // Remember the backend is awake so navigating between pages doesn't re-run
+    // the cold-start panel while it's still warm (see mountBackendWake).
+    try { localStorage.setItem('mgl:backendReadyAt', String(Date.now())); } catch (_) {}
     try { _resolveReady(true); } catch (_) {}
     try { document.dispatchEvent(new CustomEvent('mgl:backend-ready')); } catch (_) {}
   }
@@ -1133,7 +1136,15 @@
     if (API_BASE.charAt(0) === '/') { markBackendReady(); return; } // same-origin: already up
     if (document.getElementById('backendWake')) return;
 
-    var GRACE_MS = 1200, MAX_MS = 75000, POLL_MS = 2500;
+    // If the backend answered recently (this browser), treat it as still warm and
+    // skip the panel entirely — otherwise every page navigation re-checks from
+    // scratch and the cross-origin latency flashes "Server ready" each time.
+    try {
+      var readyAt = parseInt(localStorage.getItem('mgl:backendReadyAt') || '0', 10);
+      if (readyAt && (Date.now() - readyAt) < 10 * 60 * 1000) { markBackendReady(); return; }
+    } catch (_) {}
+
+    var GRACE_MS = 2500, MAX_MS = 75000, POLL_MS = 2500;
     var startedAt = Date.now();
     var el = null, hideTimer = null, elapsedTimer = null, stopped = false;
 

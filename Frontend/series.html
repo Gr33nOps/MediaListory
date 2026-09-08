@@ -47,6 +47,7 @@
                 <label class="sr-only" for="sortBy">Sort shows</label>
                 <select id="sortBy" class="filter-select" aria-label="Sort shows">
                     <option value="popularity-desc" selected>Popularity</option>
+                    <option value="rating-desc">Top Rated</option>
                     <option value="release-desc">Newest</option>
                     <option value="release-asc">Oldest</option>
                     <option value="name-asc">Name (A-Z)</option>
@@ -59,8 +60,41 @@
 
         <div id="filterSection" class="filter-section hidden">
             <div class="filter-group">
-                <select id="genre" class="filter-select">
+                <select id="genre" class="filter-select" aria-label="Filter by genre">
                     <option value="">All Genres</option>
+                </select>
+                <select id="year" class="filter-select" aria-label="Filter by first air year">
+                    <option value="">Any year</option>
+                </select>
+                <select id="minRating" class="filter-select" aria-label="Filter by minimum rating">
+                    <option value="">Any rating</option>
+                    <option value="9">9+</option>
+                    <option value="8">8+</option>
+                    <option value="7">7+</option>
+                    <option value="6">6+</option>
+                    <option value="5">5+</option>
+                </select>
+                <select id="language" class="filter-select" aria-label="Filter by original language">
+                    <option value="">Any language</option>
+                </select>
+                <select id="statusFilter" class="filter-select" aria-label="Filter by status">
+                    <option value="">Any status</option>
+                    <option value="0">Returning</option>
+                    <option value="3">Ended</option>
+                    <option value="4">Cancelled</option>
+                    <option value="2">In production</option>
+                    <option value="1">Planned</option>
+                    <option value="5">Pilot</option>
+                </select>
+                <select id="typeFilter" class="filter-select" aria-label="Filter by type">
+                    <option value="">Any type</option>
+                    <option value="4">Scripted</option>
+                    <option value="0">Documentary</option>
+                    <option value="2">Miniseries</option>
+                    <option value="3">Reality</option>
+                    <option value="1">News</option>
+                    <option value="5">Talk show</option>
+                    <option value="6">Video</option>
                 </select>
             </div>
             <div class="filter-actions">

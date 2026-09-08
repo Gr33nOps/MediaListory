@@ -14,6 +14,35 @@
   var ENDPOINT = CFG.endpoint;
   var NOUN = CFG.noun;
 
+  // Which filter controls exist per category, mapping DOM id -> request key.
+  // Only these keys are ever sent, so no API gets a parameter meant for another.
+  var FILTER_CONFIG = {
+    movie:  [
+      { id: 'genre',    key: 'genre' },
+      { id: 'year',     key: 'year' },
+      { id: 'minRating', key: 'minRating' },
+      { id: 'runtime',  key: 'runtime' },
+      { id: 'language', key: 'language' }
+    ],
+    series: [
+      { id: 'genre',    key: 'genre' },
+      { id: 'year',     key: 'year' },
+      { id: 'minRating', key: 'minRating' },
+      { id: 'language', key: 'language' },
+      { id: 'statusFilter', key: 'status' },
+      { id: 'typeFilter',   key: 'type' }
+    ],
+    anime:  [
+      { id: 'genre',    key: 'genre' },
+      { id: 'year',     key: 'year' },
+      { id: 'season',   key: 'season' },
+      { id: 'subtype',  key: 'subtype' },
+      { id: 'statusFilter', key: 'status' },
+      { id: 'ageRating', key: 'ageRating' }
+    ]
+  };
+  var FILTERS = FILTER_CONFIG[MEDIA_TYPE] || [];
+
   var currentFilters = {};
   var currentSort = 'popularity';
   var currentSortOrder = 'desc';
@@ -131,6 +160,7 @@
     });
 
     loadGenres();
+    populateDynamicFilters();
     loadUserCustomLists();
     fetchMedia(true);
 
@@ -194,18 +224,23 @@
       var isComing = currentSort === 'coming' && currentSortOrder === 'soon';
       var sortKey = isComing ? 'coming' : currentSort;
 
+      var payload = {
+        search: currentFilters.search || undefined,
+        sort: sortKey,
+        sortOrder: currentSortOrder,
+        comingSoon: isComing,
+        limit: perPage,
+        offset: offset
+      };
+      // Only attach the filter keys this category actually supports.
+      FILTERS.forEach(function (f) {
+        if (currentFilters[f.key]) payload[f.key] = currentFilters[f.key];
+      });
+
       var r = await apiFetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          search: currentFilters.search || undefined,
-          genre: currentFilters.genre || undefined,
-          sort: sortKey,
-          sortOrder: currentSortOrder,
-          comingSoon: isComing,
-          limit: perPage,
-          offset: offset
-        })
+        body: JSON.stringify(payload)
       });
 
       var data = await r.json();
@@ -423,6 +458,10 @@
             '</div>' +
             '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + esc(media.id) + '">Add to Library</button>' +
           '</div>' +
+          '<div class="atl-note">' +
+            '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
+            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Jot a quick review or note — or leave it blank."></textarea>' +
+          '</div>' +
           '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
         '</div>' +
         similarHtml +
@@ -461,9 +500,11 @@
     var scoreInput = byId('gameScore');
     var listSelect = byId('gameListSelect');
     var messageEl = byId('addGameMessage');
+    var noteInput = byId('gameNote');
     var listValue = listSelect ? listSelect.value : 'default';
     var status = statusSelect ? statusSelect.value : 'plan_to_play';
     var score = scoreInput ? scoreInput.value : '';
+    var note = noteInput ? noteInput.value.trim() : '';
 
     if (score && (parseInt(score) < 1 || parseInt(score) > 10)) {
       showMsg(messageEl, 'Score must be between 1 and 10.', 'error');
@@ -478,7 +519,7 @@
         var addResp = await apiFetch('/user/games', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ game_id: media.id, game_data: gameData, status: status, score: scoreVal })
+          body: JSON.stringify({ game_id: media.id, game_data: gameData, status: status, score: scoreVal, notes: note || undefined })
         });
         var addData = await addResp.json();
         if (!addResp.ok) {
@@ -496,7 +537,7 @@
       var listResp = await apiFetch('/user/lists/' + listId + '/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_data: gameData, status: status, score: scoreVal })
+        body: JSON.stringify({ game_data: gameData, status: status, score: scoreVal, note: note || undefined })
       });
       var listData = await listResp.json();
       if (!listResp.ok) {
@@ -527,15 +568,50 @@
   }
 
   function applyFilters() {
-    currentFilters = { genre: byId('genre').value, search: currentFilters.search || '' };
+    var next = { search: currentFilters.search || '' };
+    FILTERS.forEach(function (f) {
+      var el = byId(f.id);
+      if (el && el.value) next[f.key] = el.value;
+    });
+    currentFilters = next;
     currentPage = 1; hasMore = true; window.scrollTo(0, 0); fetchMedia(true);
   }
 
+  // Reset clears only the filter controls; the search box and sort are left alone.
   function resetFilters() {
-    var g = byId('genre'); if (g) g.value = '';
-    var s = byId('searchInput'); if (s) s.value = '';
-    currentFilters = {};
+    FILTERS.forEach(function (f) { var el = byId(f.id); if (el) el.value = ''; });
+    var kept = currentFilters.search || '';
+    currentFilters = kept ? { search: kept } : {};
     currentPage = 1; hasMore = true; window.scrollTo(0, 0); fetchMedia(true);
+  }
+
+  // Populate the option lists that come from data rather than static markup:
+  // a rolling year range for every category, and TMDB languages for movie/series.
+  function populateDynamicFilters() {
+    var yearSel = byId('year');
+    if (yearSel && yearSel.options.length <= 1) {
+      var now = new Date().getFullYear();
+      var maxYear = MEDIA_TYPE === 'anime' ? now + 1 : now;
+      var opts = '<option value="">' + (MEDIA_TYPE === 'anime' ? 'Any year' : 'Any year') + '</option>';
+      for (var y = maxYear; y >= 1950; y--) opts += '<option value="' + y + '">' + y + '</option>';
+      yearSel.innerHTML = opts;
+    }
+
+    var langSel = byId('language');
+    if (langSel && (MEDIA_TYPE === 'movie' || MEDIA_TYPE === 'series')) {
+      apiFetch('/tmdb/languages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      }).then(function (r) { return r.ok ? r.json() : []; }).then(function (langs) {
+        if (!Array.isArray(langs) || !langs.length) return;
+        var opts = '<option value="">Any language</option>';
+        langs.forEach(function (l) {
+          opts += '<option value="' + esc(l.code) + '">' + esc(l.name) + '</option>';
+        });
+        langSel.innerHTML = opts;
+      }).catch(function () {});
+    }
   }
 
   function prevPage() {

@@ -453,6 +453,7 @@ function renderCollectionRow(game) {
                     '<span class="coll-item-status">' + esc(statusText) + '</span>' +
                     progressHtml +
                 '</div>' +
+                (game.notes ? '<div class="coll-note" title="Your review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right">' +
                 '<div class="coll-score-badge">' + (game.score ? game.score : '-') + '</div>' +
@@ -547,6 +548,8 @@ function showUpdateModal(gameId) {
     var game = myGamesCache.find(function(g) { return g.game_id == gameId; });
     document.getElementById('updateStatus').value        = game ? game.status : 'completed';
     document.getElementById('updateScore').value         = game && game.score ? game.score : '';
+    var updNote = document.getElementById('updateNote');
+    if (updNote) updNote.value = game && game.notes ? game.notes : '';
     document.getElementById('updateGameName').textContent = game ? game.name : '';
     document.getElementById('updateMessage').innerHTML   = '';
 
@@ -618,11 +621,13 @@ async function incrementEpisode(gameId) {
 async function confirmUpdate() {
     var status = document.getElementById('updateStatus').value;
     var score  = document.getElementById('updateScore').value;
+    var noteEl = document.getElementById('updateNote');
     var progRow = document.getElementById('updateProgressRow');
     var progInput = document.getElementById('updateProgress');
     var msgDiv = document.getElementById('updateMessage');
     if (score && (score < 1 || score > 10)) { showError(msgDiv, 'Score must be between 1 and 10'); return; }
     var body = { status: status, score: score ? parseInt(score) : null };
+    if (noteEl) body.notes = noteEl.value.trim();
     if (progRow && progRow.style.display !== 'none' && progInput) {
         var pv = progInput.value;
         body.progress = pv === '' ? null : Math.max(0, parseInt(pv, 10) || 0);
@@ -946,6 +951,7 @@ function clRenderGameRow(g, listId, editMode) {
             '<div class="coll-item-main">' +
                 '<div class="coll-item-name">' + esc(g.name) + '</div>' +
                 '<div class="coll-item-meta">' + statusMetaHtml + '</div>' +
+                (g.note ? '<div class="coll-note" title="Your review or note">' + esc(g.note) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right"><div class="coll-score-badge">' + score + '</div>' + editActions + '</div>' +
         '</div>' +
@@ -1052,6 +1058,11 @@ function clOpenEditGameModal(gameId, listId, gameName, existingScore, existingSt
     document.getElementById('clEditScoreInput').value       = existingScore || '';
     document.getElementById('clEditGameMessage').innerHTML  = '';
     document.getElementById('clEditStatusSelect').value     = existingStatus || 'plan_to_play';
+    var clNoteEl = document.getElementById('clEditNoteInput');
+    if (clNoteEl) {
+        var _g = (clListGames[listId] || []).find(function(x) { return String(x.game_id) === String(gameId); });
+        clNoteEl.value = _g && _g.note ? _g.note : '';
+    }
     clOpenEditModal();
     setTimeout(function() {
         var inp = document.getElementById('clEditScoreInput');
@@ -1069,16 +1080,20 @@ async function clSaveEditGame() {
     var scoreVal = document.getElementById('clEditScoreInput').value;
     var score    = scoreVal ? parseInt(scoreVal) : null;
     var status   = document.getElementById('clEditStatusSelect').value || null;
+    var noteEl   = document.getElementById('clEditNoteInput');
+    var note     = noteEl ? noteEl.value.trim() : undefined;
     var msgDiv   = document.getElementById('clEditGameMessage');
     if (scoreVal && (score < 1 || score > 10)) { showError(msgDiv, 'Score must be between 1 and 10'); return; }
     var btn = document.getElementById('clEditGameSave');
     btn.disabled = true;
     try {
-        await clApi('PUT', '/user/lists/' + _clEditListId + '/games/' + _clEditGameId, { score: score, status: status });
+        var payload = { score: score, status: status };
+        if (note !== undefined) payload.note = note;
+        await clApi('PUT', '/user/lists/' + _clEditListId + '/games/' + _clEditGameId, payload);
         var games = clListGames[_clEditListId];
         if (games) {
             var game = games.find(function(g) { return g.game_id == _clEditGameId; });
-            if (game) { game.user_score = score; game.status = status; }
+            if (game) { game.user_score = score; game.status = status; if (note !== undefined) game.note = note; }
         }
         showSuccess(msgDiv, 'Game updated successfully!');
         setTimeout(function() { clCloseEditModal(); clRenderAccGames(_clEditListId); }, 1500);

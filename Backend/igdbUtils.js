@@ -14,6 +14,41 @@ function clampInt(value, min, max, fallback) {
   return Math.min(max, Math.max(min, n));
 }
 
+// Normalize a title/query for comparison: lowercase, strip accents, collapse
+// punctuation/whitespace. "Pokémon: Red!" and "pokemon red" become equal.
+function normalizeForSearch(value) {
+  return String(value == null ? '' : value)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+// Re-rank an already-fetched list so obvious title matches surface first,
+// WITHOUT dropping anything (never filters). Ties keep the API's own order,
+// so this only promotes exact/prefix/word hits over the provider's relevance
+// ranking — it never replaces good API results with worse local guesses.
+function rankSearchResults(items, term, getName) {
+  // Ignore a leading article so "dark knight" still matches "The Dark Knight".
+  const dropArticle = (s) => s.replace(/^(the|an|a) /, '') || s;
+  const q = dropArticle(normalizeForSearch(term));
+  if (!q || !Array.isArray(items) || items.length < 2) return items;
+  const scored = items.map((item, i) => {
+    const name = dropArticle(normalizeForSearch(typeof getName === 'function' ? getName(item) : item));
+    let score;
+    if (name === q) score = 0;                       // exact title
+    else if (name.startsWith(q + ' ')) score = 1;    // title begins with the query
+    else if (name.startsWith(q)) score = 2;          // prefix
+    else if ((' ' + name + ' ').includes(' ' + q + ' ')) score = 3; // whole-word hit
+    else if (name.includes(q)) score = 4;            // substring
+    else score = 5;                                  // fuzzy/provider match
+    return { item, score, i };
+  });
+  scored.sort((a, b) => (a.score - b.score) || (a.i - b.i));
+  return scored.map((s) => s.item);
+}
+
 function slugify(name) {
   return String(name || 'game')
     .toLowerCase()
@@ -85,6 +120,8 @@ function toClientGameId(igdbId) {
 module.exports = {
   sanitizeToken,
   clampInt,
+  normalizeForSearch,
+  rankSearchResults,
   slugify,
   coverUrl,
   mapIgdbToRow,
