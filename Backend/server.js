@@ -496,7 +496,7 @@ app.use(express.static(frontendPath, {
 }));
 
 app.get('/', (req, res) => res.sendFile(path.join(frontendPath, 'dashboard.html')));
-app.get('/index.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
+app.get('/index.html', (req, res) => res.sendFile(path.join(frontendPath, 'dashboard.html')));
 app.get('/auth.html', (req, res) => res.sendFile(path.join(frontendPath, 'auth.html')));
 app.get('/home.html', (req, res) => res.sendFile(path.join(frontendPath, 'home.html')));
 app.get('/movies.html', (req, res) => res.sendFile(path.join(frontendPath, 'movies.html')));

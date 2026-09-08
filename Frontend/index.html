@@ -2,158 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Games - MediaListory</title>
-    <meta name="description" content="Browse and track games on MediaListory. Rate them, take notes, and keep one library for your movies, shows, anime, and games.">
-    <meta name="robots" content="index,follow">
-    <script>try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="styles.css">
-    <!-- seo:start -->
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="mask-icon" href="/favicon.svg" color="#3b82f6">
-    <meta name="theme-color" content="#0b1220">
-    <link rel="canonical" href="https://medialistory.vercel.app/">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="MediaListory">
-    <meta property="og:title" content="Games - MediaListory">
-    <meta property="og:description" content="Browse and track games on MediaListory. Rate them, take notes, and keep one library for your movies, shows, anime, and games.">
-    <meta property="og:url" content="https://medialistory.vercel.app/">
-    <meta property="og:image" content="https://medialistory.vercel.app/img/og-card.jpg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:type" content="image/jpeg">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Games - MediaListory">
-    <meta name="twitter:description" content="Browse and track games on MediaListory. Rate them, take notes, and keep one library for your movies, shows, anime, and games.">
-    <meta name="twitter:image" content="https://medialistory.vercel.app/img/og-card.jpg">
-    <!-- seo:end -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The app's default screen is the dashboard. On Vercel a real file at "/"
+         is served before vercel.json rewrites run, so this stub exists only to
+         send the root to /dashboard.html. Must target the explicit file (never
+         "/", which would loop back here). -->
+    <meta http-equiv="refresh" content="0; url=/dashboard.html">
+    <link rel="canonical" href="https://medialistory.vercel.app/dashboard.html">
+    <title>MediaListory</title>
+    <script>location.replace('/dashboard.html');</script>
 </head>
 <body>
-    <a class="skip-link" href="#main-content">Skip to content</a>
-    <div id="main-content" tabindex="-1" class="container">
-        <nav class="navbar" id="appNav" data-active="games" data-brand="MediaListory" data-page-title="Games" data-page-sub="Find your next game and keep track of what you are playing. Game info comes from IGDB."></nav>
-        <h1 class="sr-only">Discover and track games</h1>
-
-        <div class="search-container">
-            <div class="search-bar">
-                <label class="sr-only" for="searchInput">Search games</label>
-                <input type="text" id="searchInput" class="search-input" placeholder="Search for games..." aria-label="Search games">
-                <button id="searchBtn" class="btn btn-primary">Search</button>
-            </div>
-            <div class="search-filters">
-                <label class="sr-only" for="sortBy">Sort games</label>
-                <select id="sortBy" class="filter-select" aria-label="Sort games">
-                    <option value="popularity-desc" selected>Popularity</option>
-                    <option value="release-desc">Newest</option>
-                    <option value="release-asc">Oldest</option>
-                    <option value="name-asc">Name (A-Z)</option>
-                    <option value="name-desc">Name (Z-A)</option>
-                    <option value="coming-soon">Coming Soon</option>
-                </select>
-                <button id="filterBtn" class="btn btn-secondary">Filters</button>
-            </div>
-        </div>
-
-        <div id="filterSection" class="filter-section hidden">
-            <div class="filter-group">
-                <select id="genre" class="filter-select">
-                    <option value="">All Genres</option>
-                </select>
-                <select id="platform" class="filter-select">
-                    <option value="">All Platforms</option>
-                </select>
-                <select id="publisher" class="filter-select">
-                    <option value="">All Publishers</option>
-                </select>
-                <select id="developer" class="filter-select">
-                    <option value="">All Developers</option>
-                </select>
-            </div>
-            <div class="filter-actions">
-                <button id="applyFiltersBtn" class="btn btn-primary">Apply</button>
-                <button id="resetFiltersBtn" class="btn btn-secondary">Reset</button>
-            </div>
-        </div>
-
-        <div id="loadingIndicator" class="loading-indicator" style="display:none;">
-            <div class="spinner"></div>
-            <p>Loading games...</p>
-        </div>
-
-        <div id="searchResults" class="games-grid"></div>
-
-        <div class="pagination" style="margin-top:30px;">
-            <button id="prevPageBtn" class="btn" disabled>Previous</button>
-            <span id="pageInfo" class="page-info">Page 1</span>
-            <button id="nextPageBtn" class="btn">Next</button>
-        </div>
-
-        <div id="gameModal" class="modal" hidden role="dialog">
-            <div class="modal-content">
-                <button type="button" class="close-btn" id="closeModalBtn" aria-label="Close">×</button>
-                <div id="gameDetails"></div>
-            </div>
-        </div>
-
-        <!-- ── FOOTER ───────────────────────────────────────────── -->
-        <footer class="site-footer">
-            <div class="footer-inner">
-
-                <!-- Brand -->
-                <div class="footer-brand">
-                    <div class="brand-name">MediaListory</div>
-                    <p>Track the games you play, discover what to play next, and share your collection with friends.</p>
-                </div>
-
-                <!-- Navigation -->
-                <div class="footer-col">
-                    <h4>Navigate</h4>
-                    <ul>
-                        <li><a href="home.html">Browse Games</a></li>
-                        <li><a href="myGameList.html">My Collection</a></li>
-                        <li><a href="profile.html">My Profile</a></li>
-                        <li><a href="friends.html">Following</a></li>
-                    </ul>
-                </div>
-
-                <!-- External -->
-                <div class="footer-col">
-                    <h4>Data &amp; Credits</h4>
-                    <ul>
-                        <li><a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer">IGDB</a></li>
-                        <li><a href="https://www.twitch.tv" target="_blank" rel="noopener noreferrer">Twitch</a></li>
-                        <li><a href="https://api-docs.igdb.com" target="_blank" rel="noopener noreferrer">IGDB API Docs</a></li>
-                    </ul>
-                </div>
-
-            </div>
-
-            <!-- IGDB attribution -->
-            <div class="footer-igdb">
-                <img src="https://www.igdb.com/favicon.ico" alt="IGDB logo" onerror="this.style.display='none'">
-                <div class="footer-igdb-text">
-                    Game data powered by <a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer">IGDB (Internet Game Database)</a> - a Twitch service.
-                    Game information, cover images, and metadata are provided via the
-                    <a href="https://api-docs.igdb.com" target="_blank" rel="noopener noreferrer">IGDB API</a>.
-                    All game data and images are the property of their respective owners.
-                </div>
-            </div>
-
-            <!-- Bottom bar -->
-            <div class="footer-bottom">
-                <span>© 2026 MediaListory. All rights reserved.</span>
-                <div class="footer-bottom-links">
-                    <a href="privacy.html">Privacy Policy</a>
-                    <a href="terms.html">Terms of Service</a>
-                </div>
-            </div>
-        </footer>
-    </div>
-
-    <script src="common.js"></script>
-    <script src="home.js"></script>
+    <noscript><a href="/dashboard.html">Continue to MediaListory</a></noscript>
 </body>
 </html>
