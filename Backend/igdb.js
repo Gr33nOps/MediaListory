@@ -210,7 +210,10 @@ module.exports = (verifyToken, checkBanned, db) => {
     if (!search) where.push('cover != null');
 
     if (comingSoon || sortKey === 'coming') {
+      // `hypes` is IGDB's anticipation count. Requiring it keeps the upcoming
+      // list to games people are actually waiting for.
       where.push(`first_release_date > ${now}`);
+      if (!search) where.push('hypes != null');
     } else if (trending && !search) {
       // "Trending": recently-released titles that already have real traction.
       where.push(`first_release_date != null & first_release_date >= ${now - TRENDING_WINDOW} & first_release_date <= ${now}`);
@@ -228,10 +231,24 @@ module.exports = (verifyToken, checkBanned, db) => {
       if (sortKey === 'popularity' && !search) {
         where.push('total_rating_count != null & total_rating_count >= 5');
       }
+      // "Newest" otherwise fills up with same-day shovelware nobody has touched.
+      if (sortKey === 'release' && sortOrder === 'desc' && !search) {
+        where.push('total_rating_count != null');
+      }
     }
 
-    // Rating sort is meaningless on a couple of votes — require real support.
-    if (sortKey === 'rating') where.push('total_rating_count != null & total_rating_count >= 5');
+    // When the user has already narrowed things down these floors relax, so a
+    // specific genre/platform/year combination still returns a full page.
+    const narrowed = !!(genre || platform || gameMode || year || minRating);
+    // Rating sort on a handful of votes lets shovelware outrank classics, so
+    // require a real body of ratings behind the score.
+    if (sortKey === 'rating') {
+      where.push(`total_rating_count != null & total_rating_count >= ${narrowed ? 20 : 100}`);
+    }
+    // Alphabetical sorts otherwise open on symbol-only joke titles ("^_^", "_____").
+    if (sortKey === 'name' && !search) {
+      where.push(`total_rating_count != null & total_rating_count >= ${narrowed ? 5 : 20}`);
+    }
 
     // Text search: prefer IGDB's native `search` (handles multi-word titles,
     // punctuation and relevance far better than a raw substring match). The
@@ -262,8 +279,8 @@ module.exports = (verifyToken, checkBanned, db) => {
     let finalSortField = sortField;
     let finalSortOrder = sortOrder;
     if (comingSoon || sortKey === 'coming') {
-      finalSortField = 'first_release_date';
-      finalSortOrder = 'asc';
+      finalSortField = 'hypes';
+      finalSortOrder = 'desc';
     } else if (trending || sortKey === 'popularity') {
       finalSortField = 'total_rating_count';
       finalSortOrder = 'desc';

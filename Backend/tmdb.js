@@ -14,17 +14,17 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 const ALLOWED_SORT = {
   release: 'primary_release_date',
   rating: 'vote_average',
-  name: 'original_title',
+  name: 'title',
   popularity: 'popularity',
   coming: 'primary_release_date'
 };
 
-// TV uses first_air_date instead of primary_release_date.
+// TV uses first_air_date / name instead of primary_release_date / title.
 function sortFieldFor(mediaType, sortKey) {
   const base = ALLOWED_SORT[sortKey] || ALLOWED_SORT.release;
   if (mediaType === 'series') {
     if (base === 'primary_release_date') return 'first_air_date';
-    if (base === 'original_title') return 'name';
+    if (base === 'title') return 'name';
   }
   return base;
 }
@@ -148,18 +148,51 @@ module.exports = (verifyToken, checkBanned, db) => {
     const dateField = mediaType === 'series' ? 'first_air_date' : 'primary_release_date';
     const today = new Date().toISOString().slice(0, 10);
 
+    const isSeries = mediaType === 'series';
+    // When the user has already narrowed things down, the strict quality floors
+    // below would often leave an empty page, so they relax. Unfiltered browsing
+    // keeps the strict floors that make each sort read well.
+    const narrowed = !!(body.genre || body.year || body.language || body.runtime ||
+      body.minRating || (isSeries && (body.status != null || body.type != null)));
+
     if (comingSoon) {
-      params.sort_by = `${dateField}.asc`;
-      params[`${dateField}.gte`] = today;
+      // Strictly in the future (today's releases are already out), ordered by
+      // anticipation rather than date so the list leads with titles people are
+      // actually waiting for instead of every obscure same-day release.
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+      params.sort_by = 'popularity.desc';
+      params[`${dateField}.gte`] = tomorrow;
+      if (!isSeries) {
+        params.with_release_type = '2|3'; // limited + wide theatrical
+        params.region = 'US';
+      }
     } else {
       let field = sortFieldFor(mediaType, sortKey);
       let order = sortOrder;
       if (sortKey === 'popularity') { field = 'popularity'; order = 'desc'; }
       params.sort_by = `${field}.${order}`;
       params[`${dateField}.lte`] = today;
-      if (sortKey === 'popularity') params['vote_count.gte'] = '50';
-      // Rating sort on a handful of votes is meaningless — require real support.
-      if (sortKey === 'rating') params['vote_count.gte'] = '200';
+
+      // Vote floors keep each sort meaningful. Without them TMDB happily returns
+      // titles with a couple of votes and no artwork.
+      if (sortKey === 'popularity') {
+        params['vote_count.gte'] = '50';
+      } else if (sortKey === 'rating') {
+        // Needs to be high: at a few hundred votes a handful of obscure recent
+        // titles sit on a perfect average and outrank the actual classics.
+        params['vote_count.gte'] = narrowed ? (isSeries ? '100' : '300') : (isSeries ? '1000' : '3000');
+      } else if (sortKey === 'release' && order === 'desc') {
+        // "Newest" otherwise lists every unknown title released today.
+        params['vote_count.gte'] = '20';
+      } else if (sortKey === 'name') {
+        // TMDB always orders by the ORIGINAL title while the cards show the
+        // localized one, so a mixed-script catalogue looks unsorted (a Z-A page
+        // opening on "On the Wire" whose original title is CJK). Limiting to
+        // English-original titles makes the ordering match what is displayed.
+        // An explicit Language filter below overrides this default.
+        params['vote_count.gte'] = narrowed ? (isSeries ? '50' : '200') : (isSeries ? '200' : '1000');
+        params.with_original_language = 'en';
+      }
     }
 
     const genre = sanitizeToken(body.genre, 60);

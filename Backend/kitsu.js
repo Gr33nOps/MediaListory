@@ -11,11 +11,15 @@ const KITSU_BASE = 'https://kitsu.io/api/edge';
 const TTL = { genres: 24 * 60 * 60 * 1000, list: 3 * 60 * 1000, detail: 30 * 60 * 1000 };
 
 // Our sort keys -> Kitsu sort params.
+// NOTE: Kitsu silently ignores `sort=canonicalTitle` (it returns an unsorted
+// default order), so alphabetical sorting is not offered for anime rather than
+// pretending it works. Everything below is genuinely honoured by the API.
 function kitsuSort(sortKey, sortOrder) {
-  if (sortKey === 'rating') return '-averageRating';
-  if (sortKey === 'name') return sortOrder === 'desc' ? '-canonicalTitle' : 'canonicalTitle';
+  // Kitsu's own ranks account for how many people rated a title, so they avoid
+  // the low-vote outliers a raw averageRating / userCount sort surfaces.
+  if (sortKey === 'rating') return 'ratingRank';
   if (sortKey === 'release') return sortOrder === 'asc' ? 'startDate' : '-startDate';
-  return '-userCount'; // popularity (default)
+  return 'popularityRank'; // popularity (default)
 }
 
 // Whitelisted enum filter values (exact strings the Kitsu API expects).
@@ -200,7 +204,9 @@ module.exports = (verifyToken, checkBanned, db) => {
           baseParams.push(`sort=${encodeURIComponent(kitsuSort(sortKey, body.sortOrder))}`);
         }
       } else {
-        baseParams.push(`sort=${encodeURIComponent(comingSoon ? 'startDate' : kitsuSort(sortKey, body.sortOrder))}`);
+        // Upcoming is ordered by anticipation, not raw date, so it leads with
+        // titles people are waiting for instead of the next obscure release.
+        baseParams.push(`sort=${encodeURIComponent(comingSoon ? 'popularityRank' : kitsuSort(sortKey, body.sortOrder))}`);
       }
 
       const genre = sanitizeToken(body.genre, 60);
@@ -229,6 +235,13 @@ module.exports = (verifyToken, checkBanned, db) => {
       const statusFilter = sanitizeToken(body.status, 12).toLowerCase();
       if (KITSU_STATUSES.has(statusFilter)) baseParams.push(`filter[status]=${statusFilter}`);
       else if (comingSoon && !search) baseParams.push('filter[status]=upcoming');
+      else if (!search && sortKey === 'release') {
+        // Date sorts must only consider titles that actually have a real air
+        // date. Otherwise "Newest" leads with unreleased entries carrying
+        // placeholder far-future dates (2029-12-31) and "Oldest" leads with
+        // entries that have no start date at all.
+        baseParams.push('filter[status]=current,finished');
+      }
 
       // Kitsu caps a page at 20 items but the grid wants up to 24, so page
       // through enough requests. The /trending feed is a single fixed list.
