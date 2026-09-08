@@ -243,6 +243,15 @@ module.exports = (verifyToken, checkBanned, db) => {
         baseParams.push('filter[status]=current,finished');
       }
 
+      // Top Rated: Kitsu's ratingRank is a raw average, so a title rated by a
+      // few thousand people outranks the classics (Chainsaw Man: Reze-hen at
+      // #1 on 5.7k ratings, Fullmetal Alchemist: Brotherhood down at #105).
+      // Requiring a real audience makes the list read like a top-rated list.
+      if (!search && sortKey === 'rating') {
+        const narrowed = !!(genre || year || season || subtype || ageRating || statusFilter);
+        baseParams.push(`filter[userCount]=${narrowed ? '10000' : '200000'}..`);
+      }
+
       // Kitsu caps a page at 20 items but the grid wants up to 24, so page
       // through enough requests. The /trending feed is a single fixed list.
       let rawData = [];

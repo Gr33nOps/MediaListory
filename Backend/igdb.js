@@ -240,10 +240,13 @@ module.exports = (verifyToken, checkBanned, db) => {
     // When the user has already narrowed things down these floors relax, so a
     // specific genre/platform/year combination still returns a full page.
     const narrowed = !!(genre || platform || gameMode || year || minRating);
-    // Rating sort on a handful of votes lets shovelware outrank classics, so
-    // require a real body of ratings behind the score.
+    // total_rating blends player and critic scores, so a game carrying a single
+    // 100/100 critic review is pushed to the very top (Super Metroid and Super
+    // Mario World were outranking Elden Ring on one review each). Require both a
+    // real player base and real critic coverage behind the score.
     if (sortKey === 'rating') {
-      where.push(`total_rating_count != null & total_rating_count >= ${narrowed ? 20 : 100}`);
+      where.push(`total_rating_count != null & total_rating_count >= ${narrowed ? 50 : 200}`);
+      where.push(`aggregated_rating_count != null & aggregated_rating_count >= ${narrowed ? 2 : 5}`);
     }
     // Alphabetical sorts otherwise open on symbol-only joke titles ("^_^", "_____").
     if (sortKey === 'name' && !search) {
@@ -293,6 +296,43 @@ module.exports = (verifyToken, checkBanned, db) => {
     parts.push(`limit ${limit};`, `offset ${offset};`, `where ${where.join(' & ')};`);
     if (!useNativeSearch) parts.push(`sort ${finalSortField} ${finalSortOrder};`);
     return parts.join(' ');
+  }
+
+  // IGDB's games table carries no usable popularity column (`follows` is empty
+  // for every row), so ordering by total_rating_count really means "most rated"
+  // and skews to old titles. Real popularity lives in the popularity_primitives
+  // feed; type 3 is "Playing". That feed cannot be combined with where filters,
+  // so it backs only the plain unfiltered Popularity browse and falls back to
+  // the previous ordering whenever it is unavailable.
+  const POPULARITY_TYPE_PLAYING = 3;
+  async function fetchPopularGames(body) {
+    const limit = clampInt(body.limit, 1, 50, 20);
+    const offset = clampInt(body.offset, 0, 5000, 0);
+    // Over-fetch 2x: some ids are DLC, editions or coverless and get dropped
+    // below. Stepping the primitive offset by the same factor keeps pages from
+    // overlapping, so no game can show up on two pages.
+    const primResp = await igdbFetch(
+      '/popularity_primitives',
+      `fields game_id; where popularity_type = ${POPULARITY_TYPE_PLAYING}; sort value desc; limit ${limit * 2}; offset ${offset * 2};`
+    );
+    if (!primResp.ok) return null;
+    const prims = await primResp.json();
+    const ids = (Array.isArray(prims) ? prims : []).map((p) => p && p.game_id).filter(Boolean);
+    if (!ids.length) return null;
+
+    const gamesResp = await igdbFetch(
+      '/games',
+      `fields ${GAME_FIELDS}; where id = (${ids.join(',')}) & version_parent = null & parent_game = null & game_type = (0,4,8,9,10,11) & cover != null; limit ${ids.length};`
+    );
+    if (!gamesResp.ok) return null;
+    const games = await gamesResp.json();
+    if (!Array.isArray(games) || !games.length) return null;
+
+    // Restore the order the popularity feed returned them in.
+    const rank = {};
+    ids.forEach((id, i) => { rank[id] = i; });
+    games.sort((a, b) => (rank[a.id] == null ? 1e9 : rank[a.id]) - (rank[b.id] == null ? 1e9 : rank[b.id]));
+    return games.slice(0, limit);
   }
 
   async function persistGames(games) {
@@ -411,6 +451,24 @@ module.exports = (verifyToken, checkBanned, db) => {
       // browse-level columns, so it is a fallback for when IGDB is unavailable,
       // not the primary source.
       const searchTerm = detailId ? '' : sanitizeToken(body.search, 80);
+
+      // Plain "Popularity" browse (no search, no filters) uses the real
+      // popularity feed. Anything narrower keeps the where-clause path so the
+      // filters, sorting and pagination all still apply server-side.
+      const plainPopular = !detailId && !searchTerm && body.sort === 'popularity' &&
+        !body.comingSoon && !body.trending && !body.genre && !body.platform &&
+        !body.gameMode && !body.year && !body.minRating && !body.publisher && !body.developer;
+      if (plainPopular) {
+        const popular = await fetchPopularGames(body).catch(() => null);
+        if (popular && popular.length) {
+          cache.set(cacheKey, popular, TTL.list);
+          persistGames(popular).catch(() => {});
+          res.setHeader('X-Cache', 'MISS');
+          return res.json(popular);
+        }
+        // Feed unavailable: fall through to the rating-count ordering below.
+      }
+
       let response = await igdbFetch('/games', buildGamesQuery(body));
       let data = await response.json();
 
