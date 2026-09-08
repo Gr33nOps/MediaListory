@@ -375,11 +375,11 @@ try {
 }
 
 try {
-  const myGameListRoutes = require('./myGameList');
-  app.use('/api/user', myGameListRoutes(db, verifyToken, checkBanned));
-  console.log('  MyGameList routes loaded');
+  const libraryRoutes = require('./library');
+  app.use('/api/user', libraryRoutes(db, verifyToken, checkBanned));
+  console.log('  Library routes loaded');
 } catch (error) {
-  console.error('  Error loading myGameList routes:', error.message);
+  console.error('  Error loading library routes:', error.message);
   process.exit(1);
 }
 
@@ -451,7 +451,7 @@ try {
   const authRoutes = require('./auth');
   const homeRoutes = require('./home');
   const profileRoutes = require('./profile');
-  const myGameListRoutes = require('./myGameList');
+  const libraryRoutes = require('./library');
   const friendsRoutes = require('./friends');
   const userProfileRoutes = require('./userProfile');
   const adminRoutes = require('./admin');
@@ -463,7 +463,7 @@ try {
   app.use('/api/v1/auth', authLimiter, authRoutes(db, jwt, JWT_SECRET, verifyToken, checkBanned));
   app.use('/api/v1', homeRoutes(db));
   app.use('/api/v1/user', profileRoutes(db, verifyToken, checkBanned));
-  app.use('/api/v1/user', myGameListRoutes(db, verifyToken, checkBanned));
+  app.use('/api/v1/user', libraryRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1', friendsRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/users', userProfileRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/admin', adminRoutes(db, verifyToken, verifyModerator, verifyAdmin, logModeratorActivity));
@@ -503,7 +503,7 @@ app.get('/movies.html', (req, res) => res.sendFile(path.join(frontendPath, 'movi
 app.get('/series.html', (req, res) => res.sendFile(path.join(frontendPath, 'series.html')));
 app.get('/anime.html', (req, res) => res.sendFile(path.join(frontendPath, 'anime.html')));
 app.get('/profile.html', (req, res) => res.sendFile(path.join(frontendPath, 'profile.html')));
-app.get('/myGameList.html', (req, res) => res.sendFile(path.join(frontendPath, 'myGameList.html')));
+app.get('/library.html', (req, res) => res.sendFile(path.join(frontendPath, 'library.html')));
 app.get('/friends.html', (req, res) => res.sendFile(path.join(frontendPath, 'friends.html')));
 app.get('/userProfile.html', (req, res) => res.sendFile(path.join(frontendPath, 'userProfile.html')));
 app.get('/terms.html', (req, res) => res.sendFile(path.join(frontendPath, 'terms.html')));

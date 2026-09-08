@@ -13,7 +13,7 @@ Allow: /terms.html
 Allow: /privacy.html
 
 Disallow: /auth.html
-Disallow: /myGameList.html
+Disallow: /library.html
 Disallow: /profile.html
 Disallow: /friends.html
 Disallow: /userProfile.html

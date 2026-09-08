@@ -225,7 +225,7 @@ function displayStats(games, followers, following) {
         el.className = 'cat-breakdown';
         el.removeAttribute('style');
         el.innerHTML = order.map(function(o) {
-            return '<a class="cat-stat" data-cat="' + o[0] + '" href="myGameList.html" title="View your ' + o[1] + '">' +
+            return '<a class="cat-stat" data-cat="' + o[0] + '" href="library.html" title="View your ' + o[1] + '">' +
                 '<span class="cs-num">' + (breakdown[o[0]] || 0) + '</span>' +
                 '<span class="cs-label">' + o[1] + '</span></a>';
         }).join('');

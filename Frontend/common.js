@@ -771,7 +771,7 @@
 
       var menuItems =
         '<div class="nav-menu-name" aria-hidden="true">' + esc(nameStr) + '</div>' +
-        '<a role="menuitem" href="myGameList.html" class="nav-menu-item' + (active === 'list' ? ' active' : '') + '">My Library</a>' +
+        '<a role="menuitem" href="library.html" class="nav-menu-item' + (active === 'list' ? ' active' : '') + '">My Library</a>' +
         '<a role="menuitem" href="profile.html" class="nav-menu-item' + (active === 'profile' ? ' active' : '') + '">My profile</a>';
       menuItems += '<button type="button" role="menuitem" class="nav-menu-item nav-menu-danger" id="navLogoutBtn">Log out</button>';
 
@@ -999,7 +999,7 @@
           '<li><a href="home.html">Games</a></li>' +
         '</ul></div>' +
         '<div class="footer-col"><h4>Your space</h4><ul>' +
-          '<li><a href="myGameList.html">My Library</a></li>' +
+          '<li><a href="library.html">My Library</a></li>' +
           '<li><a href="profile.html">Profile</a></li>' +
         '</ul></div>' +
         '<div class="footer-col"><h4>Data &amp; Credits</h4><ul>' +
