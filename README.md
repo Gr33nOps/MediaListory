@@ -4,12 +4,12 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 > Formerly "My Game List" — now expanded from games-only to movies + series + anime + games.
 
-[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://medialistory.onrender.com)
+[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://medialistory.vercel.app)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
 [![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/MediaListory/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/MediaListory/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**Live:** [medialistory.onrender.com](https://medialistory.onrender.com)
+**Live:** [medialistory.vercel.app](https://medialistory.vercel.app) — frontend on Vercel, API on [medialistory.onrender.com](https://medialistory.onrender.com).
 
 ## Screenshots
 
@@ -22,8 +22,10 @@ Track what you play and watch, rate your library, and discover with friends — 
 - **One app, four categories** — **Movies** & **Shows** (TMDB), **Anime** (Kitsu), **Games** (IGDB), each with its own discovery, search, and detail pages, sharing the same tracking, rating, notes, lists, and profile UI
 - **Home dashboard** — a personal landing page with "Up Next" (in-progress shows/anime + one-tap episode +1) and per-category trending rows
 - **Global search** — a nav search box (or `/` · `⌘K`/`Ctrl-K`) that autocompletes across all four categories with keyboard navigation and deep-links to detail
+- **Relevance-ranked browse search** — each category searches its own provider server-side (IGDB native search, TMDB, Kitsu), with exact/prefix title matches surfaced first and no misleading page-local filtering
+- **Filters & sorting per category** — only the filters and sort options each API genuinely supports, resolved server-side and combinable with search and pagination: e.g. genre/year/rating/language/runtime/status (Movies·Shows), category/season/format/status/age-rating (Anime), genre/platform/mode/year/rating (Games)
 - **Rich detail pages** — cast, trailer, where-to-watch providers, ratings, and "more like this", pulled live per title
-- **Track & organize** — status (game "play" / movie·show·anime "watch"), score 1–10, notes; episode progress for shows & anime; mixed-media custom lists
+- **Track, review & organize** — status (game "play" / movie·show·anime "watch"), score 1–10, and an optional review/note per title (skippable, editable later, shown on your library and profile); episode progress for shows & anime; mixed-media custom lists
 - **Your Stats / year-in-review** — hours, top genres, score distribution, category & status breakdowns, activity timeline, with a per-year switcher
 - **Release calendar** — upcoming movies, shows, anime, and games merged and grouped by month, filterable by category
 - **List import** — bring a collection in from a CSV (Letterboxd / MAL / Trakt) or a MediaListory JSON export, with a per-row match preview
@@ -35,9 +37,9 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 ## Stack
 
-Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres**. Email/password identity via Neon Auth; social sign-in via direct same-origin OAuth2 (Google/GitHub). Content from TMDB (movies/series), Kitsu (anime — no key), and IGDB (games). Deployed on **Render** (serves the full app — frontend + API).
+Vanilla HTML/CSS/JS frontend, Node/Express API, **Neon Postgres**. Email/password identity via Neon Auth; social sign-in via direct OAuth2 (Google/GitHub). Content from TMDB (movies/series), Kitsu (anime — no key), and IGDB (games). **Split deploy:** the static frontend runs on **Vercel** and calls the API on **Render** cross-origin. (Render can also serve the frontend itself as a same-origin fallback.)
 
-> Migrated off Supabase to Neon. The app mints its own session JWT (httpOnly cookie), so all data/features are unchanged. Social sign-in uses a self-hosted OAuth2 code flow on our own origin, so cookies are first-party.
+> Migrated off Supabase to Neon. The app mints its own session JWT (httpOnly cookie). The API runs the OAuth2 code exchange itself and the frontend sends credentialed cross-origin requests to it, so sessions work across the Vercel ↔ Render split.
 
 ### Media model
 
@@ -74,8 +76,9 @@ Do not set `ALLOW_DEGRADED=1` in production.
 
 ## Deploy
 
-1. **Render** (canonical — serves frontend + API): Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB (Kitsu needs no key), and — for social sign-in — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://medialistory.onrender.com` (include `https://`).
-2. **OAuth apps:** register the redirect URIs on each provider — Google: `https://medialistory.onrender.com/api/auth/oauth/google/callback`; GitHub: `https://medialistory.onrender.com/api/auth/oauth/github/callback`. The flow is same-origin (no external auth domain), so cookies stay first-party.
+1. **Render** (API): Web service, `npm start`, env from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, TMDB (Kitsu needs no key), and — for social sign-in — `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://medialistory.vercel.app` (include `https://`) so CORS and OAuth redirects target the Vercel frontend.
+2. **Vercel** (frontend): static deploy of `Frontend/` (see [`vercel.json`](vercel.json)) — no build step. It calls the Render API cross-origin (the API origin is set in [`Frontend/common.js`](Frontend/common.js), and allowed in the Vercel CSP `connect-src`).
+3. **OAuth apps:** register the redirect URIs on each provider against the **API origin** — Google: `https://medialistory.onrender.com/api/auth/oauth/google/callback`; GitHub: `https://medialistory.onrender.com/api/auth/oauth/github/callback`. The API runs the code exchange and redirects back to `FRONTEND_URL`.
 
 Details: [`docs/runbook.md`](docs/runbook.md). Probes: `/health` (up), `/ready` (DB + IGDB).
 
@@ -97,7 +100,7 @@ semgrep scan --config p/security-audit --config p/secrets --config p/javascript 
 
 ```text
 MediaListory/
-├── Backend/          Express API (routes + IGDB)
+├── Backend/          Express API (routes + TMDB/Kitsu/IGDB proxies)
 ├── Frontend/         Static pages, CSS, JS
 ├── DB/
 │   ├── schema.postgres.sql
