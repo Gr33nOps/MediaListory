@@ -185,6 +185,7 @@
   var pendingApiCalls = 0;      // in-flight apiFetch requests
   var apiFetchStarted = false;  // has this page made any real data call yet
   var _onApiActivity = null;    // mountBackendWake hooks this to react to data calls
+  var _onApiIdle = null;        // ...and to react when the last one settles
   function markBackendReady() {
     if (backendReady) return;
     backendReady = true;
@@ -311,9 +312,20 @@
     // actually wait on the API (not static pages like About/Terms).
     apiFetchStarted = true;
     pendingApiCalls++;
+    // Every data call drives the top bar, so there is always a visible sign
+    // that something is loading, not only on full page navigations.
+    if (pendingApiCalls === 1) startTopProgress();
     if (_onApiActivity) { try { _onApiActivity(); } catch (_) {} }
     var settled = false;
-    function fin() { if (settled) return; settled = true; pendingApiCalls = Math.max(0, pendingApiCalls - 1); }
+    function fin() {
+      if (settled) return;
+      settled = true;
+      pendingApiCalls = Math.max(0, pendingApiCalls - 1);
+      if (pendingApiCalls === 0) {
+        finishTopProgress();
+        if (_onApiIdle) { try { _onApiIdle(); } catch (_) {} }
+      }
+    }
     return fetch(API_BASE + path, opts).then(function (res) {
       if (res && res.ok) markBackendReady();
       fin();
@@ -1139,14 +1151,19 @@
     // If the backend answered recently (this browser), treat it as still warm and
     // skip the panel entirely - otherwise every page navigation re-checks from
     // scratch and the cross-origin latency flashes "Server ready" each time.
+    // A backend that answered recently is treated as still warm: no health poll
+    // and no panel on arrival, so moving between pages never flashes a notice.
+    // Requests are still watched below, so one that does hang explains itself.
+    var recentlyReady = false;
     try {
       var readyAt = parseInt(localStorage.getItem('mgl:backendReadyAt') || '0', 10);
-      if (readyAt && (Date.now() - readyAt) < 10 * 60 * 1000) { markBackendReady(); return; }
+      recentlyReady = !!readyAt && (Date.now() - readyAt) < 10 * 60 * 1000;
     } catch (_) {}
+    if (recentlyReady) markBackendReady();
 
-    var GRACE_MS = 2500, MAX_MS = 75000, POLL_MS = 2500;
+    var GRACE_MS = 2500, MAX_MS = 75000, POLL_MS = 2500, SLOW_MS = 4000;
     var startedAt = Date.now();
-    var el = null, hideTimer = null, elapsedTimer = null, stopped = false;
+    var el = null, hideTimer = null, elapsedTimer = null, stopped = false, slowTimer = null;
 
     var COPY = {
       waking: {
@@ -1236,10 +1253,30 @@
       });
     }
 
-    _onApiActivity = maybeShow;        // react the moment a data call starts
+    // A request only earns a notice once it has actually been slow, so anything
+    // that answers promptly never draws the panel and the UI stays quiet.
+    function onApiStart() {
+      if (slowTimer) return;
+      slowTimer = setTimeout(function () {
+        slowTimer = null;
+        if (pendingApiCalls > 0 && (!el || el.hidden)) { startedAt = Date.now(); setState('waking'); }
+      }, SLOW_MS);
+    }
+    // Everything settled: drop the watchdog and close the panel if it had opened.
+    function onApiIdle() {
+      if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
+      if (el && !el.hidden && el.getAttribute('data-state') === 'waking') {
+        setState('ready');
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(hide, 700);
+      }
+    }
+
+    _onApiActivity = onApiStart;
+    _onApiIdle = onApiIdle;
     document.addEventListener('mgl:backend-ready', onReady);
-    setTimeout(maybeShow, GRACE_MS);   // catch pages that fetch before the first poll
-    poll();
+    // Only a genuinely cold start polls /health; a warm backend stays silent.
+    if (!recentlyReady) { setTimeout(maybeShow, GRACE_MS); poll(); }
   }
   global.mountBackendWake = mountBackendWake;
   global.isBackendReady = isBackendReady;
