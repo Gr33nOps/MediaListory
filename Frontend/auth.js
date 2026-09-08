@@ -212,8 +212,8 @@ async function checkExistingSession() {
         if (typeof ensureSession === 'function') {
             var restored = await ensureSession();
             if (restored && restored.token) {
-                if (typeof redirectAfterLogin === 'function') redirectAfterLogin('home.html');
-                else window.location.href = 'home.html';
+                if (typeof redirectAfterLogin === 'function') redirectAfterLogin('dashboard.html');
+                else window.location.href = 'dashboard.html';
                 return;
             }
         }
@@ -225,8 +225,8 @@ async function checkExistingSession() {
             cache: 'no-store'
         });
         if (response.ok) {
-            if (typeof redirectAfterLogin === 'function') redirectAfterLogin('home.html');
-            else window.location.href = 'home.html';
+            if (typeof redirectAfterLogin === 'function') redirectAfterLogin('dashboard.html');
+            else window.location.href = 'dashboard.html';
         } else {
             clearSession();
         }
@@ -399,9 +399,9 @@ async function handleOAuthUsernameSubmit(e) {
 function finishOAuthLogin() {
     var next = sessionStorage.getItem('oauthNext') || '';
     sessionStorage.removeItem('oauthNext');
-    if (typeof redirectAfterLogin === 'function') redirectAfterLogin('home.html', next);
-    else if (typeof safeNextUrl === 'function') window.location.href = safeNextUrl('home.html', next);
-    else window.location.href = 'home.html';
+    if (typeof redirectAfterLogin === 'function') redirectAfterLogin('dashboard.html', next);
+    else if (typeof safeNextUrl === 'function') window.location.href = safeNextUrl('dashboard.html', next);
+    else window.location.href = 'dashboard.html';
 }
 
 function hideAllViews() {
@@ -547,8 +547,8 @@ async function handleLogin(e) {
             showSuccess(successDiv, 'Login successful! Redirecting...');
 
             setTimeout(function() {
-                if (typeof redirectAfterLogin === 'function') redirectAfterLogin('home.html');
-                else window.location.href = 'home.html';
+                if (typeof redirectAfterLogin === 'function') redirectAfterLogin('dashboard.html');
+                else window.location.href = 'dashboard.html';
             }, 500);
         } else {
             if (data.emailNotVerified && data.email) {
@@ -613,8 +613,8 @@ async function handleRegister(e) {
             localStorage.setItem('authToken', data.token);
             localStorage.setItem('currentUser', JSON.stringify(data.user));
             localStorage.setItem('lastActivity', Date.now().toString());
-            if (typeof redirectAfterLogin === 'function') redirectAfterLogin('home.html');
-            else window.location.href = 'home.html';
+            if (typeof redirectAfterLogin === 'function') redirectAfterLogin('dashboard.html');
+            else window.location.href = 'dashboard.html';
             return;
         } else if (response.ok) {
             showVerificationPending(email);

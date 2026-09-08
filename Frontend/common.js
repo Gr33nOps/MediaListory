@@ -580,8 +580,8 @@
   }
 
   function currentPageName() {
-    var name = (location.pathname.split('/').pop() || 'home.html').split('?')[0];
-    if (!name || name === 'index.html') return 'home.html';
+    var name = (location.pathname.split('/').pop() || 'dashboard.html').split('?')[0];
+    if (!name || name === 'index.html') return 'dashboard.html';
     return name;
   }
 
@@ -589,8 +589,8 @@
     var next = (typeof nextOverride === 'string' && nextOverride)
       ? nextOverride
       : (new URLSearchParams(location.search).get('next') || '');
-    if (!/^[a-zA-Z0-9._-]+\.html$/.test(next)) return fallback || 'home.html';
-    if (/^(auth|terms|privacy|404|index)\.html$/i.test(next)) return fallback || 'home.html';
+    if (!/^[a-zA-Z0-9._-]+\.html$/.test(next)) return fallback || 'dashboard.html';
+    if (/^(auth|terms|privacy|404|index)\.html$/i.test(next)) return fallback || 'dashboard.html';
     return next;
   }
 
@@ -614,7 +614,7 @@
   }
 
   function redirectAfterLogin(fallback, nextOverride) {
-    var page = safeNextUrl(fallback || 'home.html', nextOverride);
+    var page = safeNextUrl(fallback || 'dashboard.html', nextOverride);
     // Always stay on the current origin (never follow a stale localhost Site URL).
     try {
       location.assign(new URL(page, location.origin).href);
