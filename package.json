@@ -23,10 +23,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Gr33nOps/MediaListory.git"
+    "url": "https://github.com/Gr33nOps/medialistory-code.git"
   },
   "bugs": {
-    "url": "https://github.com/Gr33nOps/MediaListory/issues"
+    "url": "https://github.com/Gr33nOps/medialistory-code/issues"
   },
   "homepage": "https://medialistory.vercel.app",
   "type": "commonjs",

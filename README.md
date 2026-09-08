@@ -6,7 +6,7 @@ Track what you play and watch, rate your library, and discover with friends — 
 
 [![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://medialistory.vercel.app)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white)](package.json)
-[![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/MediaListory/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/MediaListory/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Gr33nOps/medialistory-code/ci.yml?branch=main&style=flat-square)](https://github.com/Gr33nOps/medialistory-code/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
 **Live:** [medialistory.vercel.app](https://medialistory.vercel.app) — frontend on Vercel, API on [medialistory.onrender.com](https://medialistory.onrender.com).
@@ -50,7 +50,7 @@ All media lives in one `games` catalog table, discriminated by `media_type` (`mo
 Node.js 18+ required (20 LTS recommended).
 
 ```bash
-git clone https://github.com/Gr33nOps/MediaListory.git
+git clone https://github.com/Gr33nOps/medialistory-code.git
 cd MediaListory
 cp .env.example .env
 npm install

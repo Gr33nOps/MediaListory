@@ -4,7 +4,7 @@
 
 If you find a security issue in MediaListory, please **do not open a public issue**.
 Instead, report it privately via GitHub's
-[**Report a vulnerability**](https://github.com/Gr33nOps/MediaListory/security/advisories/new)
+[**Report a vulnerability**](https://github.com/Gr33nOps/medialistory-code/security/advisories/new)
 (Security → Advisories), which opens a private channel with the maintainer.
 
 Please include:
