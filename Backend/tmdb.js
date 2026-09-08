@@ -35,6 +35,19 @@ const TTL = {
   detail: 30 * 60 * 1000
 };
 
+// Anime has its own category (Kitsu), so it must never appear under Shows.
+// TMDB's "anime" keyword covers it on /discover; /search takes no keyword
+// params, so Japanese animation is also screened out by genre + language.
+const TMDB_ANIME_KEYWORD = '210024';
+const ANIMATION_GENRE_ID = 16;
+function isJapaneseAnimation(item) {
+  if (!item || item.original_language !== 'ja') return false;
+  const ids = Array.isArray(item.genre_ids)
+    ? item.genre_ids
+    : (Array.isArray(item.genres) ? item.genres.map((g) => g && g.id) : []);
+  return ids.indexOf(ANIMATION_GENRE_ID) !== -1;
+}
+
 module.exports = (verifyToken, checkBanned, db) => {
   const router = express.Router();
   const cache = createTtlCache();
@@ -149,6 +162,8 @@ module.exports = (verifyToken, checkBanned, db) => {
     const today = new Date().toISOString().slice(0, 10);
 
     const isSeries = mediaType === 'series';
+    // Shows never include anime; that lives in its own Kitsu-backed category.
+    if (isSeries) params.without_keywords = TMDB_ANIME_KEYWORD;
     // When the user has already narrowed things down, the strict quality floors
     // below would often leave an empty page, so they relax. Unfiltered browsing
     // keeps the strict floors that make each sort read well.
@@ -429,7 +444,13 @@ module.exports = (verifyToken, checkBanned, db) => {
         return res.status(502).json({ error: 'TMDB API error' });
       }
 
-      let normalized = window.results
+      // Safety net for anime that slipped past the keyword filter, and for the
+      // search endpoint, which accepts no keyword parameters at all.
+      const rows = mediaType === 'series'
+        ? window.results.filter((item) => !isJapaneseAnimation(item))
+        : window.results;
+
+      let normalized = rows
         .map((item) => normalizeTmdb(mediaType, item, maps.byId))
         .filter(Boolean);
 
