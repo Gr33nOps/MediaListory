@@ -863,7 +863,7 @@ async function showGameDetails(gameId) {
                         '</div>' +
                         '<div class="atl-note">' +
                             '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
-                            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Jot a quick review or note, or leave it blank."></textarea>' +
+                            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Write a quick review or note, or leave it blank."></textarea>' +
                         '</div>' +
                         '<div id="customListNote" style="display:none;margin-top:12px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:var(--radius-md);font-size:0.82rem;color:var(--accent-light);">' +
                             'The game will be added to your selected custom list with the status above.' +
