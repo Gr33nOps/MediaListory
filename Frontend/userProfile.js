@@ -281,7 +281,13 @@ function updateUpMediaCounts() {
     document.querySelectorAll('#upMediaTabs .media-tab').forEach(function (tab) {
         var k = tab.dataset.media;
         if (tab.querySelector('.mt-count')) tab.querySelector('.mt-count').textContent = counts[k] || 0;
-        else tab.insertAdjacentHTML('beforeend', ' <span class="mt-count">' + (counts[k] || 0) + '</span>');
+        else {
+            tab.appendChild(document.createTextNode(' '));
+            var countSpan = document.createElement('span');
+            countSpan.className = 'mt-count';
+            countSpan.textContent = counts[k] || 0;
+            tab.appendChild(countSpan);
+        }
     });
 }
 

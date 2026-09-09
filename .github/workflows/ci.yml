@@ -54,9 +54,9 @@ jobs:
           test -f docs/API.md
           test -f docs/openapi.yaml
           test -f docs/runbook.md
-          test ! -d docs/screenshots
-          test -f Frontend/admin.html
-          test -f Frontend/moderator.html
+          test -d docs/screenshots
+          test ! -e Frontend/admin.html
+          test ! -e Frontend/moderator.html
           test ! -e Frontend/landing.js
           test ! -e Frontend/landing.css
           test ! -e Backend/publicShowcase.js
