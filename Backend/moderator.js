@@ -1,4 +1,5 @@
 const express = require('express');
+const avatars = require('./avatars');
 const { syncUserFlags } = require('./userRoles');
 const { clientError } = require('./errors');
 
@@ -30,7 +31,7 @@ module.exports = (db, verifyToken, verifyModerator, logModeratorActivity) => {
       const { search, limit = 100, offset = 0 } = req.query;
 
       let query = db('users').select(
-        'id', 'username', 'email', 'display_name', 'avatar_url',
+        'id', 'username', 'email', 'display_name', ...avatars.columns(db, 'users'),
         'created_at', 'is_moderator', 'is_admin', 'is_banned', 'banned_at', 'ban_reason'
       );
 
@@ -42,10 +43,11 @@ module.exports = (db, verifyToken, verifyModerator, logModeratorActivity) => {
         });
       }
 
-      const users = await query
+      // Avatar data URIs are served from their own cacheable URL; see avatars.js.
+      const users = avatars.decorateAll(req, await query
         .orderBy('created_at', 'desc')
         .limit(parseInt(limit))
-        .offset(parseInt(offset));
+        .offset(parseInt(offset)));
 
       const countResult = await db('users').count('id as total').first();
 

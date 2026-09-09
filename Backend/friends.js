@@ -1,23 +1,26 @@
 const express = require('express');
 const taste = require('./taste');
+const avatars = require('./avatars');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
 
-  function mapDbUser(row, extra = {}) {
+  // req is needed to build absolute avatar URLs; see avatars.js for why the data
+  // URI is no longer inlined into any of these list responses.
+  function mapDbUser(row, extra = {}, req = null) {
     return {
       id:           row.id,
       username:     row.username || 'unknown',
       display_name: row.display_name || row.username || '',
-      avatar_url:   row.avatar_url || null,
+      avatar_url:   avatars.urlFor(req, row),
       is_private:   !!row.is_private,
       ...extra
     };
   }
 
   // Attach my relationship to each listed user: following / requested / none.
-  async function decorateRelationship(meId, rows) {
+  async function decorateRelationship(meId, rows, req) {
     if (!rows.length) return [];
     const ids = rows.map(r => r.id);
     const [following, requested] = await Promise.all([
@@ -28,7 +31,7 @@ module.exports = (db, verifyToken, checkBanned) => {
     const rset = new Set(requested.map(r => r.target_id));
     return rows.map(r => mapDbUser(r, {
       relationship: fset.has(r.id) ? 'following' : (rset.has(r.id) ? 'requested' : 'none')
-    }));
+    }, req));
   }
 
   router.get('/users/search', verifyToken, checkBanned, async (req, res) => {
@@ -46,9 +49,9 @@ module.exports = (db, verifyToken, checkBanned) => {
         })
         .orderBy('username', 'asc')
         .limit(15)
-        .select('id', 'username', 'display_name', 'avatar_url', 'is_private');
+        .select('id', 'username', 'display_name', 'is_private', ...avatars.columns(db, 'users'));
 
-      res.json({ users: await decorateRelationship(req.userId, rows) });
+      res.json({ users: await decorateRelationship(req.userId, rows, req) });
     } catch (error) {
       console.error('Search users error:', error);
       return clientError(res, 400, 'Request failed', error);
@@ -83,7 +86,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         .limit(limit)
         .select(
           'ugl.status', 'ugl.score', 'ugl.progress', 'ugl.updated_at',
-          'u.id as user_id', 'u.username', 'u.display_name', 'u.avatar_url',
+          'u.id as user_id', 'u.username', 'u.display_name',
+          ...avatars.columns(db, 'u'),
           'g.name', 'g.media_type', 'g.game_id as media_ref',
           'g.background_image', 'g.episode_count'
         );
@@ -92,7 +96,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         activity: rows.map(r => ({
           user: {
             id: r.user_id, username: r.username,
-            display_name: r.display_name || r.username, avatar_url: r.avatar_url
+            display_name: r.display_name || r.username,
+            avatar_url: avatars.urlFor(req, { id: r.user_id, avatar_remote: r.avatar_remote, avatar_uploaded: r.avatar_uploaded, avatar_version: r.avatar_version })
           },
           status: r.status,
           score: r.score == null ? null : Number(r.score),
@@ -153,7 +158,7 @@ module.exports = (db, verifyToken, checkBanned) => {
 
       const [rows, following] = await Promise.all([
         db('users').whereIn('id', scores.map(s => s.id)).where('is_banned', false)
-          .select('id', 'username', 'display_name', 'avatar_url', 'is_private'),
+          .select('id', 'username', 'display_name', 'is_private', ...avatars.columns(db, 'users')),
         db('user_follows').where('follower_id', req.userId).select('following_id')
       ]);
       const followed = new Set(following.map(r => String(r.following_id)));
@@ -171,7 +176,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       if (!page.length) return res.json({ users: [] });
 
       // decorateRelationship preserves order, so the scores line back up by index.
-      const decorated = await decorateRelationship(req.userId, page.map(p => p.row));
+      const decorated = await decorateRelationship(req.userId, page.map(p => p.row), req);
       res.json({ users: decorated.map((u, i) => ({ ...u, similarity: page[i].similarity })) });
     } catch (error) {
       console.error('Similar taste discovery error:', error);
@@ -186,7 +191,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         .where('u.is_banned', false)
         .whereNot('u.id', req.userId)
         .limit(60)
-        .select('u.id', 'u.username', 'u.display_name', 'u.avatar_url', 'u.is_private');
+        .select('u.id', 'u.username', 'u.display_name', 'u.is_private', ...avatars.columns(db, 'u'));
 
       if (sort === 'active') {
         // "Most active" ~= level: the more titles tracked, the higher the level.
@@ -202,7 +207,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       }
 
       const rows = await q;
-      res.json({ users: await decorateRelationship(req.userId, rows) });
+      res.json({ users: await decorateRelationship(req.userId, rows, req) });
     } catch (error) {
       console.error('Discover users error:', error);
       return clientError(res, 400, 'Request failed', error);
@@ -216,7 +221,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         .where('f.follower_id', req.userId)
         .where('u.is_banned', false)
         .orderBy('f.created_at', 'desc')
-        .select('u.id', 'u.username', 'u.display_name', 'u.avatar_url', 'u.is_private', 'f.created_at as followed_since');
+        .select('u.id', 'u.username', 'u.display_name', 'u.is_private', 'f.created_at as followed_since', ...avatars.columns(db, 'u'));
       res.json({ following: rows.map(row => mapDbUser(row, { followed_since: row.followed_since, relationship: 'following' })) });
     } catch (error) {
       console.error('Get following error:', error);
@@ -231,8 +236,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         .where('f.following_id', req.userId)
         .where('u.is_banned', false)
         .orderBy('f.created_at', 'desc')
-        .select('u.id', 'u.username', 'u.display_name', 'u.avatar_url', 'u.is_private', 'f.created_at as followed_since');
-      res.json({ followers: await decorateRelationship(req.userId, rows) });
+        .select('u.id', 'u.username', 'u.display_name', 'u.is_private', 'f.created_at as followed_since', ...avatars.columns(db, 'u'));
+      res.json({ followers: await decorateRelationship(req.userId, rows, req) });
     } catch (error) {
       console.error('Get followers error:', error);
       return clientError(res, 400, 'Request failed', error);
@@ -247,7 +252,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         .where('r.target_id', req.userId)
         .where('u.is_banned', false)
         .orderBy('r.created_at', 'desc')
-        .select('u.id', 'u.username', 'u.display_name', 'u.avatar_url', 'u.is_private', 'r.created_at as requested_at');
+        .select('u.id', 'u.username', 'u.display_name', 'u.is_private', 'r.created_at as requested_at', ...avatars.columns(db, 'u'));
       res.json({ requests: rows.map(row => mapDbUser(row, { requested_at: row.requested_at })) });
     } catch (error) {
       console.error('Get follow requests error:', error);

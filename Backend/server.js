@@ -67,6 +67,10 @@ if (dbTarget) {
 }
 
 const app = express();
+// Render terminates TLS in front of the app. Without this, req.protocol reports
+// http, and the absolute avatar URLs built from it would be blocked as mixed
+// content on the https frontend.
+app.set('trust proxy', 1);
 function normalizeFrontendUrl(raw) {
   let url = String(raw || 'http://localhost:3000').trim().replace(/\/$/, '');
   // Browsers send Origin with a scheme; bare hostnames in env break CORS.

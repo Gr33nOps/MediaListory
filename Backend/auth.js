@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const fetch = require('node-fetch');
 const neonAuth = require('./neonAuth');
+const avatars = require('./avatars');
 const { clientError } = require('./errors');
 const {
   ensureLocalUser,
@@ -71,7 +72,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
   }
 
   // Build the client user shape from the local users row (+ optional identity).
-  function formatUser(dbUser, identity = null) {
+  function formatUser(dbUser, identity = null, req = null) {
     const id = (dbUser && dbUser.id) || (identity && identity.id) || null;
     const email = (dbUser && dbUser.email) || (identity && identity.email) || '';
     return {
@@ -79,7 +80,9 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
       email,
       username:     (dbUser && dbUser.username) || (email ? email.split('@')[0] : ''),
       display_name: (dbUser && dbUser.display_name) || (identity && identity.name) || (dbUser && dbUser.username) || '',
-      avatar_url:   (dbUser && dbUser.avatar_url) || (identity && identity.image) || null,
+      // An uploaded picture is served from its own cacheable URL rather than
+      // inlined here; this call runs on every page load. See avatars.js.
+      avatar_url:   avatars.fromValue(req, id, (dbUser && dbUser.avatar_url) || (identity && identity.image) || null, dbUser && dbUser.updated_at),
       is_admin:     (dbUser && dbUser.is_admin) || false,
       is_moderator: (dbUser && dbUser.is_moderator) || false,
       is_banned:    (dbUser && dbUser.is_banned) || false,
@@ -263,7 +266,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
         clearState,
         `mgl_token=${encodeURIComponent(appToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}${secure}`
       ]);
-      const handoff = createOauthCode(appToken, formatUser(dbUser));
+      const handoff = createOauthCode(appToken, formatUser(dbUser, null, req));
       return res.redirect(`${frontend}/auth.html?oauth=done&code=${encodeURIComponent(handoff)}`);
     } catch (error) {
       console.error('OAuth callback error:', error.message);
@@ -324,7 +327,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
       }
 
       const appToken = await issueJwt(dbUser.id, rememberMe);
-      sendAuthSession(res, appToken, formatUser(dbUser, identity), {
+      sendAuthSession(res, appToken, formatUser(dbUser, identity, req), {
         rememberMe,
         needsUsername: false,
         suggestedUsername: dbUser.username
@@ -346,7 +349,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
       }
       await db('users').where({ id: req.userId }).update({ username: clean, updated_at: db.fn.now() });
       const dbUser = await db('users').where({ id: req.userId }).first();
-      res.json({ message: 'Username saved', user: formatUser(dbUser) });
+      res.json({ message: 'Username saved', user: formatUser(dbUser, null, req) });
     } catch (error) {
       return clientError(res, 500, 'Could not save username', error);
     }
@@ -401,7 +404,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
 
       // Neon Auth is configured with verification not required, so sign the user in immediately.
       const appToken = await issueJwt(dbUser.id, false);
-      sendAuthSession(res, appToken, formatUser(dbUser, identity), {
+      sendAuthSession(res, appToken, formatUser(dbUser, identity, req), {
         success: true,
         message: 'Account created!'
       });
@@ -462,7 +465,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
       }
 
       const appToken = await issueJwt(dbUser?.id || identity.id, rememberMe);
-      sendAuthSession(res, appToken, formatUser(dbUser, identity), { rememberMe });
+      sendAuthSession(res, appToken, formatUser(dbUser, identity, req), { rememberMe });
     } catch (error) {
       return clientError(res, 500, 'Login failed', error);
     }
@@ -493,7 +496,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
       }
 
       const token = await issueJwt(userId, true);
-      sendAuthSession(res, token, formatUser(dbUser), { rememberMe: true });
+      sendAuthSession(res, token, formatUser(dbUser, null, req), { rememberMe: true });
     } catch (error) {
       return clientError(res, 500, 'Session restore failed', error);
     }
@@ -504,7 +507,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
       const dbUser = await db('users').where({ id: req.userId }).first();
       if (!dbUser) return res.status(404).json({ error: 'User not found' });
       if (dbUser.is_banned) return res.status(403).json({ error: 'Your account has been banned.' });
-      res.json({ valid: true, user: formatUser(dbUser) });
+      res.json({ valid: true, user: formatUser(dbUser, null, req) });
     } catch (error) {
       return clientError(res, 500, 'Server error', error);
     }
@@ -514,7 +517,7 @@ module.exports = (db, jwt, JWT_SECRET, verifyToken, checkBanned) => {
     try {
       const dbUser = await db('users').where({ id: req.userId }).first();
       if (!dbUser) return res.status(404).json({ error: 'User not found' });
-      res.json({ user: formatUser(dbUser) });
+      res.json({ user: formatUser(dbUser, null, req) });
     } catch (error) {
       return clientError(res, 500, 'Server error', error);
     }

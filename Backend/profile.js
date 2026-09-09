@@ -1,18 +1,26 @@
 const express = require('express');
 const neonAuth = require('./neonAuth');
 const taste = require('./taste');
+const avatars = require('./avatars');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
 
-  function publicUser(u) {
+  // Selected in place of avatar_url so the data URI never leaves Postgres.
+  const USER_FIELDS = ['id', 'email', 'username', 'display_name', 'bio', 'accent',
+                       'banner_style', 'is_private', 'created_at', 'updated_at'];
+  function userSelect() {
+    return db('users').select(...USER_FIELDS, ...avatars.columns(db, 'users'));
+  }
+
+  function publicUser(u, req) {
     return {
       id:           u.id,
       email:        u.email,
       username:     u.username,
       display_name: u.display_name || u.username || '',
-      avatar_url:   u.avatar_url || null,
+      avatar_url:   avatars.urlFor(req, u),
       bio:          u.bio || '',
       accent:       u.accent || null,
       banner_style: u.banner_style || 'posters',
@@ -30,9 +38,9 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   router.get('/profile', verifyToken, checkBanned, async (req, res) => {
     try {
-      const u = await db('users').where({ id: req.userId }).first();
+      const u = await userSelect().where({ id: req.userId }).first();
       if (!u) return res.status(404).json({ error: 'User not found' });
-      res.json({ user: publicUser(u) });
+      res.json({ user: publicUser(u, req) });
     } catch (error) {
       console.error('Get profile error:', error);
       res.status(500).json({ error: 'Server error' });
@@ -46,7 +54,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         return res.status(400).json({ error: 'Display name and email are required' });
       }
 
-      const current = await db('users').where({ id: req.userId }).first();
+      const current = await db('users').where({ id: req.userId }).select('email').first();
       if (!current) return res.status(404).json({ error: 'User not found' });
 
       // Avatar is either a remote https URL (Google/GitHub sign-in, ui-avatars)
@@ -94,8 +102,8 @@ module.exports = (db, verifyToken, checkBanned) => {
       }
 
       await db('users').where({ id: req.userId }).update(updates);
-      const u = await db('users').where({ id: req.userId }).first();
-      res.json({ message: 'Profile updated successfully', user: publicUser(u) });
+      const u = await userSelect().where({ id: req.userId }).first();
+      res.json({ message: 'Profile updated successfully', user: publicUser(u, req) });
     } catch (error) {
       console.error('Update profile error:', error);
       res.status(500).json({ error: 'Server error' });

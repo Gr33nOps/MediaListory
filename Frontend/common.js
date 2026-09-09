@@ -1235,12 +1235,16 @@
     }
     function onReady() {
       stopped = true;
-      if (hideTimer) clearTimeout(hideTimer);
       stopElapsed();
-      if (el && !el.hidden && el.getAttribute('data-state') !== 'ready') {
-        setState('ready');
-        hideTimer = setTimeout(hide, 900);
-      }
+      if (!el || el.hidden) return;
+      if (el.getAttribute('data-state') !== 'ready') setState('ready');
+      /* Always re-arm the hide. This used to clear a pending hide up front and
+         then skip rescheduling it whenever the panel was already in the ready
+         state, so the second onReady (poll() calls it again once the backend has
+         answered) cancelled the dismissal and left "Server ready" on screen for
+         good, over a page that had finished loading. */
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(hide, 900);
     }
     function poll() {
       if (stopped || backendReady) { onReady(); return; }
@@ -1326,19 +1330,37 @@
 
     function freeze(img) {
       if (!img || img.getAttribute('data-still') === '1') return;
-      if ((img.getAttribute('src') || '').slice(0, 15).toLowerCase() !== 'data:image/gif;') return;
+      var src = img.getAttribute('src') || '';
+      // Uploaded avatars now come from their own cacheable URL rather than as a
+      // data URI, so the animated ones are flagged with t=gif rather than being
+      // recognisable from the source itself.
+      var inline = src.slice(0, 15).toLowerCase() === 'data:image/gif;';
+      var hosted = src.indexOf('/avatar?') !== -1 && src.indexOf('t=gif') !== -1;
+      if (!inline && !hosted) return;
       img.setAttribute('data-still', '1');
-      function paint() {
+
+      function paintFrom(source) {
         try {
           var c = document.createElement('canvas');
-          c.width = img.naturalWidth || 128;
-          c.height = img.naturalHeight || 128;
-          c.getContext('2d').drawImage(img, 0, 0);
+          c.width = source.naturalWidth || 128;
+          c.height = source.naturalHeight || 128;
+          c.getContext('2d').drawImage(source, 0, 0);
           img.src = c.toDataURL('image/png');
-        } catch (_) {}
+        } catch (_) { /* tainted or not decodable: leave it animating */ }
       }
-      if (img.complete && img.naturalWidth) paint();
-      else img.addEventListener('load', paint, { once: true });
+
+      if (inline) {
+        if (img.complete && img.naturalWidth) paintFrom(img);
+        else img.addEventListener('load', function () { paintFrom(img); }, { once: true });
+        return;
+      }
+      // A hosted avatar is cross-origin, so it has to be re-fetched with CORS
+      // before a canvas will let us read it back. The route sends
+      // Access-Control-Allow-Origin for exactly this.
+      var probe = new Image();
+      probe.crossOrigin = 'anonymous';
+      probe.onload = function () { paintFrom(probe); };
+      probe.src = src;
     }
 
     function scan(node) {

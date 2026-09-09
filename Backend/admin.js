@@ -1,4 +1,5 @@
 const express = require('express');
+const avatars = require('./avatars');
 const { syncUserFlags } = require('./userRoles');
 const { clientError } = require('./errors');
 
@@ -13,7 +14,7 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
       const { search, limit = 100, offset = 0 } = req.query;
 
       let query = db('users').select(
-        'id', 'username', 'email', 'display_name', 'avatar_url',
+        'id', 'username', 'email', 'display_name', ...avatars.columns(db, 'users'),
         'created_at', 'is_moderator', 'is_admin', 'is_banned', 'banned_at', 'ban_reason'
       );
 
@@ -25,10 +26,12 @@ module.exports = (db, verifyToken, verifyModerator, verifyAdmin, logModeratorAct
         });
       }
 
-      const users = await query
+      // An admin list of up to 100 people used to carry 100 inlined avatar data
+      // URIs. Same treatment as everywhere else; see avatars.js.
+      const users = avatars.decorateAll(req, await query
         .orderBy('created_at', 'desc')
         .limit(parseInt(limit, 10))
-        .offset(parseInt(offset, 10));
+        .offset(parseInt(offset, 10)));
 
       const countQuery = db('users');
       if (search) {

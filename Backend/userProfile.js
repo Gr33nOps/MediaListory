@@ -1,5 +1,6 @@
 const express = require('express');
 const taste = require('./taste');
+const avatars = require('./avatars');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
@@ -7,16 +8,22 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   const CURRENT_LIMIT = 6;
 
-  async function getPublicUser(userId) {
+  // Unauthenticated on purpose: <img> cannot send a bearer token. See avatars.js.
+  router.get('/:userId/avatar', avatars.handler(db));
+
+  async function getPublicUser(userId, req) {
     try {
-      const dbUser = await db('users').where({ id: userId }).first();
+      const dbUser = await db('users').where({ id: userId })
+        .select('id', 'username', 'display_name', 'bio', 'accent', 'banner_style',
+                'is_private', 'is_banned', 'created_at', ...avatars.columns(db, 'users'))
+        .first();
       if (!dbUser) return null;
       if (dbUser.is_banned) return null;
       return {
         id:           dbUser.id,
         username:     dbUser.username     || 'unknown',
         display_name: dbUser.display_name || dbUser.username || '',
-        avatar_url:   dbUser.avatar_url   || null,
+        avatar_url:   req ? avatars.urlFor(req, dbUser) : null,
         bio:          dbUser.bio          || '',
         accent:       dbUser.accent       || null,
         banner_style: dbUser.banner_style || 'posters',
@@ -89,7 +96,7 @@ module.exports = (db, verifyToken, checkBanned) => {
     try {
       const userId = req.params.userId;
 
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       const isSelf = req.userId === userId;
@@ -168,7 +175,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       const userId = req.params.userId;
       if (userId === req.userId) return res.status(400).json({ error: 'Nothing to compare against yourself.' });
 
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       const isFollowing = await db('user_follows')
@@ -264,7 +271,7 @@ module.exports = (db, verifyToken, checkBanned) => {
     try {
       const userId = req.params.userId;
 
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       // Private libraries are only visible to the owner and accepted followers.
@@ -309,7 +316,7 @@ module.exports = (db, verifyToken, checkBanned) => {
   router.get('/:userId/followers', verifyToken, checkBanned, async (req, res) => {
     try {
       const userId = req.params.userId;
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       const rows = await db('user_follows')
@@ -331,7 +338,7 @@ module.exports = (db, verifyToken, checkBanned) => {
   router.get('/:userId/following', verifyToken, checkBanned, async (req, res) => {
     try {
       const userId = req.params.userId;
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       const rows = await db('user_follows')
@@ -353,7 +360,7 @@ module.exports = (db, verifyToken, checkBanned) => {
   router.get('/:userId/lists', verifyToken, checkBanned, async (req, res) => {
     try {
       const userId = req.params.userId;
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       if (user.is_private && req.userId !== userId) {
@@ -391,7 +398,7 @@ module.exports = (db, verifyToken, checkBanned) => {
       const userId = req.params.userId;
       const listId = parseInt(req.params.listId);
 
-      const user = await getPublicUser(userId);
+      const user = await getPublicUser(userId, req);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       const list = await db('custom_lists')
