@@ -1,17 +1,16 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="" width="96" height="96">
+  <img src="docs/assets/logo.png" alt="" width="88" height="88">
 </p>
 
 <h1 align="center">MediaListory</h1>
 
-<p align="center">One library for the movies, shows, anime, and games you go through.</p>
-
 <p align="center">
+  One library for the movies, shows, anime, and games you go through.<br>
   <a href="https://medialistory.vercel.app"><b>medialistory.vercel.app</b></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Gr33nOps/medialistory/actions"><img src="https://img.shields.io/github/actions/workflow/status/Gr33nOps/medialistory/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
+  <a href="https://github.com/Gr33nOps/medialistory/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gr33nOps/medialistory/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
   <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18 or newer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license"></a>
 </p>
@@ -20,39 +19,40 @@ MediaListory started as a game tracker and grew into one place for everything I 
 
 You can browse the whole thing without an account. Sign in when you want to start saving.
 
-The app is live at [medialistory.vercel.app](https://medialistory.vercel.app) and this repository is the code behind it, MIT licensed. If you only came to look, the tour below is the whole story. If you came to run it, skip to [Running it yourself](#running-it-yourself).
+This repository is the app itself, MIT licensed. The tour below is the short version; [Running it yourself](#running-it-yourself) is the long one.
 
 ## A look around
 
-**You land on a dashboard, not a search box.** What you are in the middle of sits at the top, with a one tap "+1 episode" on anything you are partway through, and each category brings its own trending row underneath.
+You land on trending, not on an empty search box. Each category gets its own row, and nothing here is gated: browsing, searching, and opening a title all work signed out.
 
-![The MediaListory dashboard, showing in-progress titles above per-category trending rows](docs/screenshots/home.png)
+![The MediaListory home page, with trending movies and trending shows in separate rows](docs/screenshots/home.png)
 
-**Each category browses on its own terms.** Movies and shows come from TMDB, anime from Kitsu, games from IGDB, and each one only offers the filters its provider genuinely supports. Search is resolved server side, so an exact title match comes back first instead of whatever happened to be on the page you were looking at.
+Every category browses on its own terms, because every provider does. Movies and shows come from TMDB, anime from Kitsu, games from IGDB, and each page only offers the filters its provider genuinely supports. Nothing is filtered client side after the fact, so an exact title match comes back first instead of whatever happened to be on the page you were already looking at.
 
-![Browsing movies with genre, year, and rating filters applied](docs/screenshots/browse.png)
+![The Movies page with the filter panel open, showing genre, year, rating, length, and language](docs/screenshots/browse.png)
 
-**Open anything for the full picture:** cast, trailer, where you can watch or play it, ratings, and a few similar titles to go to next. Adding it to your library takes a status, a score out of ten, and a review if you feel like writing one.
+Open a title and you get the whole record without leaving the grid: genres, director and studio, runtime, the synopsis, a trailer, where to watch it, and a few things to go to next. Saving it takes a status, a score out of ten, and a review if you feel like writing one.
 
-![A movie detail page with cast, trailer, and watch providers](docs/screenshots/detail.png)
+![The Odyssey opened in a detail overlay, showing metadata, synopsis, and trailer](docs/screenshots/detail.png)
 
-**At the end of a year you get to look back on it:** hours, top genres, how your scores are distributed, and where your time actually went by category.
+The four categories are not skins over one page. Each carries its own accent color throughout, so you always know where you are: blue for movies, green for shows, pink for anime, amber for games.
 
-![The stats page, showing hours watched, top genres, and a score distribution](docs/screenshots/stats.png)
+![The Games page, the same layout carrying an amber accent instead of blue](docs/screenshots/games.png)
 
 ## What you can do
 
-Track movies, shows, anime, and games in one library, with a status, a score out of ten, and an optional review on anything. Shows and anime also keep episode progress. Custom lists can mix any of the four.
+Track movies, shows, anime, and games in one library, with a status, a score out of ten, and an optional review on anything. Shows and anime keep episode progress, with a one tap "+1" on whatever you are partway through. Custom lists can mix all four.
 
 Beyond that:
 
-- Search across all four categories from the nav, with `/` or `Ctrl-K` to focus it
-- Filter and sort by what each provider actually exposes: genre, year, rating, language, and runtime for movies and shows; season, format, and age rating for anime; platform and game mode for games
+- Search every category at once from the nav, with `/` or `Ctrl-K` to jump into it
+- Filter and sort on what each provider actually exposes: genre, year, rating, language, and runtime for movies and shows; season, format, and age rating for anime; platform and game mode for games
 - See a release calendar of what is coming next, merged across categories and grouped by month
-- Import a collection from Letterboxd, MAL, or Trakt CSV, or a MediaListory JSON export, with a per row match preview before anything is saved
+- Look back on a year: hours, top genres, score distribution, and where the time went by category
+- Import from a Letterboxd, MAL, or Trakt CSV, or a MediaListory JSON export, with a per row match preview before anything is written
 - Follow people, keep your profile public or private, and see what they finished or rated
 - Sign in with email and password, or with Google or GitHub
-- Switch between light and dark, on desktop or phone, with each category carrying its own accent color
+- Switch between light and dark, on desktop or phone
 
 Admin and moderator dashboards ship with it for handling reports and bans.
 
@@ -68,7 +68,7 @@ Movie and TV data from [TMDB](https://www.themoviedb.org/), anime from [Kitsu](h
 
 A plain HTML, CSS, and JavaScript frontend on a Node and Express API, with **Neon Postgres** behind it. No build step and no frontend framework. Email and password identity comes from Neon Auth; Google and GitHub sign-in runs as a direct OAuth2 code exchange on the API.
 
-The deploy is split: the static frontend runs on **Vercel** and calls the API on **Render** cross origin. Render can also serve the frontend itself as a same origin fallback. The app mints its own session JWT in an httpOnly cookie, and because the API runs the OAuth2 exchange itself, sessions survive the Vercel to Render split.
+The deploy is split. The static frontend runs on **Vercel** and calls the API on **Render** cross origin, and Render can also serve the frontend itself as a same origin fallback. The app mints its own session JWT in an httpOnly cookie, and because the API performs the OAuth2 exchange itself, sessions survive that split.
 
 ### Media model
 
@@ -87,15 +87,15 @@ cp .env.example .env
 npm install
 ```
 
-1. Fill `.env` from [`.env.example`](.env.example): Neon `DATABASE_URL`, Neon Auth, JWT, Twitch/IGDB, and TMDB. Kitsu needs no key, and Google/GitHub OAuth is optional. Get the database string from the Neon Console under Connect, and the auth values from `neon neon-auth status --project-id <id> --branch production`.
-2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql), then the migrations in [`DB/migrations/`](DB/migrations/) in order. Run them through `neon psql` or the Neon SQL editor; see [`DB/README.md`](DB/README.md).
+1. Fill `.env` from [`.env.example`](.env.example): Neon `DATABASE_URL`, Neon Auth, JWT, Twitch/IGDB, and TMDB. Kitsu needs no key, and Google/GitHub OAuth is optional. The database string comes from the Neon Console under Connect, and the auth values from `neon neon-auth status --project-id <id> --branch production`.
+2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql), then the migrations in [`DB/migrations/`](DB/migrations/) in order, through `neon psql` or the Neon SQL editor. See [`DB/README.md`](DB/README.md).
 3. Start it:
 
 ```bash
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Then open [localhost:3000](http://localhost:3000).
 
 | Command | What it does |
 |---------|--------------|
@@ -108,13 +108,13 @@ Do not set `ALLOW_DEGRADED=1` in production. It lets the server boot with a brok
 
 ## Deploy
 
-**Render (API).** A web service running `npm start`, with the environment from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, and TMDB. For social sign-in add `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://medialistory.vercel.app`, including the scheme, so CORS and OAuth redirects point at the frontend.
+**Render (API).** A web service running `npm start`, with the environment from `.env.example`. Use the Neon **pooled** `DATABASE_URL` (`...-pooler...neon.tech/neondb?sslmode=require&channel_binding=require`), plus `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `JWT_SECRET`, IGDB, and TMDB. For social sign-in add `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`. Set `FRONTEND_URL=https://medialistory.vercel.app`, scheme included, so CORS and OAuth redirects point at the frontend.
 
 **Vercel (frontend).** A static deploy of `Frontend/` per [`vercel.json`](vercel.json), no build step. The API origin is set in [`Frontend/common.js`](Frontend/common.js) and allowed in the Vercel CSP `connect-src`.
 
-**OAuth apps.** Register the redirect URIs against the **API origin**, not the frontend: `https://medialistory.onrender.com/api/auth/oauth/google/callback` and `.../github/callback`. The API runs the code exchange and redirects back to `FRONTEND_URL`.
+**OAuth apps.** Register the redirect URIs against the **API origin**, not the frontend: `https://medialistory.onrender.com/api/auth/oauth/google/callback` and the matching `/github/callback`. The API runs the exchange and redirects back to `FRONTEND_URL`.
 
-Health probes: `/health` for liveness, `/ready` for database and IGDB reachability. Full procedures in [`docs/runbook.md`](docs/runbook.md).
+Health probes are `/health` for liveness and `/ready` for database and IGDB reachability. Full procedures live in [`docs/runbook.md`](docs/runbook.md).
 
 ## Maintenance
 
@@ -141,7 +141,11 @@ MediaListory/
 └── .github/          CI and issue templates
 ```
 
-Reference: [API contracts](docs/API.md) · [OpenAPI spec](docs/openapi.yaml) · [Runbook](docs/runbook.md) · [Security policy](SECURITY.md)
+Reference: [API contracts](docs/API.md) · [OpenAPI spec](docs/openapi.yaml) · [Runbook](docs/runbook.md)
+
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the setup, what CI will check, and how the code is laid out. Security issues go through [SECURITY.md](SECURITY.md) rather than the public tracker.
 
 ## License
 
