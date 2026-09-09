@@ -18,6 +18,14 @@ function ratingFromKitsu(avg) {
   return { rating: Number((n / 20).toFixed(2)), metacritic_score: Math.round(n) };
 }
 
+/* Every name Kitsu has for a title, minus the one already used as `name`. */
+function altTitles(a) {
+  const primary = bestTitle(a);
+  const all = Object.values((a && a.titles) || {})
+    .concat((a && a.abbreviatedTitles) || []);
+  return all.filter((t) => t && t !== primary);
+}
+
 function bestTitle(a) {
   if (!a) return 'Untitled';
   if (a.canonicalTitle) return a.canonicalTitle;
@@ -51,6 +59,10 @@ function normalizeKitsuAnime(item, categoriesById) {
     provider: 'kitsu',
     provider_id: String(item.id),
     name: bestTitle(a),
+    /* The show's other names (romanized Japanese, native, alternate English).
+       Search ranks against these too, which is what lets a MyAnimeList export -
+       all romanized Japanese - find the right entry. */
+    alt_titles: altTitles(a),
     background_image: pickImage(a.posterImage),
     backdrop_image: pickImage(a.coverImage) || pickImage(a.posterImage),
     description: a.synopsis || '',
@@ -82,4 +94,4 @@ function categoriesFromIncluded(included) {
   return map;
 }
 
-module.exports = { normalizeKitsuAnime, categoriesFromIncluded, ratingFromKitsu, bestTitle, pickImage };
+module.exports = { normalizeKitsuAnime, categoriesFromIncluded, ratingFromKitsu, bestTitle, altTitles, pickImage };

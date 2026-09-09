@@ -58,6 +58,20 @@ A unique index on `(provider, media_type, provider_id)` guarantees IDs from diff
   items than `limit`. Because a short page therefore no longer means "no more
   results", the response carries an `X-Has-More` header (`1`/`0`), exposed to
   the browser through CORS.
+
+  Every anime carries `franchise_key`, and one that read as a sequel also
+  carries `franchise_sequel: true` - on folded-away entries too, so a caller
+  never has to re-derive the grouping rule for itself. The browse grid uses them
+  to drop a sequel whose parent was shown on an earlier page, which the server
+  cannot see; the list import uses them to group a MyAnimeList export.
+
+  `collapse: false` returns the list uncollapsed. The import needs it: it is
+  matching titles one at a time and has to be able to find the individual
+  seasons. Results are also ranked on the catalog title only, never on a title's
+  other names - ranking on aliases sounds better and is not, because searching
+  "demon slayer" then leads with an obscure show whose alias is exactly that.
+  `alt_titles` is on every anime for callers that are matching a known title
+  rather than searching, which is the case where an alias is good evidence.
 - `POST /api/kitsu/genres` - Kitsu categories, returns `[{ id, name }]`.
 - All proxies require a session or run guest-friendly (read-only) and write results through to the shared catalog. TMDB needs `TMDB_ACCESS_TOKEN` (v4) or `TMDB_API_KEY` (v3); **Kitsu needs no key**. When a provider is unconfigured its endpoints return `503`/`500` and the other media types are unaffected.
 
@@ -150,17 +164,25 @@ stay correct without knowing seasons exist. Seasons are weighted by episode
 count, only rated seasons count, and the result is rounded to a whole score. With
 no season rated the user's own overall is left alone. See `Backend/seasons.js`.
 
-Anime gets there differently. Kitsu models each season as its own top-level
-entry rather than a child of one show, so an anime's seasons are its sibling
-catalog entries. One text search for the franchise title returns them all in a
-single call and `Backend/franchise.js` decides which of the results really are
-the same franchise; they are then numbered by air date. Recaps, shorts and
-compilation movies are left out, so a numbered season is always a real season.
+Anime gets there differently, and by two routes. Kitsu models each season as
+its own top-level entry rather than a child of one show, so an anime's seasons
+are its sibling catalog entries.
 
-The heuristic is a title one, and a deliberately timid one - see
-`Backend/franchise.js`. A franchise whose seasons are named by arc rather than
-by number (Demon Slayer) is not recognised, and returns no seasons rather than
-a wrong list.
+1. **By title** - one text search for the franchise, since Kitsu names sequels
+   off their parent. `Backend/franchise.js` decides which results really are the
+   same franchise. One call, and it answers for most shows.
+2. **By the sequel chain** - when the title route finds nothing, walk Kitsu's
+   `sequel` and `prequel` relationships. This is what handles a franchise whose
+   seasons are named by arc rather than numbered (Demon Slayer's "Yuukaku-hen"),
+   and it works from any season, not just the first: it walks back to the head
+   before walking forward. It costs one request per hop, so it is the fallback
+   rather than the default, runs only when someone opens the panel, and the
+   result is cached in `media_seasons` afterwards.
+
+Either way, recaps, shorts and compilation movies are excluded, so a numbered
+season is always a real season. Each anime season carries `external_ref`, the
+catalog ref of the entry it came from; a show's seasons have `null` there,
+because a TMDB season is not a catalog entry in its own right.
 
 ## Versioning
 

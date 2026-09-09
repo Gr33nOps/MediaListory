@@ -2,6 +2,17 @@
 // CSV export) or from a MediaListory JSON export. Everything runs client-side:
 // each row is matched against the right provider, previewed, then added through
 // the normal POST /user/games endpoint. No new backend surface.
+//
+// Anime needs one extra step. MyAnimeList has no concept of a franchise: every
+// season is its own entry with its own score, so an export carries six separate
+// Attack on Titan rows. Importing those as six library entries would fight the
+// rest of the app, which shows a franchise as one title - and would let one show
+// eat six slots of a Top 10 and count as six shared titles in Similar Taste.
+//
+// So anime rows are matched individually (the search is asked NOT to collapse,
+// or the seasons could not be found at all), then grouped by the franchise key
+// the server puts on every anime. Each group becomes one library entry plus a
+// season rating per row, which is exactly what the rest of the app expects.
 (function (global) {
   'use strict';
 
@@ -33,14 +44,40 @@
     if (/plan|watchlist|want|backlog|wish/.test(s)) return 'plan_to_play';
     return 'plan_to_play';
   }
-  function normScore(v) {
+  function rawScore(v) {
     if (v == null || v === '') return null;
     var n = parseFloat(String(v).replace(',', '.'));
-    if (!Number.isFinite(n) || n <= 0) return null;
-    if (n <= 5) n = Math.round(n * 2);        // 5-star (incl. halves) -> /10
-    else if (n > 10) n = Math.round(n / 10);  // /100 -> /10
-    else n = Math.round(n);
-    return Math.max(1, Math.min(10, n));
+    return (Number.isFinite(n) && n > 0) ? n : null;
+  }
+
+  /* Which scale a file is written in, decided from the file as a whole rather
+     than row by row.
+
+     Row by row is ambiguous and gets it wrong: a 5 is full marks on Letterboxd
+     and a middling score on MyAnimeList, and doubling it turns "this was okay"
+     into "this was perfect". Looking at the highest score in the file settles
+     it - nobody exports a list where nothing scored above 5 out of 10. */
+  function detectScale(values) {
+    var max = 0;
+    values.forEach(function (v) { if (v != null && v > max) max = v; });
+    if (max > 10) return 100;
+    if (max > 5) return 10;
+    return 5;
+  }
+
+  function scaleScore(n, scale) {
+    if (n == null) return null;
+    var out = scale === 100 ? Math.round(n / 10)
+      : scale === 5 ? Math.round(n * 2)
+        : Math.round(n);
+    return Math.max(1, Math.min(10, out));
+  }
+
+  /* Second pass over parsed rows: `score` is the raw number until now. */
+  function applyScoreScale(rows) {
+    var scale = detectScale(rows.map(function (r) { return r.score; }));
+    rows.forEach(function (r) { r.score = scaleScore(r.score, scale); });
+    return rows;
   }
 
   // ── Minimal CSV parser (quotes, commas, CRLF) ───────────────────────────
@@ -95,10 +132,10 @@
         title: title,
         type: (defaultType === 'auto') ? normType(iType >= 0 ? cols[iType] : '', 'movie') : defaultType,
         status: normStatus(iStatus >= 0 ? cols[iStatus] : ''),
-        score: normScore(iScore >= 0 ? cols[iScore] : null)
+        score: rawScore(iScore >= 0 ? cols[iScore] : null)
       });
     }
-    return out;
+    return applyScoreScale(out);
   }
 
   function rowsFromJSON(obj, defaultType) {
@@ -109,7 +146,7 @@
         title: e.name,
         type: (defaultType === 'auto') ? normType(e.media_type, 'movie') : defaultType,
         status: normStatus(e.status),
-        score: normScore(e.score),
+        score: rawScore(e.score),
         ref: e.game_id || null // our own export carries the catalog ref
       });
     }
@@ -118,7 +155,7 @@
       (l.games || []).forEach(pushEntry);
     });
     if (!out.length && Array.isArray(obj)) obj.forEach(pushEntry);
-    return out;
+    return applyScoreScale(out);
   }
 
   // ── Matching ────────────────────────────────────────────────────────────
@@ -140,12 +177,16 @@
     };
   }
 
-  async function searchMany(type, title) {
+  async function searchMany(type, title, limit) {
     try {
+      var body = { search: title, limit: limit || 5 };
+      // The anime grid folds a franchise into one result. Here we are matching
+      // one title at a time and specifically need the individual seasons back.
+      if (type === 'anime') body.collapse = false;
       var res = await global.apiFetch(SEARCH_PATH[type], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ search: title, limit: 5 })
+        body: JSON.stringify(body)
       });
       if (!res.ok) return [];
       var data = await res.json();
@@ -164,6 +205,53 @@
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
+  // ── Picking the right candidate ─────────────────────────────────────────
+  // Search ranks on the catalog title, which is the right call for someone
+  // browsing. Importing is the opposite situation: the row already names a
+  // specific title, so an exact hit on any of that entry's names is the answer.
+  // A MyAnimeList export is entirely romanized Japanese - "Shingeki no Kyojin"
+  // for a show the catalog calls "Attack on Titan" - and without checking the
+  // other names the closest thing to a match is a 360° theatre exhibit whose
+  // catalog title happens to start with the same words.
+
+  function normTitle(v) {
+    return String(v == null ? '' : v)
+      .toLowerCase()
+      .replace(/[\u2018\u2019\u201c\u201d]/g, "'")
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function titleDistance(query, name) {
+    if (!name) return 9;
+    if (name === query) return 0;
+    if (name.indexOf(query + ' ') === 0) return 1;
+    if (name.indexOf(query) === 0) return 2;
+    if ((' ' + name + ' ').indexOf(' ' + query + ' ') !== -1) return 3;
+    if (name.indexOf(query) !== -1) return 4;
+    return 9;
+  }
+
+  function candidateDistance(query, c) {
+    if (!c) return 9;
+    var names = [c.name].concat(c.alt_titles || []).filter(Boolean).map(normTitle);
+    var best = 9;
+    for (var i = 0; i < names.length; i++) best = Math.min(best, titleDistance(query, names[i]));
+    return best;
+  }
+
+  /* Index of the best candidate. Ties keep the provider's own order, so when
+     nothing matches by name the search's ranking still decides. */
+  function bestCandidate(title, cands) {
+    var query = normTitle(title);
+    var bestIdx = 0, best = 10;
+    for (var i = 0; i < cands.length; i++) {
+      var d = candidateDistance(query, cands[i]);
+      if (d < best) { best = d; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+
   async function runMatching() {
     matches = [];
     var progress = document.getElementById('imp-match-progress');
@@ -175,13 +263,87 @@
         matches.push({ row: row, candidates: [], selected: 0, match: { name: row.title }, gameData: { media_type: row.type, name: row.title, game_id: row.ref } });
       } else {
         var cands = await searchMany(row.type, row.title);
+        var pick = cands.length ? bestCandidate(row.title, cands) : 0;
         matches.push({
-          row: row, candidates: cands, selected: 0,
-          match: cands[0] || null,
-          gameData: cands[0] ? buildGameData(row.type, cands[0]) : null
+          row: row, candidates: cands, selected: pick,
+          match: cands[pick] || null,
+          gameData: cands[pick] ? buildGameData(row.type, cands[pick]) : null
         });
         await sleep(140); // stay friendly to the provider rate limiter
       }
+    }
+  }
+
+  // ── Anime franchise grouping ────────────────────────────────────────────
+  // Turns several matched season rows into one parent row that carries the
+  // others as `seasons`. Rows that get folded are marked `foldedInto` so the
+  // preview and the add step both skip them.
+
+  function releasedTime(m) {
+    var t = Date.parse((m && m.match && m.match.released) || '');
+    return isFinite(t) ? t : Number.MAX_SAFE_INTEGER;
+  }
+
+  // The franchise key is the parent's own title, normalized, so it doubles as a
+  // way to go and find the parent when the list never mentioned it.
+  async function findFranchiseParent(key) {
+    var cands = await searchMany('anime', key, 10);
+    for (var i = 0; i < cands.length; i++) {
+      if (cands[i].franchise_key === key && !cands[i].franchise_sequel) return cands[i];
+    }
+    return null;
+  }
+
+  async function groupAnimeFranchises() {
+    var groups = {};
+    matches.forEach(function (m, idx) {
+      if (!m.gameData || m.row.type !== 'anime') return;
+      var key = m.match && m.match.franchise_key;
+      if (!key) return;
+      (groups[key] = groups[key] || []).push(idx);
+    });
+
+    for (var key in groups) {
+      var idxs = groups[key];
+      if (idxs.length < 2) continue;
+
+      // Prefer the entry that is nobody's sequel; that is the franchise itself.
+      var parentIdx = -1;
+      for (var i = 0; i < idxs.length; i++) {
+        if (!matches[idxs[i]].match.franchise_sequel) { parentIdx = idxs[i]; break; }
+      }
+
+      var parent = matches[parentIdx];
+      if (parentIdx === -1) {
+        /* The list had seasons 2 and 3 but never season 1. Rather than filing
+           the whole run under "Season 2", go and fetch the real parent and add
+           that, so the library entry is the show and not a fragment of it. */
+        var found = await findFranchiseParent(key);
+        await sleep(140);
+        var earliest = idxs.slice().sort(function (a, b) { return releasedTime(matches[a]) - releasedTime(matches[b]); })[0];
+        if (!found) { parentIdx = earliest; parent = matches[parentIdx]; }
+        else {
+          parent = {
+            row: { title: found.name, type: 'anime', status: null, score: null },
+            candidates: [], selected: 0, match: found, gameData: buildGameData('anime', found),
+            addedForFranchise: true
+          };
+          matches.push(parent);
+          parentIdx = matches.length - 1;
+          idxs = idxs.concat([parentIdx]);
+        }
+      }
+
+      parent.seasons = [];
+      idxs.forEach(function (idx) {
+        if (idx === parentIdx) return;
+        matches[idx].foldedInto = parentIdx;
+        parent.seasons.push(matches[idx]);
+      });
+      /* A parent that came from the user's own list is a season in its own
+         right, so its score belongs on season 1 as much as on the title. */
+      if (!parent.addedForFranchise) parent.seasons.push(parent);
+      parent.seasons.sort(function (a, b) { return releasedTime(a) - releasedTime(b); });
     }
   }
 
@@ -303,22 +465,36 @@
     overlay.querySelector('#impPreviewRows').innerHTML = '';
     overlay.querySelector('#impPreviewSummary').textContent = '';
     await runMatching();
+    await groupAnimeFranchises();
     renderPreview();
   }
 
   function renderPreview() {
-    var matched = matches.filter(function (m) { return m.gameData; });
+    var visible = matches.filter(function (m) { return m.foldedInto == null; });
+    var matched = visible.filter(function (m) { return m.gameData; });
+    var folded = matches.filter(function (m) { return m.foldedInto != null; }).length;
+    var fromList = matches.filter(function (m) { return !m.addedForFranchise; }).length;
     var progress = document.getElementById('imp-match-progress');
     if (progress) progress.textContent = '';
+    var missed = visible.length - matched.length;
     overlay.querySelector('#impPreviewSummary').innerHTML =
-      '<strong>' + matched.length + '</strong> of ' + matches.length + ' rows matched. ' +
-      (matches.length - matched.length ? (matches.length - matched.length) + ' could not be found and will be skipped.' : '');
+      '<strong>' + matched.length + '</strong> of ' + fromList + ' rows matched. ' +
+      (missed ? missed + ' could not be found and will be skipped. ' : '') +
+      (folded ? folded + ' anime ' + (folded === 1 ? 'row was a season' : 'rows were seasons') +
+        ' of a show already listed here, and will come in as season ratings rather than separate entries.' : '');
     overlay.querySelector('#impPreviewRows').innerHTML = matches.map(function (m, idx) {
+      if (m.foldedInto != null) return '';
       var ok = !!m.gameData;
       var cat = m.row.type;
       // Match cell: a picker when there's a choice, else the single matched title.
       var matchCell;
-      if (ok && m.candidates && m.candidates.length > 1) {
+      if (m.seasons) {
+        /* No picker on a franchise: the grouping already settled which entry
+           this is, and letting it be changed here would leave the seasons
+           hanging off a title they do not belong to. */
+        matchCell = '<span class="imp-title-match">→ ' + esc(m.match.name) + '</span>' +
+          '<span class="imp-title-sub">' + m.seasons.length + ' seasons from your list</span>';
+      } else if (ok && m.candidates && m.candidates.length > 1) {
         var opts = m.candidates.map(function (c, i) {
           return '<option value="' + i + '"' + (i === m.selected ? ' selected' : '') + '>' + esc(candidateName(cat, c)) + '</option>';
         }).join('');
@@ -332,38 +508,152 @@
         '<td class="imp-c-status">' + (ok ? '<span class="imp-ok">✓</span>' : '<span class="imp-miss">-</span>') + '</td>' +
         '<td class="imp-c-title"><span class="imp-title-in">' + esc(m.row.title) + '</span>' + matchCell + '</td>' +
         '<td><span class="cal-badge cal-badge-' + cat + '">' + (CAT_LABEL[cat] || '') + '</span></td>' +
-        '<td class="imp-c-meta">' + esc(global.statusLabel ? global.statusLabel(m.row.status, cat) : m.row.status) +
-          (m.row.score ? ' · ' + m.row.score + '/10' : '') + '</td></tr>';
+        '<td class="imp-c-meta">' + (m.addedForFranchise
+          ? '<span class="imp-title-sub">from your season rows</span>'
+          : esc(global.statusLabel ? global.statusLabel(m.row.status, cat) : m.row.status) +
+            (m.row.score ? ' · ' + m.row.score + '/10' : '')) + '</td></tr>';
     }).join('');
     var addBtn = overlay.querySelector('#impAddBtn');
     addBtn.disabled = matched.length === 0;
     addBtn.textContent = matched.length ? ('Add ' + matched.length + ' matched title' + (matched.length === 1 ? '' : 's')) : 'Nothing to add';
   }
 
+  /* Places each folded row on the right season of the parent that just landed.
+     Seasons are matched by catalog ref, not by name: both sides come from the
+     same provider, so the ref is exact and survives a rename. Anything the
+     season list does not know about is added as its own entry instead, because
+     losing a title the user actually rated is the one unacceptable outcome. */
+  /* Every season of every anime added so far, as ref -> {parent, number}.
+
+     Grouping by title cannot see a franchise whose seasons are named by arc
+     rather than numbered - Demon Slayer's "Yuukaku-hen" and "Katanakaji no
+     Sato-hen" share no stem to strip. But the season list the server builds for
+     the first of them walks Kitsu's sequel chain and comes back with the whole
+     run, which names the second one. So each added anime teaches us its
+     siblings, and a later row that turns out to be one of them becomes a season
+     rating instead of a second library entry for the same show.
+
+     That matters beyond tidiness: two entries for one franchise would take two
+     slots in a Top 10 and count twice in Similar Taste. */
+  var seasonIndex = {};
+
+  async function loadSeasonIndex(parentRef) {
+    var seasons = [];
+    try {
+      var r = await global.apiFetch('/user/games/' + encodeURIComponent(parentRef) + '/seasons');
+      if (r.ok) seasons = (await r.json()).seasons || [];
+    } catch (e) { /* no index: rows simply stay separate entries */ }
+    seasons.forEach(function (s) {
+      if (s.external_ref && !seasonIndex[s.external_ref]) {
+        seasonIndex[s.external_ref] = { parent: parentRef, number: s.season_number };
+      }
+    });
+    return seasons;
+  }
+
+  async function rateSeason(parentRef, number, row) {
+    try {
+      var put = await global.apiFetch('/user/games/' + encodeURIComponent(parentRef) + '/seasons/' + number, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: row.status || null, score: row.score })
+      });
+      return put.ok;
+    } catch (e) { return false; }
+  }
+
+  /* Places each folded row on the right season of the parent that just landed.
+     Seasons are matched by catalog ref, not by name: both sides come from the
+     same provider, so the ref is exact and survives a rename. Anything the
+     season list does not know about is added as its own entry instead, because
+     losing a title the user actually rated is the one unacceptable outcome. */
+  async function applySeasons(parent) {
+    var ref = parent.gameData && parent.gameData.game_id;
+    if (!ref) return { rated: 0, leftover: [] };
+
+    await loadSeasonIndex(ref);
+
+    var rated = 0, leftover = [];
+    var members = parent.seasons || [];
+    for (var i = 0; i < members.length; i++) {
+      var member = members[i];
+      var memberRef = member.gameData && member.gameData.game_id;
+      var slot = seasonIndex[memberRef];
+      if (!slot || slot.parent !== ref) { if (member !== parent) leftover.push(member); continue; }
+      if (await rateSeason(ref, slot.number, member.row)) rated++;
+      await sleep(90);
+    }
+    return { rated: rated, leftover: leftover };
+  }
+
   async function onAdd() {
-    var toAdd = matches.filter(function (m) { return m.gameData; });
+    var toAdd = matches.filter(function (m) { return m.gameData && m.foldedInto == null; });
     if (!toAdd.length) return;
     show('run');
     var fill = overlay.querySelector('#impRunFill');
     var msg = overlay.querySelector('#impRunMsg');
-    var added = 0, dupe = 0, failed = 0;
-    for (var i = 0; i < toAdd.length; i++) {
-      var m = toAdd[i];
+    var added = 0, dupe = 0, failed = 0, rated = 0;
+    async function addOne(m) {
       try {
         var res = await global.apiFetch('/user/games', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ game_data: m.gameData, status: m.row.status, score: m.row.score })
         });
-        if (res.ok) added++;
-        else if (res.status === 400) { var d = await res.json().catch(function () { return {}; }); (/already/i.test(d.error || '') ? dupe++ : failed++); }
-        else failed++;
+        if (res.ok) { added++; return true; }
+        if (res.status === 400) {
+          var d = await res.json().catch(function () { return {}; });
+          if (/already/i.test(d.error || '')) { dupe++; return true; }
+        }
+        failed++;
       } catch (e) { failed++; }
+      return false;
+    }
+
+    seasonIndex = {};
+    for (var i = 0; i < toAdd.length; i++) {
+      var m = toAdd[i];
+      var ref = m.gameData.game_id;
+
+      /* Already known as a season of something added a moment ago: rate it
+         there instead of giving the same show a second library entry. */
+      var known = m.row.type === 'anime' ? seasonIndex[ref] : null;
+      if (known) {
+        if (await rateSeason(known.parent, known.number, m.row)) rated++;
+        fill.style.width = Math.round(((i + 1) / toAdd.length) * 100) + '%';
+        await sleep(90);
+        continue;
+      }
+
+      var landed = await addOne(m);
+      if (landed && m.row.type === 'anime') {
+        if (m.seasons) {
+          msg.textContent = 'Adding seasons for ' + m.match.name + '…';
+          var result = await applySeasons(m);
+          rated += result.rated;
+          // A season the provider does not list is still a title the user rated.
+          for (var j = 0; j < result.leftover.length; j++) await addOne(result.leftover[j]);
+        } else {
+          /* Not part of a group by title, but it may still front a franchise -
+             learn its siblings so later rows can land on it. */
+          await loadSeasonIndex(ref);
+          /* If it turns out to be one of its own seasons, its score has to be
+             recorded there too. Otherwise the first sibling to fold in becomes
+             the only rated season, and the overall is rewritten from that one
+             row - quietly replacing the score the user actually gave. */
+          var own = seasonIndex[ref];
+          if (own && own.parent === ref && m.row.score != null) {
+            if (await rateSeason(ref, own.number, m.row)) rated++;
+          }
+        }
+      }
       fill.style.width = Math.round(((i + 1) / toAdd.length) * 100) + '%';
       msg.textContent = 'Adding ' + (i + 1) + ' of ' + toAdd.length + '… (' + added + ' added, ' + dupe + ' already there, ' + failed + ' failed)';
       await sleep(90);
     }
-    msg.innerHTML = '<strong>Done.</strong> ' + added + ' added, ' + dupe + ' already in your library' + (failed ? ', ' + failed + ' failed' : '') + '.';
+    msg.innerHTML = '<strong>Done.</strong> ' + added + ' added, ' + dupe + ' already in your library' +
+      (rated ? ', ' + rated + ' season rating' + (rated === 1 ? '' : 's') + ' kept' : '') +
+      (failed ? ', ' + failed + ' failed' : '') + '.';
     overlay.querySelector('#impDoneBtn').hidden = false;
     if (global.toast) global.toast(added + ' title' + (added === 1 ? '' : 's') + ' imported', added ? 'success' : 'info');
   }

@@ -200,6 +200,29 @@
     } catch (_) {}
   }
 
+  /* The server folds an anime franchise into one tile, but it can only see the
+     page in front of it. Attack on Titan's parent can sit at the end of page 1
+     and The Final Season at the top of page 2, where there is no parent left to
+     fold it into - so the wall of near-identical seasons comes back one page
+     later. Remembering which franchises have already been shown closes that.
+
+     Only an entry the server marked as a sequel is ever dropped, so a title that
+     merely shares a stem still gets its own tile. Page 1 starts fresh, which is
+     also what makes a new search or filter start fresh. */
+  var seenFranchises = {};
+
+  function foldSeenFranchises(items) {
+    if (MEDIA_TYPE !== 'anime') return items;
+    if (currentPage === 1) seenFranchises = {};
+    return items.filter(function (m) {
+      var key = m && m.franchise_key;
+      if (!key) return true;
+      if (m.franchise_sequel && seenFranchises[key]) return false;
+      seenFranchises[key] = true;
+      return true;
+    });
+  }
+
   function skeletonCards(n) {
     var one = '<div class="skeleton-card"><div class="skeleton skel-poster"></div>' +
       '<div class="skel-info"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w50"></div></div></div>';
@@ -245,6 +268,7 @@
 
       var data = await r.json();
       if (r.ok && Array.isArray(data)) {
+        data = foldSeenFranchises(data);
         data.forEach(function (m) { if (m && m.id) lastResults[m.id] = m; });
         /* Anime tiles collapse a franchise into one entry, so a short page no
            longer means the end of the results. The server sends the answer. */

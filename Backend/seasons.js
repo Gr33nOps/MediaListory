@@ -78,7 +78,7 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
   async function seasonsFor(userId, game) {
     let seasons = await db('media_seasons')
       .where('game_id', game.id).orderBy('season_number')
-      .select('season_number', 'name', 'episode_count', 'air_date', 'poster_image');
+      .select('season_number', 'name', 'episode_count', 'air_date', 'poster_image', 'external_ref');
 
     if (!seasons.length && deps.fetchSeasons) {
       const fetched = await deps.fetchSeasons(game).catch(() => []);
@@ -94,12 +94,13 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
             name: s.name,
             episode_count: s.episode_count,
             air_date: s.air_date,
-            poster_image: s.poster_image
+            poster_image: s.poster_image,
+            external_ref: s.external_ref || null
           })))
           .onConflict(['game_id', 'season_number']).ignore();
         seasons = await db('media_seasons')
           .where('game_id', game.id).orderBy('season_number')
-          .select('season_number', 'name', 'episode_count', 'air_date', 'poster_image');
+          .select('season_number', 'name', 'episode_count', 'air_date', 'poster_image', 'external_ref');
       }
     }
 
@@ -116,6 +117,9 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
         episode_count: s.episode_count == null ? null : Number(s.episode_count),
         air_date: s.air_date,
         poster_image: s.poster_image,
+        /* Anime seasons are catalog entries of their own; a show's are not.
+           The import uses this to place a MAL row on the right season. */
+        external_ref: s.external_ref || null,
         status: entry.status || null,
         score: entry.score == null ? null : Number(entry.score),
         progress: entry.progress == null ? null : Number(entry.progress)

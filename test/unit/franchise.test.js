@@ -131,3 +131,25 @@ test('a tile says nothing when only one real season was found', () => {
   assert.equal(out.length, 1);
   assert.equal(out[0].franchise_count, undefined);
 });
+
+test('a written-out season number counts as much as a digit', () => {
+  // Kitsu carries both spellings, sometimes within one franchise.
+  assert.equal(franchiseKey('Haikyuu!! Second Season'), franchiseKey('Haikyuu!!'));
+  assert.equal(franchiseKey('Kuroko no Basket 2nd Season'), franchiseKey('Kuroko no Basket'));
+  // ...but the words alone are not a marker, or any title using them would fold.
+  assert.equal(franchiseOf('Second Chance').isSequel, false);
+  assert.equal(franchiseOf('Haikyuu!! To the Top').isSequel, false, 'an arc name is not a season marker');
+});
+
+test('every anime keeps its franchise, folded or not', () => {
+  // The list import groups a MyAnimeList export by this rather than keeping a
+  // second copy of the title rules in the browser, so it has to be on the
+  // sequels too, not only on the entry that survives.
+  const out = collapseFranchises([
+    item('Attack on Titan', '2013-04-07', 25),
+    item('Attack on Titan Season 2', '2017-04-01')
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].franchise_key, 'attack on titan');
+  assert.equal(franchiseOf('Attack on Titan Season 2').key, out[0].franchise_key);
+});

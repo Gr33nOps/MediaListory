@@ -5,7 +5,7 @@ const { createTtlCache } = require('./cache');
 const { sanitizeToken, clampInt, rankSearchResults } = require('./igdbUtils');
 const { mediaToRow } = require('./tmdbUtils');
 const { normalizeKitsuAnime, categoriesFromIncluded } = require('./kitsuUtils');
-const { collapseFranchises } = require('./franchise');
+const { collapseFranchises, franchiseOf } = require('./franchise');
 
 const KITSU_BASE = 'https://kitsu.io/api/edge';
 
@@ -304,6 +304,13 @@ module.exports = (verifyToken, checkBanned, db) => {
 
       // Kitsu's text filter is typo-tolerant and relevance-ranked; this only
       // promotes exact / prefix title matches above near-matches (nothing dropped).
+      /* Ranked on the catalog title only, deliberately. Ranking on a title's
+         other names sounds strictly better and is not: searching "demon slayer"
+         then puts an obscure 2016 show called Onigiri first, because one of its
+         aliases is exactly "Demon Slayer", above the show everyone means. An
+         alias is good evidence when matching a title you already know, which is
+         what the list import does with alt_titles - it is bad evidence when
+         someone is searching and the popular answer should win. */
       if (search) normalized = rankSearchResults(normalized, search, (m) => m && m.name);
 
       /* Everything Kitsu returned is written to the catalog, including the
@@ -312,13 +319,27 @@ module.exports = (verifyToken, checkBanned, db) => {
          view collapses. */
       persist(normalized).catch(() => {});
 
+      /* Every anime carries its franchise, folded or not. It is one short
+         string, and it means a caller never has to re-derive the grouping rule
+         for itself - the list import groups a MyAnimeList export by exactly
+         this, rather than keeping a second copy of the title parsing in the
+         browser that could drift away from this one. */
+      normalized.forEach((m) => {
+        const f = franchiseOf(m.name);
+        m.franchise_key = f.key;
+        if (f.isSequel) m.franchise_sequel = true;
+      });
+
       /* Pages stay aligned to Kitsu's own offsets rather than being topped back
          up to `limit`, so no title is ever skipped or repeated across pages. An
          anime page therefore shows a few tiles fewer than a movie page, which
          is the whole point: those tiles were the same show listed five times.
          Because the client can no longer infer "there is more" from a full
          page, the answer is sent explicitly. */
-      const collapsed = collapseFranchises(normalized);
+      /* Collapsing is for people looking at a grid. A caller that is matching a
+         list of titles one by one needs to find the individual seasons, so it
+         can ask for them - the import does, then groups them itself. */
+      const collapsed = body.collapse === false ? normalized : collapseFranchises(normalized);
       const hasMore = rawCount >= limit;
       cache.set(cacheKey, { items: collapsed, hasMore }, TTL.list);
       res.setHeader('X-Cache', 'MISS');

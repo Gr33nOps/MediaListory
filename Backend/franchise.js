@@ -26,6 +26,9 @@ const MARKERS = [
   /[\s:;,\-–—]*\b(?:the\s+)?(?:final|last)\s+(?:season|chapter)\b.*$/i,
   /[\s:;,\-–—]*\bseason\s+\d+\b.*$/i,
   /[\s:;,\-–—]*\b\d+(?:st|nd|rd|th)\s+season\b.*$/i,
+  /* Written out rather than numbered: Kitsu carries "Haikyuu!! Second Season"
+     right alongside "Boku no Hero Academia 2nd Season". */
+  /[\s:;,\-–—]*\b(?:second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+season\b.*$/i,
   /[\s:;,\-–—]*\bpart\s+\d+\b.*$/i,
   /[\s:;,\-–—]*\bcour\s+\d+\b.*$/i,
   /[\s:;,\-–—]*\b(?:2nd|3rd|4th|5th)\s+(?:stage|series)\b.*$/i,
