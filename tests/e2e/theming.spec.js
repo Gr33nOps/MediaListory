@@ -23,7 +23,7 @@ for (const c of CATEGORY) {
     const brand = page.locator('.nav-brand');
     await expect(brand).toHaveCSS('color', c.brand);
     // the four category tabs each carry a data-cat
-    await expect(page.locator('.nav-actions .btn[data-cat]')).toHaveCount(4);
+    await expect(page.locator('.nav-tab[data-cat]')).toHaveCount(4);
   });
 }
 
