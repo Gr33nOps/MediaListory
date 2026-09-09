@@ -100,6 +100,16 @@
     --transition-fast:   all 0.2s ease;
 }
 
+
+/* `hidden` has to actually hide. The browser's own `[hidden] { display: none }`
+   is weaker than any author class rule, so something like
+   `.backend-wake { display: flex }` silently wins and setting `el.hidden = true`
+   changes the property while the element stays on screen. That is what left the
+   cold-start notice dimming the whole page after it had been dismissed. One
+   guard here covers every element the app toggles this way, rather than another
+   per-class patch each time it surfaces. */
+[hidden] { display: none !important; }
+
 /* ══ Light theme ═════════════════════════════════════════════════════════
    Opt-in via <html data-theme="light"> (toggle in nav, saved to localStorage).
    Only surfaces, text, borders, shadows and the accent *shades* change - the
