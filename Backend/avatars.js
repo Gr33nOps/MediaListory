@@ -128,7 +128,13 @@ function handler(db) {
         'Cache-Control': 'public, max-age=31536000, immutable',
         // Lets the reduced-motion code paint frame one of an animated avatar to
         // a canvas without tainting it.
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        /* The app's default is same-origin, which is right for the API but wrong
+           here: the frontend is on Vercel and this is served from Render, so a
+           same-origin policy makes the browser refuse to render the <img> at all
+           and every avatar silently falls back to the generated initials. This
+           is a public profile picture meant to be embedded, so it opts out. */
+        'Cross-Origin-Resource-Policy': 'cross-origin'
       });
 
       if (req.headers['if-none-match'] === etag) return res.status(304).end();

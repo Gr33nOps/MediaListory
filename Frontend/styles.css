@@ -4813,7 +4813,7 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
     .coll-item-body, .coll-item-main, .coll-item-right { min-width: 0; }
     .coll-item-meta, .coll-item-right { flex-wrap: wrap; }
 
-    .profile-content { padding: 20px 16px; }
+    .profile-content, .pf-manage { padding: 20px 16px; }
     .profile-avatar-section { gap: 16px; margin-bottom: 20px; }
     .profile-avatar { width: 88px; height: 88px; }
     #profileDisplay .profile-avatar-section {
@@ -5158,6 +5158,14 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 }
 
 /* ── Editing your own profile ─────────────────────────────────────────────── */
+/* .profile-section is only the card chrome on this page; the padding comes from
+   .profile-content. These sections are not built from that wrapper, so they take
+   the same inset here instead of sitting flush against the card edge. */
+.pf-manage { padding: 35px; }
+/* Unlike Edit Profile and Change Password, these act on the list directly above
+   them, so they line up with it rather than being centred under it. */
+.pf-manage .profile-actions { justify-content: flex-start; align-items: center; }
+
 .pf-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
 .pf-swatch {
     width: 34px;
