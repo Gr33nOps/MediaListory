@@ -68,6 +68,34 @@ async function loadActivity() {
     } catch (e) { console.error('Load activity error:', e); }
 }
 
+/* What someone did, in words. A score is the strongest thing to say, so it wins;
+   otherwise the status and the kind of media decide the verb, because "watched"
+   is wrong for a game and "played" is wrong for a film. */
+function activityVerb(a) {
+    const title = `<strong>${esc(a.media.name)}</strong>`;
+    const isGame = a.media.media_type === 'game';
+
+    if (a.score != null) {
+        const done = a.status === 'completed';
+        return `rated ${title} ${a.score}/10` + (done ? '' : '');
+    }
+    if (a.status === 'completed') {
+        return (isGame ? 'finished playing ' : 'finished watching ') + title;
+    }
+    if (a.status === 'playing') {
+        if (isGame) return 'is playing ' + title;
+        // Only shows and anime have episodes. A film carrying stray progress
+        // should still read as a film.
+        var episodic = a.media.media_type === 'series' || a.media.media_type === 'anime';
+        if (episodic && a.progress && a.media.episode_count) {
+            return `is on episode ${a.progress} of ${a.media.episode_count} of ${title}`;
+        }
+        if (episodic && a.progress) return `is on episode ${a.progress} of ${title}`;
+        return 'is watching ' + title;
+    }
+    return 'added ' + title;
+}
+
 function displayActivity(items) {
     const section = document.getElementById('activitySection');
     const feed = document.getElementById('activityFeed');
@@ -76,9 +104,7 @@ function displayActivity(items) {
     section.hidden = false;
     feed.innerHTML = items.map(a => {
         const name = a.user.display_name || a.user.username;
-        const verb = (a.score != null)
-            ? `rated <strong>${esc(a.media.name)}</strong> ${a.score}/10`
-            : `finished <strong>${esc(a.media.name)}</strong>`;
+        const verb = activityVerb(a);
         const page = PAGE_FOR_MEDIA[a.media.media_type] || 'home.html';
         const href = `${page}?open=${encodeURIComponent(a.media.media_ref || '')}`;
         const thumb = a.media.background_image

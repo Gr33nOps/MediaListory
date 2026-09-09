@@ -101,6 +101,21 @@ shared rankings and scores. See `Backend/taste.js`.
   and the scores are cached briefly. Visibility is re-checked on every request, so
   going private removes you from other people's suggestions immediately.
 
+## Social
+
+- `GET /api/following/activity?limit=25` - what the people you follow have been
+  doing, newest first. Following is the permission: a private account only gains
+  a follower after approving them, so no extra check is needed beyond the join.
+  `user_game_lists` is updated in place, so `updated_at` is the event time and
+  there is one row per title per person showing its latest state. Planned titles
+  are excluded. Each entry carries `status`, `score`, `progress`, and the media.
+- `GET /api/users/:userId/compare` - the detail behind the headline percentage:
+  `overall`, `categories` (the same score per media type, `percent: null` where
+  there is too little shared), `counts`, `commonTop` (in both Top 10s, with both
+  ranks), `favourites` (both rated, within 1 point), and `disagreements` (both
+  rated, 3 or more apart). 403 for a private account you do not follow, 400 for
+  yourself.
+
 ## Versioning
 
 - Current mounts: `/api/*`

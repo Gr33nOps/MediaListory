@@ -170,3 +170,43 @@ test('cache tells a miss apart from a stored null', () => {
   taste.invalidate('unit-test');
   assert.equal(taste.cacheGet('pair:unit-test'), undefined, 'invalidate drops entries naming the user');
 });
+
+test('a profile can be narrowed to one category', () => {
+  const items = [
+    { game_id: 'm1', score: 9, media_type: 'movie', genres: ['Drama'] },
+    { game_id: 'm2', score: 8, media_type: 'movie', genres: ['Drama'] },
+    { game_id: 'g1', score: 3, media_type: 'game', genres: ['Shooter'] }
+  ];
+  const full = { items, top: { m1: 1, g1: 2 }, topTypes: { m1: 'movie', g1: 'game' }, genres: taste.genreVector(items) };
+
+  const movies = taste.forMediaType(full, 'movie');
+  assert.deepEqual(movies.items.map(i => i.game_id), ['m1', 'm2']);
+  assert.deepEqual(movies.top, { m1: 1 }, 'a game must not appear in the movie Top 10');
+
+  const games = taste.forMediaType(full, 'game');
+  assert.deepEqual(games.items.map(i => i.game_id), ['g1']);
+  assert.deepEqual(games.top, { g1: 2 });
+
+  // Genres are recomputed from the subset. Using the whole-library vector would
+  // drag every category towards whatever the person watches most of.
+  assert.deepEqual(Object.keys(movies.genres), ['Drama']);
+  assert.deepEqual(Object.keys(games.genres), ['Shooter']);
+  assert.deepEqual(taste.forMediaType(full, 'anime').items, []);
+});
+
+test('category scores are independent of each other', () => {
+  // Identical on movies, opposed on games. Comparing per category has to show
+  // that split rather than averaging it away.
+  const mk = (gameScore) => {
+    const items = [
+      ...Array.from({ length: 6 }, (_, i) => ({ game_id: 'm' + i, score: 9, media_type: 'movie', genres: ['Drama'] })),
+      ...Array.from({ length: 6 }, (_, i) => ({ game_id: 'g' + i, score: gameScore, media_type: 'game', genres: ['Shooter'] }))
+    ];
+    return { items, top: {}, topTypes: {}, genres: taste.genreVector(items) };
+  };
+  const a = mk(10), b = mk(1);
+  const movies = taste.similarity(taste.forMediaType(a, 'movie'), taste.forMediaType(b, 'movie'));
+  const games = taste.similarity(taste.forMediaType(a, 'game'), taste.forMediaType(b, 'game'));
+  assert.ok(movies.percent > games.percent,
+    `movies (${movies.percent}%) should beat games (${games.percent}%)`);
+});

@@ -150,6 +150,116 @@ module.exports = (db, verifyToken, checkBanned) => {
     }
   });
 
+  /* Compare two libraries in detail.
+
+     The headline percentage answers "how alike are we". This answers "where",
+     which is the part worth reading: the titles you both rate highly, the ones
+     you disagree most about, what you both put in a Top 10, and the same score
+     computed per category, since two people can match on films and share nothing
+     at all on games. Loaded on demand rather than with the profile, because most
+     visits never open it. */
+  const CATEGORIES = ['movie', 'series', 'anime', 'game'];
+  const COMPARE_LIST_MAX = 12;
+  const AGREE_WITHIN = 1;   // scores this close count as agreeing
+  const DISAGREE_FROM = 3;  // ...and this far apart count as a disagreement
+
+  router.get('/:userId/compare', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      if (userId === req.userId) return res.status(400).json({ error: 'Nothing to compare against yourself.' });
+
+      const user = await getPublicUser(userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      const isFollowing = await db('user_follows')
+        .where({ follower_id: req.userId, following_id: userId }).first();
+      if (user.is_private && !isFollowing) {
+        return res.status(403).json({ error: 'This account is private.' });
+      }
+
+      const profiles = await taste.loadProfiles(db, [req.userId, userId]);
+      const mine = profiles.get(String(req.userId));
+      const theirs = profiles.get(String(userId));
+      if (!mine || !theirs) return res.status(404).json({ error: 'User not found' });
+
+      const overall = taste.similarity(mine, theirs);
+      const categories = {};
+      for (const cat of CATEGORIES) {
+        const a = taste.forMediaType(mine, cat);
+        const b = taste.forMediaType(theirs, cat);
+        const s = taste.similarity(a, b);
+        categories[cat] = s
+          ? { percent: s.percent, shared: s.shared, coRated: s.coRated, topShared: s.topShared }
+          : { percent: null, shared: 0, coRated: 0, topShared: 0, mine: a.items.length, theirs: b.items.length };
+      }
+
+      // Walk the shared titles once, keeping the numbers needed for every list.
+      const theirsById = new Map(theirs.items.map(it => [String(it.game_id), it]));
+      const shared = [];
+      for (const it of mine.items) {
+        const other = theirsById.get(String(it.game_id));
+        if (!other) continue;
+        shared.push({
+          game_id: it.game_id,
+          media_type: it.media_type,
+          yourScore: it.score,
+          theirScore: other.score,
+          diff: (it.score != null && other.score != null) ? Math.abs(it.score - other.score) : null
+        });
+      }
+
+      const rated = shared.filter(s => s.diff != null);
+      const favourites = rated
+        .filter(s => s.diff <= AGREE_WITHIN)
+        .sort((a, b) => (b.yourScore + b.theirScore) - (a.yourScore + a.theirScore))
+        .slice(0, COMPARE_LIST_MAX);
+      const disagreements = rated
+        .filter(s => s.diff >= DISAGREE_FROM)
+        .sort((a, b) => b.diff - a.diff)
+        .slice(0, COMPARE_LIST_MAX);
+
+      // Titles both of us ranked, most highly ranked first.
+      const commonTop = [];
+      for (const key of Object.keys(mine.top || {})) {
+        if (theirs.top?.[key] == null) continue;
+        commonTop.push({
+          game_id: Number(key),
+          media_type: (mine.topTypes || {})[key] || 'game',
+          yourPosition: mine.top[key],
+          theirPosition: theirs.top[key]
+        });
+      }
+      commonTop.sort((a, b) => (a.yourPosition + a.theirPosition) - (b.yourPosition + b.theirPosition));
+
+      // One lookup for every title any of the lists will show.
+      const needed = [...new Set([...favourites, ...disagreements, ...commonTop].map(x => x.game_id))];
+      const media = needed.length
+        ? await db('games').whereIn('id', needed)
+            .select('id', 'game_id as media_ref', 'name', 'background_image', 'media_type')
+        : [];
+      const byId = new Map(media.map(m => [String(m.id), m]));
+      const decorate = (rows) => rows.map(r => {
+        const m = byId.get(String(r.game_id));
+        return m ? { ...r, name: m.name, media_ref: m.media_ref, background_image: m.background_image } : null;
+      }).filter(Boolean);
+
+      res.json({
+        user: { id: user.id, username: user.username, display_name: user.display_name, accent: user.accent },
+        overall: overall
+          ? { percent: overall.percent, shared: overall.shared, coRated: overall.coRated, topShared: overall.topShared }
+          : null,
+        categories,
+        counts: { shared: shared.length, coRated: rated.length, yours: mine.items.length, theirs: theirs.items.length },
+        favourites: decorate(favourites),
+        disagreements: decorate(disagreements),
+        commonTop: decorate(commonTop).slice(0, COMPARE_LIST_MAX)
+      });
+    } catch (error) {
+      console.error('Compare profiles error:', error);
+      return clientError(res, 400, 'Request failed', error);
+    }
+  });
+
   router.get('/:userId/games', verifyToken, checkBanned, async (req, res) => {
     try {
       const userId = req.params.userId;

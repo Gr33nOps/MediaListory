@@ -178,11 +178,16 @@ function buildProfile(rows, topRows) {
     game_id: r.game_id,
     score: r.score == null ? null : Number(r.score),
     status: r.status,
+    media_type: r.media_type || 'game',
     genres: parseGenres(r.genres)
   }));
   const top = {};
-  for (const t of topRows || []) top[String(t.game_id)] = Number(t.position);
-  return { items, top, genres: genreVector(items) };
+  const topTypes = {};
+  for (const t of topRows || []) {
+    top[String(t.game_id)] = Number(t.position);
+    topTypes[String(t.game_id)] = t.media_type || 'game';
+  }
+  return { items, top, topTypes, genres: genreVector(items) };
 }
 
 /* Load the taste profiles for a set of users in two queries rather than two per
@@ -195,8 +200,8 @@ async function loadProfiles(db, userIds) {
     db('user_game_lists as ugl')
       .join('games as g', 'g.id', 'ugl.game_id')
       .whereIn('ugl.user_id', ids)
-      .select('ugl.user_id', 'ugl.game_id', 'ugl.score', 'ugl.status', 'g.genres'),
-    db('user_top_media').whereIn('user_id', ids).select('user_id', 'game_id', 'position')
+      .select('ugl.user_id', 'ugl.game_id', 'ugl.score', 'ugl.status', 'g.media_type', 'g.genres'),
+    db('user_top_media').whereIn('user_id', ids).select('user_id', 'game_id', 'position', 'media_type')
   ]);
 
   const byUser = new Map(ids.map(id => [id, { rows: [], top: [] }]));
@@ -264,9 +269,22 @@ function invalidate(userId) {
   }
 }
 
+/* Narrow a profile to one category so the same scoring can answer "how alike are
+   we on anime" as well as overall. Genres are recomputed from the subset, since a
+   whole-library genre vector would drag every category towards the one the person
+   watches most. */
+function forMediaType(profile, mediaType) {
+  const items = profile.items.filter(it => (it.media_type || 'game') === mediaType);
+  const top = {};
+  for (const key of Object.keys(profile.top || {})) {
+    if ((profile.topTypes || {})[key] === mediaType) top[key] = profile.top[key];
+  }
+  return { items, top, topTypes: profile.topTypes, genres: genreVector(items) };
+}
+
 module.exports = {
   WEIGHTS, MIN_LIBRARY, MIN_SHARED, MIN_CO_RATED,
   overlapScore, ratingScore, topScore, genreScore, genreVector, similarity,
-  parseGenres, buildProfile, loadProfiles, findCandidates,
+  parseGenres, buildProfile, loadProfiles, findCandidates, forMediaType,
   cacheGet, cacheSet, invalidate
 };

@@ -5245,3 +5245,103 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 @media (prefers-reduced-motion: reduce) {
     .pf-current-item, .pf-person, .pf-chip { transition: none; }
 }
+
+/* ── Compare profiles ─────────────────────────────────────────────────────
+   Rows, not cards. Every entry here is a title plus two numbers, which a list
+   states more clearly than a grid of panels would. */
+
+.pf-similar-more {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0;
+    color: var(--text-muted);
+}
+.pf-similar-more:hover { color: var(--pf-accent, var(--cat-movie)); }
+
+.pf-cmp-cats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.pf-cmp-cat {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    align-items: center;
+    gap: 12px;
+}
+.pf-cmp-cat-name { font-size: 0.88rem; font-weight: 600; color: var(--text-secondary); }
+.pf-cmp-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+}
+.pf-cmp-bar > span { display: block; height: 100%; border-radius: 3px; background: var(--cat-movie); }
+.pf-cmp-cat[data-cat="movie"]  .pf-cmp-bar > span { background: var(--cat-movie); }
+.pf-cmp-cat[data-cat="series"] .pf-cmp-bar > span { background: var(--cat-series); }
+.pf-cmp-cat[data-cat="anime"]  .pf-cmp-bar > span { background: var(--cat-anime); }
+.pf-cmp-cat[data-cat="game"]   .pf-cmp-bar > span { background: var(--cat-game); }
+.pf-cmp-pct {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    min-width: 3.2em;
+    text-align: right;
+}
+.pf-cmp-nodata { font-size: 0.78rem; color: var(--text-dim); min-width: 3.2em; text-align: right; }
+.pf-cmp-counts { margin: 0 0 18px; }
+
+.pf-cmp-h {
+    margin: 20px 0 8px;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.pf-cmp-list { display: flex; flex-direction: column; gap: 2px; }
+.pf-cmp-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 6px 10px 6px 6px;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.pf-cmp-row:hover { background: rgba(255, 255, 255, 0.05); }
+.pf-cmp-row[data-cat="movie"]  { border-left-color: var(--cat-movie); }
+.pf-cmp-row[data-cat="series"] { border-left-color: var(--cat-series); }
+.pf-cmp-row[data-cat="anime"]  { border-left-color: var(--cat-anime); }
+.pf-cmp-row[data-cat="game"]   { border-left-color: var(--cat-game); }
+.pf-cmp-row img { width: 30px; height: 44px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
+.pf-cmp-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pf-cmp-scores, .pf-cmp-ranks {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+.pf-cmp-ranks { font-size: 0.82rem; color: var(--text-muted); }
+.pf-cmp-vs { font-size: 0.7rem; font-weight: 500; color: var(--text-dim); }
+/* Only a real gap is coloured; agreement needs no emphasis to be readable. */
+.pf-cmp-scores.is-apart .pf-cmp-you  { color: var(--cat-series-light); }
+.pf-cmp-scores.is-apart .pf-cmp-them { color: var(--red-light); }
+
+@media (max-width: 640px) {
+    .pf-cmp-cat { grid-template-columns: 60px 1fr auto; gap: 8px; }
+    .pf-cmp-row img { width: 26px; height: 38px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-cmp-row { transition: none; }
+}

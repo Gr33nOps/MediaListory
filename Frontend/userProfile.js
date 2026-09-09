@@ -1013,7 +1013,9 @@ function renderSimilarBadge(similarity, user) {
     el.innerHTML =
         '<span class="pf-similar-pct">' + Number(similarity.percent) + '%</span>' +
         '<span class="pf-similar-label">Similar taste</span>' +
+        '<button type="button" class="link-btn pf-similar-more" id="upCompareBtn">Compare in detail</button>' +
         (bits.length ? '<span class="pf-similar-note">' + pfEsc(bits.join(' · ')) + '</span>' : '');
+    wireCompareButton();
 }
 
 function renderCurrentlyInto(current) {
@@ -1104,4 +1106,134 @@ async function loadSimilarPeople() {
             '</a>';
         }).join('');
     } catch (_) { /* discovery is a bonus: if it fails the section simply stays off */ }
+}
+
+/* ── Compare profiles ──────────────────────────────────────────────────────
+   The headline percentage says how alike two people are. This says where: the
+   titles you both rate highly, the ones you disagree most about, what you both
+   ranked, and the same score per category, since matching on films says nothing
+   about games. Fetched only when asked for, because most visits never open it. */
+
+var pfCompareLoaded = false;
+
+function wireCompareButton() {
+    var btn = document.getElementById('upCompareBtn');
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', function () {
+        var section = document.getElementById('upCompare');
+        if (!section) return;
+        if (pfCompareLoaded) {
+            section.hidden = !section.hidden;
+            btn.textContent = section.hidden ? 'Compare in detail' : 'Hide comparison';
+            if (!section.hidden) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            return;
+        }
+        loadCompare();
+    });
+}
+
+async function loadCompare() {
+    var section = document.getElementById('upCompare');
+    var body = document.getElementById('upCompareBody');
+    var btn = document.getElementById('upCompareBtn');
+    if (!section || !body) return;
+
+    section.hidden = false;
+    body.innerHTML = '<p class="pf-empty">Working it out...</p>';
+    if (btn) { btn.disabled = true; btn.textContent = 'Comparing...'; }
+
+    try {
+        var r = await fetch(API_BASE + '/users/' + encodeURIComponent(viewingUserId) + '/compare', {
+            headers: { Authorization: 'Bearer ' + authToken }
+        });
+        var d = await r.json().catch(function () { return {}; });
+        if (!r.ok) {
+            body.innerHTML = '<p class="pf-empty">' + pfEsc(d.error || 'Could not compare right now.') + '</p>';
+        } else {
+            renderCompare(d);
+            pfCompareLoaded = true;
+        }
+    } catch (_) {
+        body.innerHTML = '<p class="pf-empty">Could not reach the server.</p>';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Hide comparison'; }
+}
+
+function compareTitleRow(item, right) {
+    var href = pfOpenHref(item.media_type, item.media_ref);
+    return '<a class="pf-cmp-row" href="' + pfEsc(href) + '" data-cat="' + pfEsc(item.media_type) + '">' +
+        pfPoster(item.background_image, '') +
+        '<span class="pf-cmp-name">' + pfEsc(item.name) + '</span>' +
+        right +
+    '</a>';
+}
+
+function renderCompare(d) {
+    var body = document.getElementById('upCompareBody');
+    var them = (d.user && (d.user.display_name || d.user.username)) || 'them';
+    var parts = [];
+
+    // Per category. A category with too little behind it says so rather than
+    // showing a number, exactly like the headline figure does.
+    var cats = [['movie', 'Movies'], ['series', 'Shows'], ['anime', 'Anime'], ['game', 'Games']];
+    var catRows = cats.map(function (c) {
+        var s = (d.categories || {})[c[0]] || {};
+        var pct = s.percent;
+        var bar = pct == null
+            ? '<span class="pf-cmp-bar"><span style="width:0"></span></span>'
+            : '<span class="pf-cmp-bar"><span style="width:' + Number(pct) + '%"></span></span>';
+        var value = pct == null
+            ? '<span class="pf-cmp-nodata">Not enough shared</span>'
+            : '<span class="pf-cmp-pct">' + Number(pct) + '%</span>';
+        return '<div class="pf-cmp-cat" data-cat="' + c[0] + '">' +
+            '<span class="pf-cmp-cat-name">' + c[1] + '</span>' + bar + value +
+        '</div>';
+    }).join('');
+    parts.push('<div class="pf-cmp-cats">' + catRows + '</div>');
+
+    var counts = d.counts || {};
+    parts.push('<p class="pf-hint pf-cmp-counts">' +
+        Number(counts.shared || 0) + ' titles in both libraries, ' +
+        Number(counts.coRated || 0) + ' rated by both of you.</p>');
+
+    if ((d.commonTop || []).length) {
+        parts.push('<h3 class="pf-cmp-h">Both of you ranked these</h3>');
+        parts.push('<div class="pf-cmp-list">' + d.commonTop.map(function (it) {
+            return compareTitleRow(it, '<span class="pf-cmp-ranks">' +
+                '<span title="Your rank">#' + Number(it.yourPosition) + '</span>' +
+                '<span class="pf-cmp-vs">vs</span>' +
+                '<span title="Their rank">#' + Number(it.theirPosition) + '</span>' +
+            '</span>');
+        }).join('') + '</div>');
+    }
+
+    if ((d.favourites || []).length) {
+        parts.push('<h3 class="pf-cmp-h">You both rate these highly</h3>');
+        parts.push('<div class="pf-cmp-list">' + d.favourites.map(function (it) {
+            return compareTitleRow(it, '<span class="pf-cmp-scores">' +
+                '<span class="pf-cmp-you">' + Number(it.yourScore) + '</span>' +
+                '<span class="pf-cmp-vs">vs</span>' +
+                '<span class="pf-cmp-them">' + Number(it.theirScore) + '</span>' +
+            '</span>');
+        }).join('') + '</div>');
+    }
+
+    if ((d.disagreements || []).length) {
+        parts.push('<h3 class="pf-cmp-h">You disagree most about these</h3>');
+        parts.push('<div class="pf-cmp-list">' + d.disagreements.map(function (it) {
+            return compareTitleRow(it, '<span class="pf-cmp-scores is-apart">' +
+                '<span class="pf-cmp-you">' + Number(it.yourScore) + '</span>' +
+                '<span class="pf-cmp-vs">vs</span>' +
+                '<span class="pf-cmp-them">' + Number(it.theirScore) + '</span>' +
+            '</span>');
+        }).join('') + '</div>');
+    }
+
+    if (!(d.commonTop || []).length && !(d.favourites || []).length && !(d.disagreements || []).length) {
+        parts.push('<p class="pf-empty">Nothing you have both rated yet. Score a few of the titles you share with ' +
+            pfEsc(them) + ' and this fills in.</p>');
+    }
+
+    body.innerHTML = parts.join('');
 }

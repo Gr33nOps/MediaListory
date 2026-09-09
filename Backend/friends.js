@@ -57,6 +57,60 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   // People discovery: every account (public accounts are directly followable,
   // private accounts show a Request button), minus yourself and banned users.
+  /* Activity from the people you follow.
+
+     Following is the permission: a private account only gains a follower after
+     approving the request, so anyone whose rows appear here has already let this
+     viewer see their library. No extra privacy check is needed beyond the join.
+
+     user_game_lists is updated in place rather than appended to, so updated_at is
+     the closest thing to an event time the schema has. That means one row per
+     title per person, showing its latest state, which is what a feed of "what
+     they are up to" wants anyway. Planned titles are left out: adding something
+     to a watchlist is not news. */
+  router.get('/following/activity', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 25));
+      const rows = await db('user_game_lists as ugl')
+        .join('users as u', 'u.id', 'ugl.user_id')
+        .join('games as g', 'g.id', 'ugl.game_id')
+        .whereIn('ugl.user_id', db('user_follows').where('follower_id', req.userId).select('following_id'))
+        .where('u.is_banned', false)
+        .where(function () {
+          this.whereIn('ugl.status', ['completed', 'playing']).orWhereNotNull('ugl.score');
+        })
+        .orderBy('ugl.updated_at', 'desc')
+        .limit(limit)
+        .select(
+          'ugl.status', 'ugl.score', 'ugl.progress', 'ugl.updated_at',
+          'u.id as user_id', 'u.username', 'u.display_name', 'u.avatar_url',
+          'g.name', 'g.media_type', 'g.game_id as media_ref',
+          'g.background_image', 'g.episode_count'
+        );
+
+      res.json({
+        activity: rows.map(r => ({
+          user: {
+            id: r.user_id, username: r.username,
+            display_name: r.display_name || r.username, avatar_url: r.avatar_url
+          },
+          status: r.status,
+          score: r.score == null ? null : Number(r.score),
+          progress: r.progress == null ? null : Number(r.progress),
+          updated_at: r.updated_at,
+          media: {
+            name: r.name, media_type: r.media_type || 'game', media_ref: r.media_ref,
+            background_image: r.background_image,
+            episode_count: r.episode_count == null ? null : Number(r.episode_count)
+          }
+        }))
+      });
+    } catch (error) {
+      console.error('Following activity error:', error);
+      return clientError(res, 400, 'Request failed', error);
+    }
+  });
+
   /* People with similar taste.
 
      Scoring everybody would mean reading every library on every request, so this
