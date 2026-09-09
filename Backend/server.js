@@ -389,7 +389,7 @@ try {
   const libraryRoutes = require('./library');
   const seasonRoutes = require('./seasons');
   const seasonSources = require('./seasonSources');
-  app.use('/api/user', libraryRoutes(db, verifyToken, checkBanned));
+  app.use('/api/user', libraryRoutes(db, verifyToken, checkBanned, { fetchSeasons: seasonSources.fetchSeasons }));
   app.use('/api/user', seasonRoutes(db, verifyToken, checkBanned, { fetchSeasons: seasonSources.fetchSeasons }));
   console.log('  Library routes loaded');
 } catch (error) {
@@ -479,7 +479,7 @@ try {
   app.use('/api/v1/auth', authLimiter, authRoutes(db, jwt, JWT_SECRET, verifyToken, checkBanned));
   app.use('/api/v1', homeRoutes(db));
   app.use('/api/v1/user', profileRoutes(db, verifyToken, checkBanned));
-  app.use('/api/v1/user', libraryRoutes(db, verifyToken, checkBanned));
+  app.use('/api/v1/user', libraryRoutes(db, verifyToken, checkBanned, { fetchSeasons: seasonSources.fetchSeasons }));
   app.use('/api/v1/user', seasonRoutes(db, verifyToken, checkBanned, { fetchSeasons: seasonSources.fetchSeasons }));
   app.use('/api/v1', friendsRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/users', userProfileRoutes(db, verifyToken, checkBanned));

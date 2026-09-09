@@ -46,6 +46,101 @@ function deriveOverall(seasons) {
   return clampScore(weighted / weight);
 }
 
+const SEASON_COLUMNS = ['season_number', 'name', 'episode_count', 'air_date', 'poster_image', 'external_ref'];
+
+/* Recompute and store the overall for one title from its rated seasons.
+
+   Exported rather than kept in the router because adding a title can now
+   produce a season rating too - a second copy of this rule would be a second
+   place for the overall to go wrong. */
+async function syncOverall(db, userId, gameRowId) {
+  const rows = await db('user_season_entries as use')
+    .leftJoin('media_seasons as ms', function () {
+      this.on('ms.game_id', '=', 'use.game_id').andOn('ms.season_number', '=', 'use.season_number');
+    })
+    .where({ 'use.user_id': userId, 'use.game_id': gameRowId })
+    .select('use.score', 'ms.episode_count');
+
+  const derived = deriveOverall(rows);
+  if (derived == null) return null; // nothing rated: the user's own score stands
+
+  await db('user_game_lists')
+    .where({ user_id: userId, game_id: gameRowId })
+    .update({ score: derived, updated_at: db.fn.now() });
+  return derived;
+}
+
+/* An anime library entry is itself one of the seasons - Kitsu gives every
+   season its own catalog id - so the score on the entry is a score for that
+   season as much as for the show.
+
+   Record it there before the first other season is rated, or the overall gets
+   derived from that other season alone and quietly replaces a rating the user
+   gave deliberately. Adding Katanakaji-hen at 5 to a Demon Slayer already rated
+   9 turned the show into a 5.
+
+   Only ever fills a gap: it does nothing once any season is rated, does nothing
+   without a score to preserve, and does nothing for a show, whose entry is the
+   show rather than one of its seasons. */
+async function seedOwnSeasonFromTitle(db, userId, gameRowId) {
+  const already = await db('user_season_entries')
+    .where({ user_id: userId, game_id: gameRowId }).first('id');
+  if (already) return null;
+
+  const owned = await db('user_game_lists')
+    .where({ user_id: userId, game_id: gameRowId }).first('score', 'status');
+  if (!owned || owned.score == null) return null;
+
+  const game = await db('games').where('id', gameRowId).first('game_id', 'media_type');
+  if (!game || game.media_type !== 'anime') return null;
+
+  const own = await db('media_seasons')
+    .where({ game_id: gameRowId, external_ref: game.game_id }).first('season_number');
+  if (!own) return null;
+
+  await db('user_season_entries').insert({
+    user_id: userId,
+    game_id: gameRowId,
+    season_number: own.season_number,
+    status: owned.status || null,
+    score: owned.score,
+    updated_at: db.fn.now()
+  }).onConflict(['user_id', 'game_id', 'season_number']).ignore();
+  return own.season_number;
+}
+
+/* Make sure a title's season list is cached, fetching it once if not.
+
+   Called on view, and now also in the background when a title is added: an
+   empty media_seasons is what stops the app noticing that two entries someone
+   is adding are really two seasons of one show. */
+async function ensureSeasons(db, game, fetchSeasons) {
+  let seasons = await db('media_seasons')
+    .where('game_id', game.id).orderBy('season_number').select(SEASON_COLUMNS);
+  if (seasons.length || typeof fetchSeasons !== 'function') return seasons;
+
+  const fetched = await fetchSeasons(game).catch(() => []);
+  if (!fetched || !fetched.length) return seasons;
+
+  /* Pick the columns rather than spreading the source object: a provider
+     adapter is free to carry extra fields of its own, and spreading them would
+     try to insert columns this table does not have. */
+  await db('media_seasons')
+    .insert(fetched.map(s => ({
+      game_id: game.id,
+      season_number: s.season_number,
+      name: s.name,
+      episode_count: s.episode_count,
+      air_date: s.air_date,
+      poster_image: s.poster_image,
+      external_ref: s.external_ref || null
+    })))
+    .onConflict(['game_id', 'season_number']).ignore();
+
+  return db('media_seasons')
+    .where('game_id', game.id).orderBy('season_number').select(SEASON_COLUMNS);
+}
+
 module.exports = (db, verifyToken, checkBanned, deps = {}) => {
   const express = require('express');
   const { clientError } = require('./errors');
@@ -53,56 +148,12 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
 
   const STATUSES = ['playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];
 
-  /* Recompute and store the overall for one title. Called after any season write
-     so the rest of the app sees a correct score without knowing seasons exist. */
-  async function syncOverall(userId, gameRowId) {
-    const rows = await db('user_season_entries as use')
-      .leftJoin('media_seasons as ms', function () {
-        this.on('ms.game_id', '=', 'use.game_id').andOn('ms.season_number', '=', 'use.season_number');
-      })
-      .where({ 'use.user_id': userId, 'use.game_id': gameRowId })
-      .select('use.score', 'ms.episode_count');
-
-    const derived = deriveOverall(rows);
-    if (derived == null) return null; // nothing rated: the user's own score stands
-
-    await db('user_game_lists')
-      .where({ user_id: userId, game_id: gameRowId })
-      .update({ score: derived, updated_at: db.fn.now() });
-    return derived;
-  }
 
   /* Seasons for a title, with this user's entries merged in. The catalog side is
      filled lazily on first view so adding a show does not fan out into a request
      per season for data nobody may ever open. */
   async function seasonsFor(userId, game) {
-    let seasons = await db('media_seasons')
-      .where('game_id', game.id).orderBy('season_number')
-      .select('season_number', 'name', 'episode_count', 'air_date', 'poster_image', 'external_ref');
-
-    if (!seasons.length && deps.fetchSeasons) {
-      const fetched = await deps.fetchSeasons(game).catch(() => []);
-      if (fetched && fetched.length) {
-        /* Pick the columns rather than spreading the source object: a provider
-           adapter is free to carry extra fields of its own (the Kitsu one
-           returns each season's catalog ref) and spreading them would try to
-           insert columns this table does not have. */
-        await db('media_seasons')
-          .insert(fetched.map(s => ({
-            game_id: game.id,
-            season_number: s.season_number,
-            name: s.name,
-            episode_count: s.episode_count,
-            air_date: s.air_date,
-            poster_image: s.poster_image,
-            external_ref: s.external_ref || null
-          })))
-          .onConflict(['game_id', 'season_number']).ignore();
-        seasons = await db('media_seasons')
-          .where('game_id', game.id).orderBy('season_number')
-          .select('season_number', 'name', 'episode_count', 'air_date', 'poster_image', 'external_ref');
-      }
-    }
+    const seasons = await ensureSeasons(db, game, deps.fetchSeasons);
 
     const mine = await db('user_season_entries')
       .where({ user_id: userId, game_id: game.id })
@@ -181,6 +232,8 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
         .where({ game_id: game.id, season_number: number }).first();
       if (!known) return res.status(404).json({ error: 'That season is not listed for this title.' });
 
+      await seedOwnSeasonFromTitle(db, req.userId, game.id);
+
       const row = {
         user_id: req.userId,
         game_id: game.id,
@@ -194,7 +247,7 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
         .onConflict(['user_id', 'game_id', 'season_number'])
         .merge(['status', 'score', 'progress', 'updated_at']);
 
-      const derived = await syncOverall(req.userId, game.id);
+      const derived = await syncOverall(db, req.userId, game.id);
       const seasons = await seasonsFor(req.userId, game);
       res.json({ seasons, derived, overall: derived });
     } catch (error) {
@@ -210,7 +263,7 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
       if (!game) return res.status(404).json({ error: 'Not in your library' });
       await db('user_season_entries')
         .where({ user_id: req.userId, game_id: game.id, season_number: number }).del();
-      const derived = await syncOverall(req.userId, game.id);
+      const derived = await syncOverall(db, req.userId, game.id);
       const seasons = await seasonsFor(req.userId, game);
       res.json({ seasons, derived, overall: derived });
     } catch (error) {
@@ -223,3 +276,6 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
 
 module.exports.deriveOverall = deriveOverall;
 module.exports.clampScore = clampScore;
+module.exports.syncOverall = syncOverall;
+module.exports.seedOwnSeasonFromTitle = seedOwnSeasonFromTitle;
+module.exports.ensureSeasons = ensureSeasons;

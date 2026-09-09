@@ -73,6 +73,54 @@ module.exports = (verifyToken, checkBanned, db) => {
     return maps;
   }
 
+  /* A second pass of folding, using what we already know rather than the title.
+
+     Grouping by title cannot see a franchise whose seasons are named by arc:
+     "Kimetsu no Yaiba: Yuukaku-hen" shares no stem with "Kimetsu no Yaiba", so
+     Demon Slayer still came back as a wall of separate results. Working it out
+     from scratch here would mean walking Kitsu's sequel chain once per tile,
+     which a grid cannot pay for.
+
+     But once anybody has expanded that franchise, media_seasons already holds
+     the answer, and asking it costs one indexed query for the whole page.
+     Coverage grows as the catalog gets used, and when the table knows nothing
+     this simply does nothing. As everywhere else, an entry is only folded into
+     a parent that is present in the same response - never hidden on a guess. */
+  async function foldKnownSeasons(items) {
+    if (!db || items.length < 2) return items;
+
+    const refs = items.map((m) => m && m.id).filter(Boolean);
+    let rows = [];
+    try {
+      rows = await db('media_seasons as ms')
+        .join('games as g', 'g.id', 'ms.game_id')
+        .whereIn('ms.external_ref', refs)
+        .select('ms.external_ref as ref', 'g.game_id as parent_ref');
+    } catch (_) { return items; }
+    if (!rows.length) return items;
+
+    const parentOf = new Map();
+    rows.forEach((r) => { if (r.ref !== r.parent_ref) parentOf.set(r.ref, r.parent_ref); });
+    if (!parentOf.size) return items;
+
+    const present = new Map(items.map((m) => [m.id, m]));
+    const out = [];
+    for (const item of items) {
+      const parentRef = parentOf.get(item.id);
+      const parent = parentRef ? present.get(parentRef) : null;
+      if (!parent || parent === item) { out.push(item); continue; }
+
+      /* Both sides get the parent's identity as their franchise, so the browse
+         grid can also drop a season that lands on a later page than its parent. */
+      const key = 'ref:' + parentRef;
+      parent.franchise_key = key;
+      parent.franchise_count = (parent.franchise_count || 1) + 1;
+      item.franchise_key = key;
+      item.franchise_sequel = true;
+    }
+    return out;
+  }
+
   function dbRowToNormalized(row) {
     const parse = (v) => (typeof v === 'string' ? JSON.parse(v || '[]') : v || []);
     return {
@@ -339,7 +387,9 @@ module.exports = (verifyToken, checkBanned, db) => {
       /* Collapsing is for people looking at a grid. A caller that is matching a
          list of titles one by one needs to find the individual seasons, so it
          can ask for them - the import does, then groups them itself. */
-      const collapsed = body.collapse === false ? normalized : collapseFranchises(normalized);
+      const collapsed = body.collapse === false
+        ? normalized
+        : await foldKnownSeasons(collapseFranchises(normalized));
       const hasMore = rawCount >= limit;
       cache.set(cacheKey, { items: collapsed, hasMore }, TTL.list);
       res.setHeader('X-Cache', 'MISS');

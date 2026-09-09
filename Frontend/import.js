@@ -600,7 +600,14 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ game_data: m.gameData, status: m.row.status, score: m.row.score })
         });
-        if (res.ok) { added++; return true; }
+        if (res.ok) {
+          /* The server folds an anime that is already a season of something in
+             the library. Count it as what it became, not as a new entry. */
+          var body = await res.json().catch(function () { return {}; });
+          if (body && body.folded_into) { rated++; return false; }
+          added++;
+          return true;
+        }
         if (res.status === 400) {
           var d = await res.json().catch(function () { return {}; });
           if (/already/i.test(d.error || '')) { dupe++; return true; }

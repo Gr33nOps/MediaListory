@@ -3,8 +3,9 @@ const taste = require('./taste');
 const { clientError } = require('./errors');
 const { parseIgdbClientId, slugify } = require('./igdbUtils');
 const { parseMediaRef, externalRef, isValidMediaType, providerFor } = require('./tmdbUtils');
+const { syncOverall, ensureSeasons, seedOwnSeasonFromTitle } = require('./seasons');
 
-module.exports = (db, verifyToken, checkBanned) => {
+module.exports = (db, verifyToken, checkBanned, deps = {}) => {
   const router = express.Router();
 
   // Adding, rating, or removing a title changes what Similar Taste is computed
@@ -160,6 +161,70 @@ module.exports = (db, verifyToken, checkBanned) => {
     }
   }
 
+  /* Anime is the one category where a season is its own catalog entry, so
+     "Kimetsu no Yaiba" and "Kimetsu no Yaiba: Yuukaku-hen" can both be added as
+     separate titles - one show taking two slots in a Top 10 and counting as two
+     shared titles in Similar Taste instead of one shared interest.
+
+     If what someone is adding is already listed as a season of something they
+     own, record it there instead. The lookup is one indexed hit on
+     media_seasons.external_ref, and it finds nothing when the parent's season
+     list has never been fetched, so this is a good guard rather than a
+     guarantee. Titles now cache their seasons on add, which is what keeps the
+     table filled in enough for it to work. */
+  async function foldIntoOwnedSeason(userId, gameRowId, entry) {
+    const game = await db('games').where('id', gameRowId).first('game_id', 'media_type');
+    if (!game || game.media_type !== 'anime') return null;
+
+    const slot = await db('media_seasons as ms')
+      .join('user_game_lists as ugl', function () {
+        this.on('ugl.game_id', '=', 'ms.game_id').andOn(db.raw('ugl.user_id = ?', [userId]));
+      })
+      .join('games as g', 'g.id', 'ms.game_id')
+      .where('ms.external_ref', game.game_id)
+      .whereNot('ms.game_id', gameRowId)
+      .first('ms.game_id as parent_id', 'ms.season_number', 'g.name as parent_name', 'g.game_id as parent_ref');
+    if (!slot) return null;
+
+    /* The parent's own score is a score for the parent's own season. Move it
+       there first, or deriving the overall from this new season alone would
+       throw it away. */
+    await seedOwnSeasonFromTitle(db, userId, slot.parent_id);
+
+    await db('user_season_entries').insert({
+      user_id: userId,
+      game_id: slot.parent_id,
+      season_number: slot.season_number,
+      status: entry.status || null,
+      score: entry.score || null,
+      updated_at: db.fn.now()
+    }).onConflict(['user_id', 'game_id', 'season_number']).merge(['status', 'score', 'updated_at']);
+
+    const overall = await syncOverall(db, userId, slot.parent_id);
+    return {
+      parent_name: slot.parent_name,
+      parent_ref: slot.parent_ref,
+      season_number: slot.season_number,
+      overall
+    };
+  }
+
+  /* Fill in a title's season list after it is added, without making the add
+     wait for it. Nothing user-facing depends on it finishing: it makes the
+     seasons panel instant on first open, and it is what lets the guard above
+     recognise a sibling later. */
+  function cacheSeasonsInBackground(gameRowId) {
+    if (typeof deps.fetchSeasons !== 'function') return;
+    setImmediate(async () => {
+      try {
+        const game = await db('games').where('id', gameRowId)
+          .first('id', 'game_id', 'name', 'media_type', 'tmdb_id', 'provider_id');
+        if (!game || (game.media_type !== 'anime' && game.media_type !== 'series')) return;
+        await ensureSeasons(db, game, deps.fetchSeasons);
+      } catch (_) { /* a missing season list is not a failed add */ }
+    });
+  }
+
   router.post('/games', verifyToken, checkBanned, async (req, res) => {
     try {
       const { game_id, game_data, status, score, notes } = req.body;
@@ -178,6 +243,16 @@ module.exports = (db, verifyToken, checkBanned) => {
         .first();
       if (existing) return res.status(400).json({ error: 'Game already in your list', game_id: dbGameId });
 
+      const folded = await foldIntoOwnedSeason(req.userId, dbGameId, { status, score });
+      if (folded) {
+        return res.status(200).json({
+          message: `Saved as season ${folded.season_number} of ${folded.parent_name}, already in your library.`,
+          folded_into: folded.parent_ref,
+          season_number: folded.season_number,
+          overall: folded.overall
+        });
+      }
+
       await db('user_game_lists').insert({
         user_id: req.userId,
         game_id: dbGameId,
@@ -186,6 +261,7 @@ module.exports = (db, verifyToken, checkBanned) => {
         notes:   cleanNote(notes)
       });
 
+      cacheSeasonsInBackground(dbGameId);
       res.status(201).json({ message: 'Game added successfully', game_id: dbGameId });
     } catch (error) {
       console.error('Add game error:', error);

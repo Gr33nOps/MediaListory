@@ -554,7 +554,10 @@
           showMsg(messageEl, already ? 'Already in your library.' : (addData.error || 'Failed to add.'), already ? 'success' : 'error');
           return;
         }
-        showMsg(messageEl, 'Added to your library.', 'success');
+        /* An anime that is already a season of something in the library is
+           saved there instead of becoming a second entry for the same show.
+           Say so, because it is not what was clicked. */
+        showMsg(messageEl, addData.folded_into ? addData.message : 'Added to your library.', 'success');
         return;
       }
 
