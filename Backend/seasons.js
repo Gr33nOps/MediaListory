@@ -83,8 +83,19 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
     if (!seasons.length && deps.fetchSeasons) {
       const fetched = await deps.fetchSeasons(game).catch(() => []);
       if (fetched && fetched.length) {
+        /* Pick the columns rather than spreading the source object: a provider
+           adapter is free to carry extra fields of its own (the Kitsu one
+           returns each season's catalog ref) and spreading them would try to
+           insert columns this table does not have. */
         await db('media_seasons')
-          .insert(fetched.map(s => ({ ...s, game_id: game.id })))
+          .insert(fetched.map(s => ({
+            game_id: game.id,
+            season_number: s.season_number,
+            name: s.name,
+            episode_count: s.episode_count,
+            air_date: s.air_date,
+            poster_image: s.poster_image
+          })))
           .onConflict(['game_id', 'season_number']).ignore();
         seasons = await db('media_seasons')
           .where('game_id', game.id).orderBy('season_number')

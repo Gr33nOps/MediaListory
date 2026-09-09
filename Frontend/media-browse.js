@@ -246,7 +246,10 @@
       var data = await r.json();
       if (r.ok && Array.isArray(data)) {
         data.forEach(function (m) { if (m && m.id) lastResults[m.id] = m; });
-        hasMore = data.length === perPage;
+        /* Anime tiles collapse a franchise into one entry, so a short page no
+           longer means the end of the results. The server sends the answer. */
+        var moreHeader = r.headers.get('X-Has-More');
+        hasMore = moreHeader === null ? data.length === perPage : moreHeader === '1';
         render(data, replace);
         updatePagination();
         if (data.length === 0 && replace) {

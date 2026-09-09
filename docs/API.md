@@ -44,6 +44,20 @@ A unique index on `(provider, media_type, provider_id)` guarantees IDs from diff
 - `POST /api/tmdb/movies` and `POST /api/tmdb/series` - movies/series list/search/detail (structured filters: `id`, `search`, `genre`, `sort`, `sortOrder`, `comingSoon`, `limit`, `offset`). Returns MediaListory-normalized objects (`id`, `media_type`, `provider`, `provider_id`, `tmdb_id`, `name`, `background_image`, `backdrop_image`, `released`, `rating`, `genres`, `developers`, `publishers`, ...).
 - `POST /api/tmdb/genres` - body `{ media_type: "movie" | "series" }`, returns `[{ id, name }]`.
 - `POST /api/kitsu/anime` - anime list/search/detail (structured filters: `id`, `search`, `genre`, `sort` (`popularity`/`rating`/`release`), `sortOrder`, `comingSoon`, `limit`, `offset`). Returns normalized objects (`id: kitsu_<id>`, `media_type: "anime"`, `provider: "kitsu"`, `provider_id`, `name`, `background_image`, `backdrop_image`, `released`, `rating`, `metacritic_score`, `number_of_episodes`, `subtype`, `status`, `genres`, ...).
+
+  List responses collapse an anime franchise into one entry: Kitsu lists every
+  season of a show as its own result, so a search for Attack on Titan otherwise
+  returns eight near-identical tiles. Only an entry whose title carries a season
+  marker is ever folded, and only into a parent present in the same response, so
+  nothing is hidden on a guess. The surviving entry carries `franchise_key` and,
+  when it absorbed other seasons, `franchise_count`. Everything Kitsu returned
+  is still written to the catalog - only the view collapses.
+
+  Pages stay aligned to Kitsu's own offsets rather than being topped back up, so
+  no title is skipped or repeated between pages, and an anime page returns fewer
+  items than `limit`. Because a short page therefore no longer means "no more
+  results", the response carries an `X-Has-More` header (`1`/`0`), exposed to
+  the browser through CORS.
 - `POST /api/kitsu/genres` - Kitsu categories, returns `[{ id, name }]`.
 - All proxies require a session or run guest-friendly (read-only) and write results through to the shared catalog. TMDB needs `TMDB_ACCESS_TOKEN` (v4) or `TMDB_API_KEY` (v3); **Kitsu needs no key**. When a provider is unconfigured its endpoints return `503`/`500` and the other media types are unaffected.
 
@@ -136,10 +150,17 @@ stay correct without knowing seasons exist. Seasons are weighted by episode
 count, only rated seasons count, and the result is rounded to a whole score. With
 no season rated the user's own overall is left alone. See `Backend/seasons.js`.
 
-Anime returns an empty list for now: Kitsu models each season as its own
-top-level entry rather than a child of one show, so an anime's seasons are its
-sibling catalog entries reached through the sequel chain. That is franchise
-grouping and is not yet implemented.
+Anime gets there differently. Kitsu models each season as its own top-level
+entry rather than a child of one show, so an anime's seasons are its sibling
+catalog entries. One text search for the franchise title returns them all in a
+single call and `Backend/franchise.js` decides which of the results really are
+the same franchise; they are then numbered by air date. Recaps, shorts and
+compilation movies are left out, so a numbered season is always a real season.
+
+The heuristic is a title one, and a deliberately timid one - see
+`Backend/franchise.js`. A franchise whose seasons are named by arc rather than
+by number (Demon Slayer) is not recognised, and returns no seasons rather than
+a wrong list.
 
 ## Versioning
 

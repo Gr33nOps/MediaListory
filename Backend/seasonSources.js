@@ -5,14 +5,18 @@
    counts come with it, which is also what fixes the missing episode_count on
    series rows.
 
-   Anime is deliberately empty here. Kitsu models each season as its own
-   top-level entry rather than as a child of one show, so an anime's "seasons"
-   are its sibling entries in the catalog, reached through the sequel chain, not
-   something a provider hands back for a single id. That is franchise grouping
-   and it lives elsewhere; returning nothing here keeps this module honest rather
-   than pretending it can answer. */
+   Anime has no such endpoint. Kitsu models each season as its own top-level
+   entry rather than as a child of one show, so an anime's "seasons" are its
+   sibling entries. One text search for the franchise title returns them all in
+   a single call, and Backend/franchise.js decides which results are genuinely
+   the same franchise. Anything without a real episode count, and anything that
+   is not a TV or ONA run, is left out: specials, recaps and movies are not
+   seasons and should not become numbered ones. */
+
+const { membersToSeasons, franchiseOf } = require('./franchise');
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+const KITSU_BASE = 'https://kitsu.io/api/edge';
 
 function tmdbAuth() {
   const bearer = (process.env.TMDB_ACCESS_TOKEN || '').trim();
@@ -50,6 +54,35 @@ async function fetchTmdbSeasons(tmdbId) {
     }));
 }
 
+async function fetchKitsuSeasons(name) {
+  const { base } = franchiseOf(name);
+  if (!base) return [];
+
+  const url = `${KITSU_BASE}/anime?filter[text]=${encodeURIComponent(base)}&page[limit]=20`;
+  const res = await fetch(url, { headers: { Accept: 'application/vnd.api+json' } });
+  if (!res.ok) return [];
+  const body = await res.json();
+
+  const candidates = (body.data || [])
+    .map((a) => {
+      const at = a.attributes || {};
+      return {
+        id: `kitsu_${a.id}`,
+        name: at.canonicalTitle || (at.titles && (at.titles.en || at.titles.en_jp)) || '',
+        released: at.startDate || null,
+        background_image: (at.posterImage && (at.posterImage.large || at.posterImage.medium)) || null,
+        number_of_episodes: at.episodeCount != null ? Number(at.episodeCount) : null,
+        subtype: at.subtype || null
+      };
+    })
+    .filter((m) => m.name);
+
+  const seasons = membersToSeasons(base, candidates);
+  /* One entry is not a season list, it is just the show itself. Showing a lone
+     "Season 1" that duplicates the title would be noise, so say nothing. */
+  return seasons.length > 1 ? seasons : [];
+}
+
 /* Called with the catalog row. Returns [] for anything without a season concept,
    which the caller treats as "this title simply has no seasons". */
 async function fetchSeasons(game) {
@@ -57,7 +90,10 @@ async function fetchSeasons(game) {
   if (game.media_type === 'series' && game.tmdb_id) {
     return fetchTmdbSeasons(game.tmdb_id);
   }
+  if (game.media_type === 'anime' && game.name) {
+    return fetchKitsuSeasons(game.name);
+  }
   return [];
 }
 
-module.exports = { fetchSeasons, fetchTmdbSeasons };
+module.exports = { fetchSeasons, fetchTmdbSeasons, fetchKitsuSeasons };

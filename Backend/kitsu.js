@@ -5,6 +5,7 @@ const { createTtlCache } = require('./cache');
 const { sanitizeToken, clampInt, rankSearchResults } = require('./igdbUtils');
 const { mediaToRow } = require('./tmdbUtils');
 const { normalizeKitsuAnime, categoriesFromIncluded } = require('./kitsuUtils');
+const { collapseFranchises } = require('./franchise');
 
 const KITSU_BASE = 'https://kitsu.io/api/edge';
 
@@ -139,7 +140,12 @@ module.exports = (verifyToken, checkBanned, db) => {
       : `list:${crypto.createHash('sha1').update(JSON.stringify(body)).digest('hex')}`;
 
     const cached = cache.get(cacheKey);
-    if (cached) { res.setHeader('X-Cache', 'HIT'); return res.json(cached); }
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      if (Array.isArray(cached)) return res.json(cached);
+      res.setHeader('X-Has-More', cached.hasMore ? '1' : '0');
+      return res.json(cached.items);
+    }
 
     try {
       if (detailId) {
@@ -256,6 +262,7 @@ module.exports = (verifyToken, checkBanned, db) => {
       // through enough requests. The /trending feed is a single fixed list.
       let rawData = [];
       let rawIncluded = [];
+      let rawCount = 0;
       let ok = false;
       if (trending) {
         const response = await kitsuFetch('/trending/anime?include=categories');
@@ -282,10 +289,14 @@ module.exports = (verifyToken, checkBanned, db) => {
         }
         rawData = rawData.slice(0, limit);
       }
+      rawCount = rawData.length;
 
       if (!ok) {
         const degraded = await loadListFromDb(body);
-        if (degraded && degraded.length) { res.setHeader('X-Cache', 'DEGRADED'); return res.json(degraded); }
+        if (degraded && degraded.length) {
+          res.setHeader('X-Cache', 'DEGRADED');
+          return res.json(collapseFranchises(degraded));
+        }
         return res.status(502).json({ error: 'Kitsu API error' });
       }
       const cats = categoriesFromIncluded(rawIncluded);
@@ -295,14 +306,31 @@ module.exports = (verifyToken, checkBanned, db) => {
       // promotes exact / prefix title matches above near-matches (nothing dropped).
       if (search) normalized = rankSearchResults(normalized, search, (m) => m && m.name);
 
-      cache.set(cacheKey, normalized, TTL.list);
+      /* Everything Kitsu returned is written to the catalog, including the
+         seasons that are about to be folded away: they are still real entries,
+         and the season list a library row opens is built out of them. Only the
+         view collapses. */
       persist(normalized).catch(() => {});
+
+      /* Pages stay aligned to Kitsu's own offsets rather than being topped back
+         up to `limit`, so no title is ever skipped or repeated across pages. An
+         anime page therefore shows a few tiles fewer than a movie page, which
+         is the whole point: those tiles were the same show listed five times.
+         Because the client can no longer infer "there is more" from a full
+         page, the answer is sent explicitly. */
+      const collapsed = collapseFranchises(normalized);
+      const hasMore = rawCount >= limit;
+      cache.set(cacheKey, { items: collapsed, hasMore }, TTL.list);
       res.setHeader('X-Cache', 'MISS');
-      return res.json(normalized);
+      res.setHeader('X-Has-More', hasMore ? '1' : '0');
+      return res.json(collapsed);
     } catch (error) {
       if (!detailId) {
         const degraded = await loadListFromDb(body);
-        if (degraded && degraded.length) { res.setHeader('X-Cache', 'DEGRADED'); return res.json(degraded); }
+        if (degraded && degraded.length) {
+          res.setHeader('X-Cache', 'DEGRADED');
+          return res.json(collapseFranchises(degraded));
+        }
       }
       return sendError(res, error, 'Failed to fetch from Kitsu');
     }
