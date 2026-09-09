@@ -268,6 +268,8 @@
 
       var data = await r.json();
       if (r.ok && Array.isArray(data)) {
+        // Before rendering, so the first paint already carries the badges.
+        if (typeof loadLibraryIndex === 'function') await loadLibraryIndex();
         data = foldSeenFranchises(data);
         data.forEach(function (m) { if (m && m.id) lastResults[m.id] = m; });
         /* Anime tiles collapse a franchise into one entry, so a short page no
@@ -310,10 +312,12 @@
       // the rest live in the detail modal, one click away.
       var label = 'View details for ' + (m.name || NOUN);
       var ratingHtml = m.rating ? '<span class="card-rating">★ ' + esc(Number(m.rating).toFixed(1)) + '</span>' : '';
+      // Says "you already have this" before the user clicks in and adds it twice.
+      var ownedHtml = typeof ownedBadgeHtml === 'function' ? ownedBadgeHtml(m.id) : '';
       return '<div class="game-card" data-game-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="' + esc(label) + '">' +
         '<div class="game-image-wrapper">' +
           '<img src="' + esc(imgSrc) + '" alt="' + esc((m.name || NOUN) + ' cover') + '" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-          ratingHtml +
+          ratingHtml + ownedHtml +
         '</div>' +
         '<div class="game-info">' +
           '<div class="game-title">' + esc(m.name) + '</div>' +
@@ -361,6 +365,11 @@
       (MEDIA_TYPE === 'anime' && media.age_rating) ? { label: 'Rating', value: String(media.age_rating) } : null,
       (MEDIA_TYPE === 'movie' && media.runtime) ? { label: 'Runtime', value: media.runtime + ' min' } : null
     ].filter(Boolean);
+
+    /* Already tracked? Then this panel is for editing what is saved, not for
+       adding a second copy. Same controls, filled in and relabelled - a
+       separate edit screen would be a second place for the same job. */
+    var owned = typeof libraryEntry === 'function' ? libraryEntry(media.id) : null;
 
     var customListOptions = userCustomLists.map(function (list) {
       return '<option value="custom_' + esc(list.id) + '">' + esc(list.name) + '</option>';
@@ -461,7 +470,11 @@
         '</div>' +
         genreTagsHtml + infoGridHtml + descHtml + trailerHtml + watchHtml + castHtml +
         '<div class="add-to-list">' +
-          '<h3>Add to My Library</h3>' +
+          '<h3>' + (owned ? 'In your library' : 'Add to My Library') + '</h3>' +
+          (owned ? '<p class="atl-owned-note">Saved as <strong>' +
+            esc(typeof statusLabel === 'function' ? statusLabel(owned.status, MEDIA_TYPE) : (owned.status || '')) + '</strong>' +
+            (owned.score ? ', rated <strong>' + esc(String(owned.score)) + '/10</strong>' : ', not rated yet') +
+            '. Change it below.</p>' : '') +
           '<div style="margin-bottom:12px;">' +
             '<label>Add to list</label>' +
             '<select id="gameListSelect" class="filter-select" style="width:100%;margin:0;">' +
@@ -471,19 +484,21 @@
           '<div class="atl-controls">' +
             '<div class="atl-field atl-field-status">' +
               '<label>Status</label>' +
-              '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' + statusOptions(MEDIA_TYPE, 'completed') + '</select>' +
+              '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' + statusOptions(MEDIA_TYPE, (owned && owned.status) || 'completed') + '</select>' +
             '</div>' +
             '<div class="atl-field">' +
               '<label>Your score (1-10)</label>' +
               '<div class="score-input-container" style="margin:0;">' +
-                '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--">' +
+                '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--"' +
+                  (owned && owned.score ? ' value="' + esc(String(owned.score)) + '"' : '') + '>' +
                 '<div class="score-controls">' +
                   '<button type="button" class="score-btn" id="mbScoreUp" aria-label="Increase score">+</button>' +
                   '<button type="button" class="score-btn" id="mbScoreDown" aria-label="Decrease score">−</button>' +
                 '</div>' +
               '</div>' +
             '</div>' +
-            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + esc(media.id) + '">Add to Library</button>' +
+            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + esc(media.id) + '">' +
+              (owned ? 'Save changes' : 'Add to Library') + '</button>' +
           '</div>' +
           '<div class="atl-note">' +
             '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
@@ -542,6 +557,26 @@
     var scoreVal = score ? parseInt(score) : null;
 
     try {
+      var owned = typeof libraryEntry === 'function' ? libraryEntry(ref) : null;
+
+      if (listValue === 'default' && owned && owned.id) {
+        // Editing what is already saved. Never send an empty note over a real
+        // one: a blank box means "left alone", not "delete what I wrote".
+        var patch = { status: status, score: scoreVal };
+        if (note) patch.notes = note;
+        var upResp = await apiFetch('/user/games/' + encodeURIComponent(owned.id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch)
+        });
+        var upData = await upResp.json().catch(function () { return {}; });
+        if (!upResp.ok) { showMsg(messageEl, upData.error || 'Could not save that.', 'error'); return; }
+        if (typeof setLibraryEntry === 'function') setLibraryEntry(ref, { id: owned.id, status: status, score: scoreVal });
+        if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(ref);
+        showMsg(messageEl, 'Updated in your library.', 'success');
+        return;
+      }
+
       if (listValue === 'default') {
         var addResp = await apiFetch('/user/games', {
           method: 'POST',
@@ -557,6 +592,10 @@
         /* An anime that is already a season of something in the library is
            saved there instead of becoming a second entry for the same show.
            Say so, because it is not what was clicked. */
+        if (typeof setLibraryEntry === 'function' && !addData.folded_into) {
+          setLibraryEntry(ref, { id: addData.game_id, status: status, score: scoreVal });
+        }
+        if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(ref);
         showMsg(messageEl, addData.folded_into ? addData.message : 'Added to your library.', 'success');
         return;
       }

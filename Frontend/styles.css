@@ -4254,6 +4254,22 @@ a.cat-stat:hover { border-color: var(--cs-color); }
     padding: 2px 8px; border-radius: 999px;
 }
 
+/* Mirror of the rating chip, on the other corner: this title is already tracked.
+   Same shape and weight so the two read as one family, not two ideas. */
+.card-owned {
+    position: absolute; top: 8px; left: 8px;
+    font-size: 0.74rem; font-weight: 700; color: var(--accent-light);
+    background: rgba(8,12,20,0.82); border: 1px solid var(--accent-border);
+    padding: 2px 8px; border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* What the library already holds, above the controls that change it. */
+.atl-owned-note {
+    margin: -4px 0 12px; font-size: 0.82rem; color: var(--text-muted);
+}
+.atl-owned-note strong { color: var(--text-primary); font-weight: 600; }
+
 /* One-tap episode progress in the library */
 .coll-progress { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .coll-progress-bar { width: 72px; height: 6px; border-radius: 999px; background: rgba(148,163,184,0.25); overflow: hidden; flex-shrink: 0; }

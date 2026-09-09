@@ -1449,3 +1449,123 @@
   global.bindScoreInput = bindScoreInput;
   global.MEDIA_STATUS_KEYS = STATUS_KEYS;
 })(typeof window !== 'undefined' ? window : globalThis);
+
+
+/* ── What is already in the library ──────────────────────────────────────────
+   Browse and search pages ask this to show that a title is already tracked, so
+   nobody adds the same thing three times wondering whether it took. Loaded once
+   per page from a small refs-only endpoint and kept up to date in memory as the
+   user adds or edits, rather than re-fetched after every change. */
+var __libraryIndex = null;
+
+async function loadLibraryIndex(force) {
+    if (__libraryIndex && !force) return __libraryIndex;
+    if (typeof isGuest === 'function' && isGuest()) { __libraryIndex = {}; return __libraryIndex; }
+    try {
+        var r = await apiFetch('/user/games/refs');
+        if (!r.ok) { __libraryIndex = {}; return __libraryIndex; }
+        var rows = await r.json();
+        var map = {};
+        (Array.isArray(rows) ? rows : []).forEach(function (x) { if (x && x.ref) map[x.ref] = x; });
+        __libraryIndex = map;
+    } catch (e) {
+        // No index just means no badges; browsing must still work.
+        __libraryIndex = {};
+    }
+    return __libraryIndex;
+}
+
+function libraryEntry(ref) {
+    return (__libraryIndex && ref) ? (__libraryIndex[ref] || null) : null;
+}
+
+function setLibraryEntry(ref, entry) {
+    if (!__libraryIndex) __libraryIndex = {};
+    if (entry) __libraryIndex[ref] = Object.assign({}, __libraryIndex[ref] || {}, entry, { ref: ref });
+    else delete __libraryIndex[ref];
+}
+
+/* The badge on a browse card. Kept here so every category draws the same one. */
+function ownedBadgeHtml(ref) {
+    var entry = libraryEntry(ref);
+    if (!entry) return '';
+    var label = entry.score ? ('\u2713 ' + entry.score) : '\u2713';
+    var title = entry.score ? ('In your library, rated ' + entry.score) : 'In your library';
+    return '<span class="card-owned" title="' + esc(title) + '" aria-label="' + esc(title) + '">' + esc(label) + '</span>';
+}
+
+/* Update one card in place after an add or edit, so the badge appears without
+   reloading the grid and losing the user's place. */
+function refreshOwnedBadge(ref) {
+    var cards = document.querySelectorAll('.game-card[data-game-id="' + (window.CSS && CSS.escape ? CSS.escape(ref) : ref) + '"]');
+    for (var i = 0; i < cards.length; i++) {
+        var wrap = cards[i].querySelector('.game-image-wrapper');
+        if (!wrap) continue;
+        var existing = wrap.querySelector('.card-owned');
+        if (existing) existing.remove();
+        var html = ownedBadgeHtml(ref);
+        // nosemgrep: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method -- built from esc()-escaped values in ownedBadgeHtml
+        if (html) wrap.insertAdjacentHTML('beforeend', html);
+    }
+}
+
+/* ── Forgiving text matching ─────────────────────────────────────────────────
+   Used for searching your own collection, where an exact substring match is a
+   bad deal: it fails on a typo, on words out of order, and on any punctuation
+   the title happens to spell differently. "dark knight the", "darkknight" and
+   "dark knght" should all find The Dark Knight. */
+
+function normalizeText(value) {
+    return String(value == null ? '' : value)
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+/* Edit distance, but stop as soon as it exceeds `max` - the answer past that
+   point is "not close", and computing how far is wasted work. */
+function withinEditDistance(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return false;
+    var prev = [], curr = [], i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+        curr[0] = i;
+        var best = curr[0];
+        for (j = 1; j <= b.length; j++) {
+            curr[j] = Math.min(
+                prev[j] + 1,
+                curr[j - 1] + 1,
+                prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+            );
+            if (curr[j] < best) best = curr[j];
+        }
+        if (best > max) return false;
+        prev = curr.slice();
+    }
+    return prev[b.length] <= max;
+}
+
+function tokenMatches(token, word) {
+    if (word.indexOf(token) === 0 || token.indexOf(word) === 0) return true;
+    if (word.indexOf(token) !== -1) return true;
+    // Only allow a typo once a word is long enough for one to be unambiguous.
+    if (token.length < 4) return false;
+    return withinEditDistance(word, token, token.length >= 7 ? 2 : 1);
+}
+
+/* True when `query` is a plausible way of asking for `text`. */
+function fuzzyMatches(text, query) {
+    var q = normalizeText(query);
+    if (!q) return true;
+    var t = normalizeText(text);
+    if (!t) return false;
+    if (t.indexOf(q) !== -1) return true;
+    // Ignoring spaces catches "darkknight" and "star wars" written as one word.
+    if (t.replace(/ /g, '').indexOf(q.replace(/ /g, '')) !== -1) return true;
+
+    var words = t.split(' ');
+    return q.split(' ').every(function (token) {
+        return words.some(function (word) { return tokenMatches(token, word); });
+    });
+}

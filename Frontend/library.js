@@ -379,8 +379,14 @@ function displayMyGames(games) {
     if (currentStatusFilter !== 'all') filtered = filtered.filter(function(g) { return g.status === currentStatusFilter; });
     if (currentSearchTerm) {
         filtered = filtered.filter(function(g) {
-            return g.name.toLowerCase().includes(currentSearchTerm) ||
-                (g.genres && g.genres.some(function(genre) { return (genre.name || genre).toLowerCase().includes(currentSearchTerm); }));
+            /* Forgiving on purpose: an exact substring match fails on a typo,
+               on words out of order, and on punctuation spelled differently -
+               all of which are ordinary ways to type a title you half remember. */
+            var match = typeof fuzzyMatches === 'function'
+                ? function (text) { return fuzzyMatches(text, currentSearchTerm); }
+                : function (text) { return String(text).toLowerCase().includes(currentSearchTerm); };
+            return match(g.name) ||
+                (g.genres && g.genres.some(function(genre) { return match(genre.name || genre); }));
         });
     }
     if (filtered.length === 0) {
@@ -914,7 +920,13 @@ function clRenderAccGames(listId) {
     var games    = (clListGames[listId] || []).slice();
     if (currentMediaFilter !== 'all') games = games.filter(function(g) { return (g.media_type || 'game') === currentMediaFilter; });
     if (f.status !== 'all') games = games.filter(function(g) { return g.status === f.status; });
-    if (f.search) games = games.filter(function(g) { return g.name.toLowerCase().includes(f.search); });
+    if (f.search) {
+        games = games.filter(function (g) {
+            return typeof fuzzyMatches === 'function'
+                ? fuzzyMatches(g.name, f.search)
+                : g.name.toLowerCase().includes(f.search);
+        });
+    }
     switch (f.sort) {
         case 'name':           games.sort(function(a,b) { return a.name.localeCompare(b.name); }); break;
         case 'name_desc':      games.sort(function(a,b) { return b.name.localeCompare(a.name); }); break;

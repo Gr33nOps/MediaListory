@@ -144,6 +144,15 @@ shared rankings and scores. See `Backend/taste.js`.
   rated, 3 or more apart). 403 for a private account you do not follow, 400 for
   yourself.
 
+## Library
+
+- `GET /api/user/games/refs` - just enough of the library to answer "do I
+  already have this?" while browsing: `ref`, `id`, `status`, `score` per title
+  and nothing else. Browse and search pages load it once to mark titles that are
+  already tracked, and the detail panel uses it to offer editing what is saved
+  instead of adding a second copy. Deliberately not `GET /games`, which carries
+  every title's description and runs to tens of kilobytes.
+
 ## Seasons
 
 Optional, per season ratings for shows and anime. A title with no season rows

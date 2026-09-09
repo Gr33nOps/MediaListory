@@ -269,6 +269,25 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
     }
   });
 
+  /* Just enough of the library to answer "do I already have this?" while
+     browsing: ref, status and score, and nothing else.
+
+     Deliberately not GET /games, which carries every title's description and
+     runs to tens of kilobytes - far too much to load on a browse page for a
+     question this small. Declared before the parameterised routes so /refs is
+     never read as an id. */
+  router.get('/games/refs', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const rows = await db('user_game_lists as ugl')
+        .join('games as g', 'g.id', 'ugl.game_id')
+        .where('ugl.user_id', req.userId)
+        .select('g.game_id as ref', 'ugl.game_id as id', 'ugl.status', 'ugl.score');
+      res.json(rows);
+    } catch (error) {
+      return clientError(res, 400, 'Request failed', error);
+    }
+  });
+
   router.get('/games', verifyToken, checkBanned, async (req, res) => {
     try {
       const { status, sort = 'added_date', order = 'desc', media_type } = req.query;

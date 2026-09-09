@@ -508,6 +508,8 @@ async function fetchGames(replace) {
             hasMoreGames = data.length === apiGamesPerPage;
 
             collectFilterOptions(transformedGames);
+            // Before rendering, so the first paint already carries the badges.
+            if (typeof loadLibraryIndex === 'function') await loadLibraryIndex();
             displaySearchResults(transformedGames, replace);
             updatePaginationButtons();
 
@@ -593,10 +595,12 @@ function displaySearchResults(games, replace) {
         // summary all live in the detail modal.
         var cardLabel = 'View details for ' + (game.name || 'game');
         var ratingHtml = game.rating ? '<span class="card-rating">★ ' + esc(Number(game.rating).toFixed(1)) + '</span>' : '';
+        // Says "you already have this" before the user adds it a second time.
+        var ownedHtml = typeof ownedBadgeHtml === 'function' ? ownedBadgeHtml(game.id) : '';
         return '<div class="game-card" data-game-id="' + esc(game.id) + '" role="button" tabindex="0" aria-label="' + esc(cardLabel) + '">' +
             '<div class="game-image-wrapper">' +
                 '<img src="' + esc(imgSrc) + '" alt="' + esc(game.name || 'Game') + ' cover" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                ratingHtml +
+                ratingHtml + ownedHtml +
             '</div>' +
             '<div class="game-info">' +
                 '<div class="game-title">' + esc(game.name) + '</div>' +
@@ -699,6 +703,10 @@ async function showGameDetails(gameId) {
         }
 
         if (game) {
+            /* Already tracked? Then this panel edits what is saved rather than
+               adding a second copy. Same controls, filled in and relabelled. */
+            var ownedEntry = typeof libraryEntry === 'function' ? libraryEntry(game.id) : null;
+
             var gameDataStr = JSON.stringify({
                 igdb_id:          game.igdb_id,
                 name:             game.name,
@@ -830,7 +838,11 @@ async function showGameDetails(gameId) {
                     trailerHtml +
                     shotsHtml +
                     '<div class="add-to-list">' +
-                        '<h3>Add to My Library</h3>' +
+                        '<h3>' + (ownedEntry ? 'In your library' : 'Add to My Library') + '</h3>' +
+                        (ownedEntry ? '<p class="atl-owned-note">Saved as <strong>' +
+                            esc(typeof statusLabel === 'function' ? statusLabel(ownedEntry.status, 'game') : (ownedEntry.status || '')) + '</strong>' +
+                            (ownedEntry.score ? ', rated <strong>' + esc(String(ownedEntry.score)) + '/10</strong>' : ', not rated yet') +
+                            '. Change it below.</p>' : '') +
                         '<div style="margin-bottom:12px;">' +
                             '<label>Add to list</label>' +
                             '<select id="gameListSelect" class="filter-select" style="width:100%;margin:0;" onchange="handleListSelectChange()">' +
@@ -842,24 +854,28 @@ async function showGameDetails(gameId) {
                             '<div class="atl-field atl-field-status">' +
                                 '<label>Status</label>' +
                                 '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' +
-                                    '<option value="playing">In progress</option>' +
+                                    (typeof statusOptions === 'function'
+                                      ? statusOptions('game', (ownedEntry && ownedEntry.status) || 'completed')
+                                      : '<option value="playing">In progress</option>' +
                                     '<option value="completed" selected>Completed</option>' +
                                     '<option value="plan_to_play">Planned</option>' +
                                     '<option value="on_hold">On hold</option>' +
-                                    '<option value="dropped">Dropped</option>' +
+                                    '<option value="dropped">Dropped</option>') +
                                 '</select>' +
                             '</div>' +
                             '<div class="atl-field">' +
                                 '<label>Your score (1-10)</label>' +
                                 '<div class="score-input-container" style="margin:0;">' +
-                                    '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--">' +
+                                    '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--"' +
+                                        (ownedEntry && ownedEntry.score ? ' value="' + esc(String(ownedEntry.score)) + '"' : '') + '>' +
                                     '<div class="score-controls">' +
                                         '<button type="button" class="score-btn" id="scoreUpBtn" aria-label="Increase score">+</button>' +
                                         '<button type="button" class="score-btn" id="scoreDownBtn" aria-label="Decrease score">−</button>' +
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
-                            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + game.id + '" data-game-data="' + gameDataStr + '">Add to Library</button>' +
+                            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + game.id + '" data-game-data="' + gameDataStr + '">' +
+                                (ownedEntry ? 'Save changes' : 'Add to Library') + '</button>' +
                         '</div>' +
                         '<div class="atl-note">' +
                             '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
@@ -910,6 +926,32 @@ async function addToList(gameId, gameData) {
         return;
     }
 
+    var ownedNow = typeof libraryEntry === 'function' ? libraryEntry(gameId) : null;
+
+    if (listValue === 'default' && ownedNow && ownedNow.id) {
+        // Editing what is already saved. A blank note box means "left alone",
+        // never "delete what I wrote", so it is only sent when it has content.
+        try {
+            var patch = { status: status, score: score ? parseInt(score) : null };
+            if (note) patch.notes = note;
+            var up = await fetch(`${API_BASE}/user/games/${encodeURIComponent(ownedNow.id)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify(patch)
+            });
+            var ud = await up.json().catch(function () { return {}; });
+            if (!up.ok) { showInlineMsg(messageEl, ud.error || 'Could not save that.', 'error'); return; }
+            if (typeof setLibraryEntry === 'function') {
+                setLibraryEntry(gameId, { id: ownedNow.id, status: status, score: score ? parseInt(score) : null });
+            }
+            if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(gameId);
+            showInlineMsg(messageEl, 'Updated in your collection.', 'success');
+        } catch (error) {
+            showInlineMsg(messageEl, 'Network error. Please try again.', 'error');
+        }
+        return;
+    }
+
     if (listValue === 'default') {
         try {
             var r = await fetch(`${API_BASE}/user/games`, {
@@ -935,6 +977,10 @@ async function addToList(gameId, gameData) {
                 }
                 return;
             }
+            if (typeof setLibraryEntry === 'function') {
+                setLibraryEntry(gameId, { id: d.game_id, status: status, score: score ? parseInt(score) : null });
+            }
+            if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(gameId);
             showInlineMsg(messageEl, 'Game added to your collection.', 'success');
             if (scoreInput)   scoreInput.value   = '';
             if (statusSelect) statusSelect.value = 'completed';
