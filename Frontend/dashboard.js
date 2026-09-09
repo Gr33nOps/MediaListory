@@ -3,6 +3,13 @@
    browse page with ?open=<ref>, which opens that title's detail there. */
 (function () {
   var API = (typeof API_BASE === 'string' && API_BASE) ? API_BASE : '/api';
+  // Every data call goes through apiFetch so it is counted by the cold-start
+  // watchdog in common.js. A raw fetch here is invisible to it, which leaves the
+  // trending skeletons sitting there with no "Starting the server" notice while
+  // Render boots. Falls back to plain fetch only if common.js somehow missed.
+  var api = (typeof apiFetch === 'function')
+    ? apiFetch
+    : function (path, opts) { return fetch(API + path, opts); };
   var token = (typeof getToken === 'function') ? getToken() : '';
   var isGuest = !token;
   var user = (typeof getStoredUser === 'function') ? getStoredUser() : null;
@@ -102,7 +109,7 @@
   async function loadUpNext() {
     if (isGuest) return;
     try {
-      var r = await fetch(API + '/user/games', { headers: { Authorization: 'Bearer ' + token } });
+      var r = await api('/user/games');
       if (!r.ok) return;
       var d = await r.json();
       libCache = d.games || [];
@@ -122,9 +129,9 @@
     if (next >= g.episode_count && status === 'playing') status = 'completed';
     btn.disabled = true;
     try {
-      var r = await fetch(API + '/user/games/' + id, {
+      var r = await api('/user/games/' + id, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: status, score: g.score || null, progress: next })
       });
       if (r.ok) {
@@ -172,7 +179,7 @@
       return rowShell('Trending ' + LABEL[t.cat], skelRow(), CAT_FOR[t.cat]);
     }).join('');
     var results = await Promise.all(TRENDING.map(function (t) {
-      return fetch(API + t.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) })
+      return api(t.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) })
         .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; });
     }));
     var html = '';

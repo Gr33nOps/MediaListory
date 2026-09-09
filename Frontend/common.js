@@ -1275,6 +1275,12 @@
     _onApiActivity = onApiStart;
     _onApiIdle = onApiIdle;
     document.addEventListener('mgl:backend-ready', onReady);
+    // Page scripts run while the document is still parsing, so a page like the
+    // dashboard has already fired its data calls by the time this mounts on
+    // DOMContentLoaded. Those calls saw a null _onApiActivity and never armed the
+    // watchdog, so a backend that was assumed warm but had gone cold left the
+    // skeletons up with no notice at all. Arm it now for anything still waiting.
+    if (pendingApiCalls > 0) onApiStart();
     // Only a genuinely cold start polls /health; a warm backend stays silent.
     if (!recentlyReady) { setTimeout(maybeShow, GRACE_MS); poll(); }
   }
