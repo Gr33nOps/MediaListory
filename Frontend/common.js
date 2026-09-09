@@ -1313,6 +1313,55 @@
   }
   global.mountAurora = mountAurora;
 
+  // ── Reduced motion: hold animated avatars on their first frame ────────────
+  // An animated GIF inside an <img> cannot be paused from CSS, and avatars show
+  // up in followers lists and search results where a grid of looping pictures is
+  // exactly the motion someone with the preference set has asked not to see.
+  // Frame one is painted to a canvas and swapped in, so the picture still shows,
+  // it just holds still. Only uploaded (same-origin data:) GIFs are touched;
+  // a remote one would taint the canvas and is left alone.
+  function freezeAnimatedAvatars() {
+    if (typeof document === 'undefined' || !document.body || !global.matchMedia) return;
+    if (!global.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    function freeze(img) {
+      if (!img || img.getAttribute('data-still') === '1') return;
+      if ((img.getAttribute('src') || '').slice(0, 15).toLowerCase() !== 'data:image/gif;') return;
+      img.setAttribute('data-still', '1');
+      function paint() {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth || 128;
+          c.height = img.naturalHeight || 128;
+          c.getContext('2d').drawImage(img, 0, 0);
+          img.src = c.toDataURL('image/png');
+        } catch (_) {}
+      }
+      if (img.complete && img.naturalWidth) paint();
+      else img.addEventListener('load', paint, { once: true });
+    }
+
+    function scan(node) {
+      if (!node || node.nodeType !== 1) return;
+      if (node.tagName === 'IMG') freeze(node);
+      if (!node.querySelectorAll) return;
+      var imgs = node.querySelectorAll('img');
+      for (var i = 0; i < imgs.length; i++) freeze(imgs[i]);
+    }
+
+    scan(document.body);
+    // Avatars arrive with async renders, so catch the ones that land later too.
+    try {
+      new MutationObserver(function (muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var added = muts[i].addedNodes;
+          for (var j = 0; j < added.length; j++) scan(added[j]);
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    } catch (_) {}
+  }
+  global.freezeAnimatedAvatars = freezeAnimatedAvatars;
+
   if (typeof document !== 'undefined') {
     initSentry(); // set up as early as possible so init-time errors are caught
     if (document.readyState === 'loading') {
@@ -1325,6 +1374,7 @@
         mountPageHeader();
         mountGlobalSearch();
         mountAppFooter();
+        freezeAnimatedAvatars();
         initAnalytics();
       });
     } else {
@@ -1336,6 +1386,7 @@
       mountPageHeader();
       mountGlobalSearch();
       mountAppFooter();
+      freezeAnimatedAvatars();
       initAnalytics();
     }
   }

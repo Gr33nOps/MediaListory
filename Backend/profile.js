@@ -39,9 +39,22 @@ module.exports = (db, verifyToken, checkBanned) => {
       const current = await db('users').where({ id: req.userId }).first();
       if (!current) return res.status(404).json({ error: 'User not found' });
 
-      // Avatar may be a normal URL or an uploaded data: URI (kept modest client-side).
+      // Avatar is either a remote https URL (Google/GitHub sign-in, ui-avatars)
+      // or an uploaded data: URI. GIF is allowed through so animated pictures
+      // survive; the client keeps those whole rather than flattening them.
       let avatar = avatar_url ? String(avatar_url).trim() : null;
-      if (avatar && avatar.length > 400000) avatar = null; // guard against oversized payloads
+      if (avatar) {
+        const isRemote = /^https:\/\//i.test(avatar);
+        const isImageData = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(avatar);
+        if (!isRemote && !isImageData) {
+          return res.status(400).json({ error: 'Profile picture must be an https URL or an uploaded PNG, JPEG, GIF, or WebP.' });
+        }
+        // Say so rather than saving the rest of the profile with the picture
+        // quietly dropped, which reads as a successful save that did not stick.
+        if (avatar.length > 400000) {
+          return res.status(413).json({ error: 'That profile picture is too large. Please use a smaller image.' });
+        }
+      }
 
       const updates = {
         display_name: String(display_name).trim().slice(0, 100),

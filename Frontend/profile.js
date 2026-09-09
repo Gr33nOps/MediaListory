@@ -130,12 +130,40 @@ function displayProfile(user) {
     var clr = document.getElementById('avatarClearBtn'); if (clr) clr.style.display = user.avatar_url ? 'inline-block' : 'none';
 }
 
+// An animated avatar has to stay small: avatar_url is a data URI stored on the
+// user row and returned inline with every profile, friends list, and search
+// result, so a heavy one is paid for on each of those responses.
+var GIF_MAX_BYTES = 256 * 1024;
+
+// Count graphic control extension blocks. One means a single frame, so a static
+// GIF still takes the downscale path below rather than being kept at full size.
+function isAnimatedGif(binary) {
+    var seen = 0, i = 0;
+    while ((i = binary.indexOf('\x21\xF9\x04', i)) !== -1) {
+        if (++seen > 1) return true;
+        i += 3;
+    }
+    return false;
+}
+
 // Read a chosen image, cover-crop to a square, downscale, and return a small
 // JPEG data URL so any photo from the user's device becomes a light avatar.
+// An animated GIF is the exception and is kept byte for byte: every canvas pass
+// below composites a single frame, which is what silently flattened them before.
 function readImageToDataUrl(file, cb) {
-    if (!file || !/^image\//.test(file.type)) { cb(null); return; }
+    if (!file || !/^image\//.test(file.type)) { cb(null, 'type'); return; }
     var reader = new FileReader();
     reader.onload = function () {
+        var dataUrl = String(reader.result || '');
+        if (file.type === 'image/gif') {
+            var binary = '';
+            try { binary = atob(dataUrl.slice(dataUrl.indexOf(',') + 1)); } catch (_) {}
+            if (binary && isAnimatedGif(binary)) {
+                if (file.size > GIF_MAX_BYTES) { cb(null, 'gifsize'); return; }
+                cb(dataUrl);
+                return;
+            }
+        }
         var img = new Image();
         img.onload = function () {
             var size = 256;
@@ -148,7 +176,7 @@ function readImageToDataUrl(file, cb) {
             try { cb(canvas.toDataURL('image/jpeg', 0.82)); } catch (_) { cb(null); }
         };
         img.onerror = function () { cb(null); };
-        img.src = reader.result;
+        img.src = dataUrl;
     };
     reader.onerror = function () { cb(null); };
     reader.readAsDataURL(file);
@@ -164,8 +192,15 @@ function initAvatarUpload() {
 
     function handleFile(file) {
         if (file && file.size > 8 * 1024 * 1024) { flashEdit('That image is too large (max 8MB).', true); return; }
-        readImageToDataUrl(file, function (url) {
-            if (!url) { flashEdit('Could not read that image. Try a JPG or PNG.', true); return; }
+        readImageToDataUrl(file, function (url, reason) {
+            if (!url) {
+                // An animated GIF is stored whole, so its own limit is much lower
+                // than the 8MB one above and needs to say so.
+                flashEdit(reason === 'gifsize'
+                    ? 'That GIF is too large. Animated pictures have to stay under 256KB, because they are sent in full every time your profile appears.'
+                    : 'Could not read that image. Try a JPG, PNG, or GIF.', true);
+                return;
+            }
             preview.src = url; dataField.value = url;
             if (clearBtn) clearBtn.style.display = 'inline-block';
         });
