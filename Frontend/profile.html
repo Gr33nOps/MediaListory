@@ -120,6 +120,32 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="editBio">Bio</label>
+                        <textarea id="editBio" class="form-input" rows="3" maxlength="300"
+                                  placeholder="A line or two about what you watch and play."></textarea>
+                        <p class="pf-hint"><span id="bioCount">0</span> of 300 characters</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label id="accentLabel">Profile colour</label>
+                        <div class="pf-swatches" role="group" aria-labelledby="accentLabel" id="accentSwatches">
+                            <button type="button" class="pf-swatch" data-cat="movie"  aria-pressed="false" aria-label="Blue"></button>
+                            <button type="button" class="pf-swatch" data-cat="series" aria-pressed="false" aria-label="Green"></button>
+                            <button type="button" class="pf-swatch" data-cat="anime"  aria-pressed="false" aria-label="Pink"></button>
+                            <button type="button" class="pf-swatch" data-cat="game"   aria-pressed="false" aria-label="Amber"></button>
+                        </div>
+                        <p class="pf-hint">Tints headings and Top 10 rankings on your profile.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editBanner">Profile header</label>
+                        <select id="editBanner" class="form-input">
+                            <option value="posters">Posters from my Top 10</option>
+                            <option value="accent">Just my profile colour</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <div class="pv-toggle-row">
                             <div>
                                 <div class="pv-toggle-title">Private account</div>
@@ -141,6 +167,34 @@
                 </form>
             </div>
         </div>
+
+        <section class="profile-section" id="topManager" data-accent="movie" hidden>
+            <div class="pf-section-head">
+                <h2 class="pf-section-title">Top 10 of all time</h2>
+                <div class="pf-chiprow" id="topCatTabs" role="tablist" aria-label="Top 10 category"></div>
+            </div>
+            <p class="pf-hint">Pick from titles already in your library. The order you set here is the order people see on your profile.</p>
+            <div class="pf-edit-top" id="topEditList"></div>
+            <div class="profile-actions" style="margin-top:12px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="topAddBtn">Add a title</button>
+                <span id="topStatus" class="pf-hint"></span>
+            </div>
+            <div id="topPicker" style="margin-top:12px;" hidden>
+                <label class="sr-only" for="topPickerSearch">Search your library</label>
+                <input type="search" id="topPickerSearch" class="form-input" placeholder="Search your library..." autocomplete="off">
+                <div class="pf-picker-results" id="topPickerResults"></div>
+            </div>
+        </section>
+
+        <section class="profile-section" id="currentManager" hidden>
+            <h2 class="pf-section-title">Currently into</h2>
+            <p class="pf-hint">Your profile shows what you are part way through. Tick up to six to pin exactly which ones appear; leave them all unticked and it follows whatever you touched most recently.</p>
+            <div class="pf-edit-top" id="currentPickList"></div>
+            <div class="profile-actions" style="margin-top:12px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="currentSaveBtn">Save selection</button>
+                <span id="currentStatus" class="pf-hint"></span>
+            </div>
+        </section>
 
         <div id="passwordModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
             <div class="modal-content password-modal-content">

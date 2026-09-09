@@ -4879,3 +4879,369 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
     .footer-igdb-text { min-width: 0; overflow-wrap: anywhere; }
     .toast-host { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); max-width: none; }
 }
+
+/* ══ Personal profiles ══════════════════════════════════════════════════════
+   Currently into, Top 10 of all time, Similar Taste, and people who match.
+
+   These sections sit directly on the page rather than each getting a panel of
+   its own: the profile already lives inside .profile-section, and wrapping every
+   block again would stack borders three deep. Separation comes from spacing and
+   one hairline rule, so the poster art stays the loudest thing on the page.
+
+   Every profile picks one of the four category colors as its accent, exposed
+   here as --pf-accent. Nothing invents a new hue. */
+
+.profile-section[data-accent] { --pf-accent: var(--cat-movie); --pf-accent-dim: var(--cat-movie-dim); }
+.profile-section[data-accent="movie"]  { --pf-accent: var(--cat-movie);  --pf-accent-dim: var(--cat-movie-dim); }
+.profile-section[data-accent="series"] { --pf-accent: var(--cat-series); --pf-accent-dim: var(--cat-series-dim); }
+.profile-section[data-accent="anime"]  { --pf-accent: var(--cat-anime);  --pf-accent-dim: var(--cat-anime-dim); }
+.profile-section[data-accent="game"]   { --pf-accent: var(--cat-game);   --pf-accent-dim: var(--cat-game-dim); }
+
+/* ── Header art ───────────────────────────────────────────────────────────
+   A band of the profile's own posters, heavily scrimmed so it reads as texture
+   behind the name rather than as a picture competing with it. Short on purpose:
+   this is a header, not a hero. */
+.pf-banner {
+    position: relative;
+    height: 104px;
+    margin: calc(var(--radius-lg) * -1) calc(var(--radius-lg) * -1) 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: linear-gradient(180deg, var(--pf-accent-dim, var(--cat-movie-dim)), transparent);
+    overflow: hidden;
+}
+.pf-banner.has-art { display: flex; gap: 2px; }
+.pf-banner.has-art img {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.5;
+}
+.pf-banner.has-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(10, 12, 18, 0.35) 0%, rgba(10, 12, 18, 0.82) 72%, var(--bg-card) 100%);
+}
+
+/* ── Bio ──────────────────────────────────────────────────────────────────── */
+.pf-bio {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+/* ── Similar taste read-out ───────────────────────────────────────────────
+   Baseline-aligned figure and label, not a badge. The number carries it. */
+.pf-similar {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.pf-similar-pct {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--pf-accent, var(--cat-movie));
+    letter-spacing: -0.02em;
+}
+.pf-similar-label { font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); }
+.pf-similar-none  { font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+.pf-similar-note {
+    flex-basis: 100%;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+/* ── Section scaffolding ──────────────────────────────────────────────────── */
+.pf-section {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-subtle);
+}
+.pf-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.pf-section-title {
+    margin: 0 0 14px;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+.pf-section-head .pf-section-title { margin-bottom: 0; }
+
+.pf-chiprow { display: flex; gap: 6px; flex-wrap: wrap; }
+.pf-chip {
+    padding: 5px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.pf-chip:hover { color: var(--text-secondary); border-color: var(--border); }
+.pf-chip.active {
+    color: var(--pf-accent, var(--cat-movie));
+    border-color: currentColor;
+}
+.pf-chip:focus-visible { outline: 2px solid var(--pf-accent, var(--cat-movie)); outline-offset: 2px; }
+
+/* ── Currently into ───────────────────────────────────────────────────────
+   A row of small landscape stills with the verb above the title, so the section
+   reads as sentences ("Watching Severance") rather than as another poster grid.
+   Each item carries its own category color on the left edge. */
+.pf-current {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 10px;
+}
+.pf-current-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px 8px 8px;
+    border-left: 3px solid var(--cat-movie);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.025);
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.pf-current-item:hover { background: rgba(255, 255, 255, 0.055); }
+.pf-current-item[data-cat="movie"]  { border-left-color: var(--cat-movie); }
+.pf-current-item[data-cat="series"] { border-left-color: var(--cat-series); }
+.pf-current-item[data-cat="anime"]  { border-left-color: var(--cat-anime); }
+.pf-current-item[data-cat="game"]   { border-left-color: var(--cat-game); }
+.pf-current-item img {
+    width: 44px;
+    height: 62px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+.pf-current-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pf-current-verb {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+}
+.pf-current-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pf-current-prog { font-size: 0.78rem; color: var(--text-muted); }
+
+/* ── Top 10 ───────────────────────────────────────────────────────────────
+   Posters in rank order with the number set over the corner. It scrolls
+   sideways instead of wrapping, because a ranked list that wraps to a second
+   row stops reading as a ranking. */
+.pf-top {
+    display: flex;
+    gap: 12px;
+    margin: 0;
+    /* Room for the rank numerals, which sit outside each poster. Without the
+       left and top padding the scroll container clips the 1. */
+    padding: 4px 0 12px;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+}
+.pf-top-item { flex: 0 0 118px; scroll-snap-align: start; }
+.pf-top-item a { display: block; text-decoration: none; position: relative; }
+.pf-top-item img {
+    width: 118px;
+    height: 172px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    display: block;
+    background: var(--bg-deep);
+}
+/* The numeral sits inside the poster corner rather than hanging off it: the row
+   is a horizontal scroll container, so anything outside the item box gets
+   clipped at whichever edge the list is scrolled to. */
+.pf-top-rank {
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    z-index: 2;
+    font-family: var(--font-display);
+    font-size: 2.1rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--bg-base);
+    -webkit-text-stroke: 2px var(--pf-accent, var(--cat-movie));
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.pf-top[data-cat="movie"]  { --pf-accent: var(--cat-movie); }
+.pf-top[data-cat="series"] { --pf-accent: var(--cat-series); }
+.pf-top[data-cat="anime"]  { --pf-accent: var(--cat-anime); }
+.pf-top[data-cat="game"]   { --pf-accent: var(--cat-game); }
+.pf-top-name {
+    display: block;
+    margin-top: 7px;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.pf-top-item a:hover .pf-top-name { color: var(--text-primary); }
+.pf-top-item a:focus-visible { outline: 2px solid var(--pf-accent, var(--cat-movie)); outline-offset: 3px; border-radius: var(--radius-md); }
+
+/* ── People with similar taste ────────────────────────────────────────────── */
+.pf-people {
+    display: grid;
+    /* Wide enough that an ordinary display name is not truncated to initials. */
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 8px;
+}
+.pf-person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.pf-person:hover { background: rgba(255, 255, 255, 0.05); }
+.pf-person img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.pf-person-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pf-person-pct {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--pf-accent, var(--cat-movie));
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Editing your own profile ─────────────────────────────────────────────── */
+.pf-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.pf-swatch {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    background-clip: content-box;
+    box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.pf-swatch[data-cat="movie"]  { background-color: var(--cat-movie); }
+.pf-swatch[data-cat="series"] { background-color: var(--cat-series); }
+.pf-swatch[data-cat="anime"]  { background-color: var(--cat-anime); }
+.pf-swatch[data-cat="game"]   { background-color: var(--cat-game); }
+.pf-swatch[aria-pressed="true"] { border-color: var(--text-primary); }
+.pf-swatch:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+
+/* The editor reuses the poster row above, plus controls that only exist here. */
+.pf-edit-top { display: flex; flex-direction: column; gap: 10px; }
+.pf-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.02);
+}
+.pf-edit-row img { width: 34px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
+.pf-edit-pos {
+    width: 1.6em;
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.pf-edit-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pf-edit-actions { display: flex; gap: 4px; }
+.pf-icon-btn {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.pf-icon-btn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border); }
+.pf-icon-btn:disabled { opacity: 0.35; cursor: default; }
+.pf-icon-btn:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.pf-hint { font-size: 0.82rem; color: var(--text-dim); margin: 0; }
+.pf-empty { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+
+.pf-picker-results { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow-y: auto; }
+.pf-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.pf-picker-row:hover { background: rgba(255, 255, 255, 0.05); }
+.pf-picker-row img { width: 32px; height: 46px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
+.pf-picker-row[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+
+@media (max-width: 640px) {
+    .pf-banner { height: 76px; }
+    .pf-current { grid-template-columns: 1fr; }
+    .pf-top-item { flex-basis: 96px; }
+    .pf-top-item img { width: 96px; height: 140px; }
+    .pf-top-rank { font-size: 1.7rem; }
+    .pf-people { grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-current-item, .pf-person, .pf-chip { transition: none; }
+}

@@ -1,5 +1,6 @@
 const express = require('express');
 const neonAuth = require('./neonAuth');
+const taste = require('./taste');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
@@ -12,11 +13,20 @@ module.exports = (db, verifyToken, checkBanned) => {
       username:     u.username,
       display_name: u.display_name || u.username || '',
       avatar_url:   u.avatar_url || null,
+      bio:          u.bio || '',
+      accent:       u.accent || null,
+      banner_style: u.banner_style || 'posters',
       is_private:   !!u.is_private,
       created_at:   u.created_at,
       updated_at:   u.updated_at
     };
   }
+
+  const MEDIA_TYPES = ['movie', 'series', 'anime', 'game'];
+  const ACCENTS = ['movie', 'series', 'anime', 'game'];
+  const BANNER_STYLES = ['posters', 'accent'];
+  const TOP_LIMIT = 10;
+  const CURRENT_LIMIT = 6;
 
   router.get('/profile', verifyToken, checkBanned, async (req, res) => {
     try {
@@ -56,6 +66,8 @@ module.exports = (db, verifyToken, checkBanned) => {
         }
       }
 
+      const { bio, accent, banner_style } = req.body;
+
       const updates = {
         display_name: String(display_name).trim().slice(0, 100),
         avatar_url:   avatar,
@@ -63,6 +75,17 @@ module.exports = (db, verifyToken, checkBanned) => {
       };
       if (typeof is_private !== 'undefined') {
         updates.is_private = (is_private === true || is_private === 'true' || is_private === 1);
+      }
+      // Each of these is only touched when sent, so a client that predates them
+      // does not wipe what the user already chose.
+      if (typeof bio !== 'undefined') {
+        updates.bio = String(bio == null ? '' : bio).trim().slice(0, 300) || null;
+      }
+      if (typeof accent !== 'undefined') {
+        updates.accent = ACCENTS.includes(accent) ? accent : null;
+      }
+      if (typeof banner_style !== 'undefined') {
+        updates.banner_style = BANNER_STYLES.includes(banner_style) ? banner_style : 'posters';
       }
       // Email is managed by Neon Auth; we mirror it locally for display but do not
       // change the sign-in email here (that requires a verified email-change flow).
@@ -76,6 +99,126 @@ module.exports = (db, verifyToken, checkBanned) => {
     } catch (error) {
       console.error('Update profile error:', error);
       res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  /* ── Top 10 of all time, one list per category ─────────────────────────── */
+
+  // Shape rows for the profile: poster, name, and the ref the browse pages open.
+  function topSelect(query) {
+    return query
+      .join('games as g', 'g.id', 'user_top_media.game_id')
+      .select(
+        'user_top_media.media_type', 'user_top_media.position',
+        'g.id as game_row_id', 'g.game_id', 'g.name', 'g.background_image', 'g.released'
+      )
+      .orderBy('user_top_media.media_type')
+      .orderBy('user_top_media.position');
+  }
+
+  function groupTop(rows) {
+    const out = { movie: [], series: [], anime: [], game: [] };
+    for (const r of rows) {
+      if (!out[r.media_type]) continue;
+      out[r.media_type].push({
+        position: Number(r.position),
+        game_id: r.game_id,
+        name: r.name,
+        background_image: r.background_image,
+        released: r.released
+      });
+    }
+    return out;
+  }
+
+  router.get('/profile/top', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const rows = await topSelect(db('user_top_media').where('user_top_media.user_id', req.userId));
+      res.json({ top: groupTop(rows) });
+    } catch (error) {
+      return clientError(res, 400, 'Request failed', error);
+    }
+  });
+
+  // Replaces one category's list outright. The client sends the order it wants,
+  // so reordering, adding, and removing are all the same call and there is never
+  // a half-applied list.
+  router.put('/profile/top/:mediaType', verifyToken, checkBanned, async (req, res) => {
+    const mediaType = String(req.params.mediaType || '');
+    if (!MEDIA_TYPES.includes(mediaType)) {
+      return res.status(400).json({ error: 'Unknown category' });
+    }
+    const refs = Array.isArray(req.body?.game_ids) ? req.body.game_ids.map(String) : null;
+    if (!refs) return res.status(400).json({ error: 'game_ids must be an array' });
+    if (refs.length > TOP_LIMIT) {
+      return res.status(400).json({ error: `A Top 10 holds at most ${TOP_LIMIT} titles.` });
+    }
+
+    try {
+      // Resolve external refs to catalog rows, and refuse anything filed under a
+      // different category so a game cannot be ranked in the movies Top 10.
+      const unique = [...new Set(refs)];
+      const games = unique.length
+        ? await db('games').whereIn('game_id', unique).select('id', 'game_id', 'media_type')
+        : [];
+      const byRef = new Map(games.map(g => [String(g.game_id), g]));
+
+      const rows = [];
+      const seen = new Set();
+      for (const ref of refs) {
+        const g = byRef.get(ref);
+        if (!g) return res.status(400).json({ error: `Not in the catalog yet: ${ref}` });
+        if (g.media_type !== mediaType) {
+          return res.status(400).json({ error: `"${ref}" is not a ${mediaType}.` });
+        }
+        if (seen.has(ref)) continue;
+        seen.add(ref);
+        rows.push({ user_id: req.userId, media_type: mediaType, game_id: g.id, position: rows.length + 1 });
+      }
+
+      await db.transaction(async (trx) => {
+        await trx('user_top_media').where({ user_id: req.userId, media_type: mediaType }).del();
+        if (rows.length) await trx('user_top_media').insert(rows);
+      });
+
+      taste.invalidate(req.userId);
+      const fresh = await topSelect(db('user_top_media').where('user_top_media.user_id', req.userId));
+      res.json({ message: 'Top 10 updated', top: groupTop(fresh) });
+    } catch (error) {
+      return clientError(res, 400, 'Could not save that Top 10', error);
+    }
+  });
+
+  /* ── Currently into ────────────────────────────────────────────────────── */
+
+  // The profile falls back to the most recently updated in-progress titles, so
+  // this endpoint only records a deliberate override.
+  router.put('/profile/current', verifyToken, checkBanned, async (req, res) => {
+    const refs = Array.isArray(req.body?.game_ids) ? req.body.game_ids.map(String) : null;
+    if (!refs) return res.status(400).json({ error: 'game_ids must be an array' });
+    if (refs.length > CURRENT_LIMIT) {
+      return res.status(400).json({ error: `You can pin at most ${CURRENT_LIMIT} titles.` });
+    }
+
+    try {
+      const rows = refs.length
+        ? await db('user_game_lists as ugl')
+            .join('games as g', 'g.id', 'ugl.game_id')
+            .where('ugl.user_id', req.userId)
+            .whereIn('g.game_id', refs)
+            .select('ugl.id')
+        : [];
+
+      await db.transaction(async (trx) => {
+        await trx('user_game_lists').where({ user_id: req.userId }).update({ show_on_profile: false });
+        if (rows.length) {
+          await trx('user_game_lists').whereIn('id', rows.map(r => r.id)).update({ show_on_profile: true });
+        }
+      });
+
+      res.json({ message: 'Updated', pinned: rows.length });
+    } catch (error) {
+      return clientError(res, 400, 'Could not save that selection', error);
     }
   });
 

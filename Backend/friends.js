@@ -1,4 +1,5 @@
 const express = require('express');
+const taste = require('./taste');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
@@ -56,6 +57,74 @@ module.exports = (db, verifyToken, checkBanned) => {
 
   // People discovery: every account (public accounts are directly followable,
   // private accounts show a Request button), minus yourself and banned users.
+  /* People with similar taste.
+
+     Scoring everybody would mean reading every library on every request, so this
+     shortlists on shared titles in SQL first and only scores that shortlist. The
+     result is cached for a few minutes because it moves slowly: it changes when
+     somebody rates or ranks something, not when they open a page.
+
+     Private accounts are left out unless you already follow them. Their Top 10,
+     ratings, and library are all hidden from you, so putting a number on how much
+     you have in common would leak the thing privacy is meant to cover. */
+  router.get('/discover/similar', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
+      const key = 'similar:' + req.userId;
+
+      /* Only the scores are cached, never who may see them. Visibility is
+         re-read below on every request: caching it would keep somebody in other
+         people's suggestions for the rest of the TTL after they went private,
+         still showing how much taste they share. */
+      let scores = taste.cacheGet(key);
+      if (scores === undefined) {
+        const candidateIds = await taste.findCandidates(db, req.userId, 40);
+        const profiles = candidateIds.length
+          ? await taste.loadProfiles(db, [req.userId, ...candidateIds])
+          : new Map();
+        const mine = profiles.get(String(req.userId));
+
+        scores = [];
+        for (const id of candidateIds) {
+          const theirs = profiles.get(id);
+          if (!mine || !theirs) continue;
+          const score = taste.similarity(mine, theirs);
+          if (!score) continue; // not enough between us to put a number on
+          scores.push({ id, percent: score.percent, shared: score.shared, topShared: score.topShared, coRated: score.coRated });
+        }
+        scores.sort((a, b) => b.percent - a.percent || b.shared - a.shared);
+        taste.cacheSet(key, scores);
+      }
+      if (!scores.length) return res.json({ users: [] });
+
+      const [rows, following] = await Promise.all([
+        db('users').whereIn('id', scores.map(s => s.id)).where('is_banned', false)
+          .select('id', 'username', 'display_name', 'avatar_url', 'is_private'),
+        db('user_follows').where('follower_id', req.userId).select('following_id')
+      ]);
+      const followed = new Set(following.map(r => String(r.following_id)));
+      const byId = new Map(rows.map(r => [String(r.id), r]));
+
+      const page = [];
+      for (const s of scores) {
+        const row = byId.get(s.id);
+        // Banned, deleted, or private-and-not-followed: not for this viewer.
+        if (!row) continue;
+        if (row.is_private && !followed.has(s.id)) continue;
+        page.push({ row, similarity: { percent: s.percent, shared: s.shared, topShared: s.topShared, coRated: s.coRated } });
+        if (page.length >= limit) break;
+      }
+      if (!page.length) return res.json({ users: [] });
+
+      // decorateRelationship preserves order, so the scores line back up by index.
+      const decorated = await decorateRelationship(req.userId, page.map(p => p.row));
+      res.json({ users: decorated.map((u, i) => ({ ...u, similarity: page[i].similarity })) });
+    } catch (error) {
+      console.error('Similar taste discovery error:', error);
+      return clientError(res, 400, 'Request failed', error);
+    }
+  });
+
   router.get('/discover', verifyToken, checkBanned, async (req, res) => {
     try {
       const sort = String(req.query.sort || 'recent');

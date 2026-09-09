@@ -1,8 +1,11 @@
 const express = require('express');
+const taste = require('./taste');
 const { clientError } = require('./errors');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
+
+  const CURRENT_LIMIT = 6;
 
   async function getPublicUser(userId) {
     try {
@@ -14,12 +17,72 @@ module.exports = (db, verifyToken, checkBanned) => {
         username:     dbUser.username     || 'unknown',
         display_name: dbUser.display_name || dbUser.username || '',
         avatar_url:   dbUser.avatar_url   || null,
+        bio:          dbUser.bio          || '',
+        accent:       dbUser.accent       || null,
+        banner_style: dbUser.banner_style || 'posters',
         is_private:   !!dbUser.is_private,
         created_at:   dbUser.created_at
       };
     } catch (_) {
       return null;
     }
+  }
+
+  // A user's Top 10s, grouped by category and already in rank order.
+  async function getTopMedia(userId) {
+    const rows = await db('user_top_media')
+      .join('games as g', 'g.id', 'user_top_media.game_id')
+      .where('user_top_media.user_id', userId)
+      .orderBy('user_top_media.position')
+      .select('user_top_media.media_type', 'user_top_media.position',
+              'g.game_id', 'g.name', 'g.background_image', 'g.released');
+    const out = { movie: [], series: [], anime: [], game: [] };
+    for (const r of rows) {
+      if (!out[r.media_type]) continue;
+      out[r.media_type].push({
+        position: Number(r.position), game_id: r.game_id,
+        name: r.name, background_image: r.background_image, released: r.released
+      });
+    }
+    return out;
+  }
+
+  /* What someone is currently into. Pinned titles win; with nothing pinned this
+     falls back to whatever they have most recently touched, so the section is
+     worth reading before anybody configures it. */
+  async function getCurrentlyInto(userId) {
+    const base = () => db('user_game_lists as ugl')
+      .join('games as g', 'g.id', 'ugl.game_id')
+      .where('ugl.user_id', userId)
+      .where('ugl.status', 'playing')
+      .select('g.game_id', 'g.name', 'g.background_image', 'g.media_type',
+              'g.episode_count', 'ugl.progress', 'ugl.updated_at');
+
+    const pinned = await base().where('ugl.show_on_profile', true)
+      .orderBy('ugl.updated_at', 'desc').limit(CURRENT_LIMIT);
+    if (pinned.length) return { items: pinned, pinned: true };
+
+    const recent = await base().orderBy('ugl.updated_at', 'desc').limit(CURRENT_LIMIT);
+    return { items: recent, pinned: false };
+  }
+
+  /* One pairwise Similar Taste score, cached briefly. The key is order
+     independent because the score is symmetric, so two people looking at each
+     other share the entry. */
+  async function scoreAgainstViewer(viewerId, targetId) {
+    if (!viewerId || !targetId || viewerId === targetId) return null;
+    const key = 'pair:' + [String(viewerId), String(targetId)].sort().join(':');
+    const cached = taste.cacheGet(key);
+    if (cached !== undefined) return cached;
+
+    const profiles = await taste.loadProfiles(db, [viewerId, targetId]);
+    const result = taste.similarity(
+      profiles.get(String(viewerId)) || { items: [], top: {}, genres: {} },
+      profiles.get(String(targetId)) || { items: [], top: {}, genres: {} }
+    );
+    const value = result ? { percent: result.percent, shared: result.shared, coRated: result.coRated, topShared: result.topShared } : null;
+    taste.cacheSet(key, value);
+    return value;
   }
 
   router.get('/:userId', verifyToken, checkBanned, async (req, res) => {
@@ -54,6 +117,16 @@ module.exports = (db, verifyToken, checkBanned) => {
         mediaBreakdown[key] += parseInt(r.count) || 0;
       });
 
+      // A private library stays private: no Top 10, nothing currently into, and
+      // no similarity score, since all three are derived from what they track.
+      const [top, current, similar] = canView
+        ? await Promise.all([
+            getTopMedia(userId),
+            getCurrentlyInto(userId),
+            isSelf ? Promise.resolve(null) : scoreAgainstViewer(req.userId, userId)
+          ])
+        : [null, null, null];
+
       res.json({
         user: {
           ...user,
@@ -65,7 +138,11 @@ module.exports = (db, verifyToken, checkBanned) => {
           mediaBreakdown: canView ? mediaBreakdown : { game: 0, movie: 0, series: 0, anime: 0 },
           followersCount: parseInt(followers?.count) || 0,
           followingCount: parseInt(following?.count) || 0
-        }
+        },
+        top,
+        currentlyInto: current,
+        // null means "not enough data yet" rather than a number nobody can trust.
+        similarity: similar
       });
     } catch (error) {
       console.error('Get user profile error:', error);

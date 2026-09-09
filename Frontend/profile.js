@@ -108,6 +108,7 @@ async function loadProfile() {
         var followingData = await results[2].json();
 
         displayStats(gamesData.games, followersData.followers, followingData.following);
+        initProfileManagers(gamesData.games);
     } catch (error) {
         console.error('Load profile error:', error);
     }
@@ -128,6 +129,7 @@ function displayProfile(user) {
     var avaData = document.getElementById('editAvatarData'); if (avaData) avaData.value = user.avatar_url || '';
     var priv = document.getElementById('editPrivate'); if (priv) priv.checked = !!user.is_private;
     var clr = document.getElementById('avatarClearBtn'); if (clr) clr.style.display = user.avatar_url ? 'inline-block' : 'none';
+    initProfileCustomisation(user);
 }
 
 // An animated avatar has to stay small: avatar_url is a data URI stored on the
@@ -301,7 +303,10 @@ async function handleProfileUpdate(e) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
             },
-            body: JSON.stringify({ display_name: displayName, email: email, avatar_url: avatarUrl, is_private: isPrivate })
+            body: JSON.stringify(Object.assign(
+                { display_name: displayName, email: email, avatar_url: avatarUrl, is_private: isPrivate },
+                profileCustomisationPayload()
+            ))
         });
         var data = await response.json();
 
@@ -420,4 +425,327 @@ function showError(element, message) {
 function showSuccess(element, message) {
     var safe = (typeof esc === 'function') ? esc(message) : String(message || '');
     element.innerHTML = '<div class="success">' + safe + '</div>';
+}
+
+/* ── Customising your own profile ──────────────────────────────────────────
+   The Top 10s and the "Currently into" picker. Both draw from the library that
+   is already loaded for the stats above, so neither costs an extra round trip
+   on load, and a Top 10 can only hold things you actually track. That keeps the
+   rankings honest and means every Top 10 entry also feeds Similar Taste. */
+
+var MG_ORDER  = ['movie', 'series', 'anime', 'game'];
+var MG_LABEL  = { movie: 'Movies', series: 'Shows', anime: 'Anime', game: 'Games' };
+var MG_FALLBACK = '/img/no-image.svg';
+var MG_TOP_MAX = 10;
+var MG_CURRENT_MAX = 6;
+
+var mgLibrary = [];       // everything in my library, for the picker
+var mgTop = { movie: [], series: [], anime: [], game: [] };
+var mgActiveCat = 'movie';
+var mgCurrentPinned = [];
+
+function mgEsc(v) {
+    return (typeof esc === 'function') ? esc(v) : String(v == null ? '' : v);
+}
+
+/* /user/games returns the numeric join id as game_id and the universal external
+   ref (tmdb_movie_123 and friends) as media_ref. Every profile API keys on the
+   external ref, so that is what the pickers must send. */
+function mgRef(g) {
+    return String(g.media_ref || g.game_id);
+}
+
+function mgPoster(src, alt) {
+    return '<img src="' + mgEsc(src || MG_FALLBACK) + '" alt="' + mgEsc(alt || '') + '" loading="lazy">';
+}
+
+function mgStatus(id, text, isError) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = isError ? 'var(--red-light)' : 'var(--text-dim)';
+}
+
+/* Called once the library has loaded, so both managers can render from it. */
+function initProfileManagers(games) {
+    mgLibrary = Array.isArray(games) ? games : [];
+    var topWrap = document.getElementById('topManager');
+    var curWrap = document.getElementById('currentManager');
+    if (topWrap) topWrap.hidden = false;
+    if (curWrap) curWrap.hidden = false;
+
+    mgCurrentPinned = mgLibrary.filter(function (g) { return g.show_on_profile; }).map(mgRef);
+
+    renderCurrentPicker();
+    loadTopMedia();
+    wireManagers();
+}
+
+function wireManagers() {
+    var add = document.getElementById('topAddBtn');
+    var picker = document.getElementById('topPicker');
+    var search = document.getElementById('topPickerSearch');
+    if (add && picker && !add.dataset.wired) {
+        add.dataset.wired = '1';
+        add.addEventListener('click', function () {
+            picker.hidden = !picker.hidden;
+            add.textContent = picker.hidden ? 'Add a title' : 'Done adding';
+            if (!picker.hidden) { renderPicker(''); if (search) search.focus(); }
+        });
+    }
+    if (search && !search.dataset.wired) {
+        search.dataset.wired = '1';
+        search.addEventListener('input', function () { renderPicker(search.value); });
+    }
+    var save = document.getElementById('currentSaveBtn');
+    if (save && !save.dataset.wired) {
+        save.dataset.wired = '1';
+        save.addEventListener('click', saveCurrentPicks);
+    }
+}
+
+async function loadTopMedia() {
+    try {
+        var r = await fetch(API_BASE + '/user/profile/top', { headers: { Authorization: 'Bearer ' + authToken } });
+        if (!r.ok) return;
+        var d = await r.json();
+        mgTop = d.top || mgTop;
+        renderTopManager();
+    } catch (_) { /* the section stays empty rather than blocking the page */ }
+}
+
+function renderTopManager() {
+    var tabs = document.getElementById('topCatTabs');
+    var list = document.getElementById('topEditList');
+    var wrap = document.getElementById('topManager');
+    if (!tabs || !list) return;
+
+    if (wrap) wrap.setAttribute('data-accent', mgActiveCat);
+    tabs.innerHTML = MG_ORDER.map(function (cat) {
+        var n = (mgTop[cat] || []).length;
+        var on = cat === mgActiveCat;
+        return '<button type="button" role="tab" class="pf-chip' + (on ? ' active' : '') + '" data-cat="' + cat + '"' +
+            ' aria-selected="' + on + '">' + MG_LABEL[cat] + (n ? ' (' + n + ')' : '') + '</button>';
+    }).join('');
+    tabs.querySelectorAll('.pf-chip').forEach(function (b) {
+        b.addEventListener('click', function () {
+            mgActiveCat = b.dataset.cat;
+            mgStatus('topStatus', '');
+            renderTopManager();
+            var picker = document.getElementById('topPicker');
+            if (picker && !picker.hidden) renderPicker(document.getElementById('topPickerSearch').value);
+        });
+    });
+
+    var items = mgTop[mgActiveCat] || [];
+    if (!items.length) {
+        list.innerHTML = '<p class="pf-empty">Nothing ranked in ' + MG_LABEL[mgActiveCat].toLowerCase() +
+            ' yet. Add up to ten and put them in the order you would defend.</p>';
+        return;
+    }
+
+    list.innerHTML = items.map(function (it, i) {
+        var last = i === items.length - 1;
+        return '<div class="pf-edit-row">' +
+            '<span class="pf-edit-pos">' + (i + 1) + '</span>' +
+            mgPoster(it.background_image, '') +
+            '<span class="pf-edit-name">' + mgEsc(it.name) + '</span>' +
+            '<span class="pf-edit-actions">' +
+                '<button type="button" class="pf-icon-btn" data-move="up" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') +
+                    ' aria-label="Move ' + mgEsc(it.name) + ' up">&uarr;</button>' +
+                '<button type="button" class="pf-icon-btn" data-move="down" data-i="' + i + '"' + (last ? ' disabled' : '') +
+                    ' aria-label="Move ' + mgEsc(it.name) + ' down">&darr;</button>' +
+                '<button type="button" class="pf-icon-btn" data-remove="' + i + '"' +
+                    ' aria-label="Remove ' + mgEsc(it.name) + '">&times;</button>' +
+            '</span>' +
+        '</div>';
+    }).join('');
+
+    list.querySelectorAll('[data-move]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var i = parseInt(b.dataset.i, 10);
+            var to = b.dataset.move === 'up' ? i - 1 : i + 1;
+            var arr = mgTop[mgActiveCat];
+            if (to < 0 || to >= arr.length) return;
+            var tmp = arr[i]; arr[i] = arr[to]; arr[to] = tmp;
+            renderTopManager();
+            saveTop();
+        });
+    });
+    list.querySelectorAll('[data-remove]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            mgTop[mgActiveCat].splice(parseInt(b.dataset.remove, 10), 1);
+            renderTopManager();
+            saveTop();
+        });
+    });
+}
+
+/* The picker only offers titles of the active category that are not already
+   ranked, so it is impossible to build an invalid list from the UI. */
+function renderPicker(term) {
+    var out = document.getElementById('topPickerResults');
+    if (!out) return;
+    var q = String(term || '').trim().toLowerCase();
+    var ranked = (mgTop[mgActiveCat] || []).map(function (t) { return String(t.game_id); });
+
+    var matches = mgLibrary.filter(function (g) {
+        if ((g.media_type || 'game') !== mgActiveCat) return false;
+        if (ranked.indexOf(mgRef(g)) !== -1) return false;
+        return !q || String(g.name || '').toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 40);
+
+    if (!matches.length) {
+        out.innerHTML = '<p class="pf-empty">' + (q
+            ? 'No ' + MG_LABEL[mgActiveCat].toLowerCase() + ' in your library match that.'
+            : 'Add some ' + MG_LABEL[mgActiveCat].toLowerCase() + ' to your library first.') + '</p>';
+        return;
+    }
+
+    var full = (mgTop[mgActiveCat] || []).length >= MG_TOP_MAX;
+    out.innerHTML = matches.map(function (g) {
+        return '<button type="button" class="pf-picker-row" data-ref="' + mgEsc(mgRef(g)) + '"' +
+            (full ? ' aria-disabled="true"' : '') + '>' +
+            mgPoster(g.background_image, '') +
+            '<span class="pf-edit-name">' + mgEsc(g.name) + '</span>' +
+        '</button>';
+    }).join('');
+
+    out.querySelectorAll('.pf-picker-row').forEach(function (b) {
+        b.addEventListener('click', function () {
+            if ((mgTop[mgActiveCat] || []).length >= MG_TOP_MAX) {
+                mgStatus('topStatus', 'That list is full. Remove one first.', true);
+                return;
+            }
+            var g = mgLibrary.find(function (x) { return mgRef(x) === b.dataset.ref; });
+            if (!g) return;
+            mgTop[mgActiveCat].push({ game_id: mgRef(g), name: g.name, background_image: g.background_image });
+            renderTopManager();
+            renderPicker(document.getElementById('topPickerSearch').value);
+            saveTop();
+        });
+    });
+}
+
+async function saveTop() {
+    var cat = mgActiveCat;
+    var refs = (mgTop[cat] || []).map(function (t) { return t.game_id; });
+    mgStatus('topStatus', 'Saving...');
+    try {
+        var r = await fetch(API_BASE + '/user/profile/top/' + cat, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+            body: JSON.stringify({ game_ids: refs })
+        });
+        var d = await r.json().catch(function () { return {}; });
+        if (!r.ok) { mgStatus('topStatus', d.error || 'Could not save.', true); return; }
+        mgStatus('topStatus', 'Saved');
+        setTimeout(function () { mgStatus('topStatus', ''); }, 1600);
+    } catch (_) {
+        mgStatus('topStatus', 'Could not reach the server.', true);
+    }
+}
+
+/* ── Currently into ───────────────────────────────────────────────────────── */
+
+function renderCurrentPicker() {
+    var list = document.getElementById('currentPickList');
+    if (!list) return;
+    var playing = mgLibrary.filter(function (g) { return g.status === 'playing'; });
+
+    if (!playing.length) {
+        list.innerHTML = '<p class="pf-empty">Nothing in progress right now. Set something to "In progress" and it shows up here.</p>';
+        return;
+    }
+
+    list.innerHTML = playing.map(function (g) {
+        var on = mgCurrentPinned.indexOf(mgRef(g)) !== -1;
+        var verb = (g.media_type === 'game') ? 'Playing' : 'Watching';
+        return '<label class="pf-edit-row">' +
+            '<input type="checkbox" data-ref="' + mgEsc(mgRef(g)) + '"' + (on ? ' checked' : '') + '>' +
+            mgPoster(g.background_image, '') +
+            '<span class="pf-edit-name">' + mgEsc(g.name) + '</span>' +
+            '<span class="pf-edit-pos" style="width:auto;font-size:0.75rem;">' + verb + '</span>' +
+        '</label>';
+    }).join('');
+
+    list.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            var picked = list.querySelectorAll('input[type="checkbox"]:checked');
+            if (picked.length > MG_CURRENT_MAX) {
+                cb.checked = false;
+                mgStatus('currentStatus', 'You can pin at most ' + MG_CURRENT_MAX + '.', true);
+            } else {
+                mgStatus('currentStatus', '');
+            }
+        });
+    });
+}
+
+async function saveCurrentPicks() {
+    var list = document.getElementById('currentPickList');
+    if (!list) return;
+    var refs = [].slice.call(list.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(function (cb) { return cb.dataset.ref; });
+    mgStatus('currentStatus', 'Saving...');
+    try {
+        var r = await fetch(API_BASE + '/user/profile/current', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+            body: JSON.stringify({ game_ids: refs })
+        });
+        var d = await r.json().catch(function () { return {}; });
+        if (!r.ok) { mgStatus('currentStatus', d.error || 'Could not save.', true); return; }
+        mgCurrentPinned = refs.map(String);
+        mgStatus('currentStatus', refs.length ? 'Saved' : 'Cleared, your profile follows what you touched most recently');
+        setTimeout(function () { mgStatus('currentStatus', ''); }, 2600);
+    } catch (_) {
+        mgStatus('currentStatus', 'Could not reach the server.', true);
+    }
+}
+
+/* ── Bio, colour, and header controls in the edit form ────────────────────── */
+
+function initProfileCustomisation(user) {
+    var bio = document.getElementById('editBio');
+    var count = document.getElementById('bioCount');
+    if (bio) {
+        bio.value = user.bio || '';
+        if (count) count.textContent = String(bio.value.length);
+        if (!bio.dataset.wired) {
+            bio.dataset.wired = '1';
+            bio.addEventListener('input', function () {
+                if (count) count.textContent = String(bio.value.length);
+            });
+        }
+    }
+
+    var banner = document.getElementById('editBanner');
+    if (banner) banner.value = user.banner_style || 'posters';
+
+    var swatches = document.getElementById('accentSwatches');
+    if (!swatches) return;
+    var chosen = user.accent || 'movie';
+    swatches.querySelectorAll('.pf-swatch').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.cat === chosen));
+        if (b.dataset.wired) return;
+        b.dataset.wired = '1';
+        b.addEventListener('click', function () {
+            swatches.querySelectorAll('.pf-swatch').forEach(function (o) {
+                o.setAttribute('aria-pressed', String(o === b));
+            });
+        });
+    });
+}
+
+// What the edit form should send alongside the existing fields.
+function profileCustomisationPayload() {
+    var bio = document.getElementById('editBio');
+    var banner = document.getElementById('editBanner');
+    var pressed = document.querySelector('#accentSwatches .pf-swatch[aria-pressed="true"]');
+    return {
+        bio: bio ? bio.value : '',
+        accent: pressed ? pressed.dataset.cat : null,
+        banner_style: banner ? banner.value : 'posters'
+    };
 }

@@ -50,6 +50,8 @@ Beyond that:
 - See a release calendar of what is coming next, merged across categories and grouped by month
 - Look back on a year: hours, top genres, score distribution, and where the time went by category
 - Import from a Letterboxd, MAL, or Trakt CSV, or a MediaListory JSON export, with a per row match preview before anything is written
+- Rank a Top 10 of all time in each category, and show what you are part way through on your profile
+- See how close someone else's taste is to yours as a percentage, worked out from shared titles, how you both scored them, your Top 10s, and the genres you gravitate to, and find people that way
 - Follow people, keep your profile public or private, and see what they finished or rated
 - Sign in with email and password, or with Google or GitHub
 - Switch between light and dark, on desktop or phone

@@ -1,10 +1,25 @@
 const express = require('express');
+const taste = require('./taste');
 const { clientError } = require('./errors');
 const { parseIgdbClientId, slugify } = require('./igdbUtils');
 const { parseMediaRef, externalRef, isValidMediaType, providerFor } = require('./tmdbUtils');
 
 module.exports = (db, verifyToken, checkBanned) => {
   const router = express.Router();
+
+  // Adding, rating, or removing a title changes what Similar Taste is computed
+  // from, so drop this user's cached scores once the write has actually
+  // succeeded. Doing it here rather than in each handler means a new write
+  // endpoint cannot forget to. Other people's cached lists are left to expire on
+  // their own: one rating rarely reorders somebody else's suggestions, and the
+  // TTL is short.
+  router.use((req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD') return next();
+    res.on('finish', () => {
+      if (res.statusCode < 400 && req.userId) taste.invalidate(req.userId);
+    });
+    next();
+  });
 
   function generateSlug(name) {
     return slugify(name);

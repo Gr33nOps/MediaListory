@@ -162,7 +162,8 @@
         <nav class="navbar" id="appNav" data-active="" data-brand="MediaListory"></nav>
         <h1 class="sr-only">User profile</h1>
 
-        <div class="profile-section">
+        <div class="profile-section" id="upProfileSection">
+            <div class="pf-banner" id="upBanner" aria-hidden="true"></div>
             <div class="profile-header">
                 <h2 id="profileTitle">User Profile</h2>
             </div>
@@ -188,7 +189,9 @@
                                 <span class="stat-label">Following</span>
                             </div>
                         </div>
+                        <p id="upBio" class="pf-bio" hidden></p>
                         <div id="upMediaBreakdown" class="cat-breakdown"></div>
+                        <div id="upSimilar" class="pf-similar" hidden></div>
                         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                             <button id="followActionBtn" class="btn btn-primary btn-sm">Follow</button>
                             <button id="shareProfileBtn" class="btn btn-secondary btn-sm">Share profile</button>
@@ -221,6 +224,24 @@
             <h2>This account is private</h2>
             <p id="privateNoticeText">Follow this person to see their library and lists. They'll get a request to approve.</p>
         </div>
+
+        <section id="upCurrent" class="pf-section" hidden>
+            <h2 class="pf-section-title">Currently into</h2>
+            <div id="upCurrentList" class="pf-current"></div>
+        </section>
+
+        <section id="upTop" class="pf-section" hidden>
+            <div class="pf-section-head">
+                <h2 class="pf-section-title">Top 10 of all time</h2>
+                <div id="upTopTabs" class="pf-chiprow" role="tablist" aria-label="Top 10 category"></div>
+            </div>
+            <ol id="upTopList" class="pf-top"></ol>
+        </section>
+
+        <section id="upSimilarPeople" class="pf-section" hidden>
+            <h2 class="pf-section-title">People with similar taste</h2>
+            <div id="upSimilarPeopleList" class="pf-people"></div>
+        </section>
 
         <div id="upTabs" class="page-tabs" role="tablist" aria-label="Profile sections">
             <button type="button" class="page-tab active" role="tab" id="upTabBtnCollection" data-tab="collection" aria-controls="tab-collection" aria-selected="true">Collection</button>

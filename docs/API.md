@@ -63,6 +63,44 @@ A unique index on `(provider, media_type, provider_id)` guarantees IDs from diff
 - `POST /api/auth/logout` - clears cookie (auth optional)
 - Same email via Google vs GitHub vs password is **not** auto-merged - see `docs/runbook.md` (Account linking)
 
+## Profiles
+
+Personalisation lives on the user row; the Top 10s and "Currently into" are read
+back through the public profile endpoint so a visitor gets them in one request.
+
+- `PUT /api/user/profile` also accepts `bio` (<= 300 chars), `accent`
+  (`movie` | `series` | `anime` | `game`, or null), and `banner_style`
+  (`posters` | `accent`). Each is only written when present, so an older client
+  cannot blank what the user set. `avatar_url` must be an https URL or a PNG,
+  JPEG, GIF, or WebP data URI; oversized ones answer 413 rather than saving the
+  rest of the profile with the picture dropped.
+- `GET /api/user/profile/top` - your Top 10s, grouped by category, in rank order.
+- `PUT /api/user/profile/top/:mediaType` - `{ game_ids: [...] }`, the external
+  refs in the order you want them, at most 10. Replaces that category outright, so
+  adding, removing, and reordering are all the same call. A ref filed under
+  another category is rejected.
+- `PUT /api/user/profile/current` - `{ game_ids: [...] }`, at most 6, pins which
+  in-progress titles show publicly. An empty array clears the pins and the profile
+  falls back to the most recently updated in-progress titles.
+- `GET /api/users/:userId` additionally returns `top`, `currentlyInto`, and
+  `similarity`. All three are `null` when `canView` is false, since each is
+  derived from a library that a private account has not shared.
+
+### Similar Taste
+
+`similarity` is `{ percent, shared, coRated, topShared }`, or `null` meaning
+"Not enough data yet". It is computed from real rows only: Top 10 agreement
+(0.35), rating agreement over co-rated titles (0.30), genre affinity weighted by
+score (0.20), and library overlap against the smaller library (0.15). Components
+that cannot be measured are dropped and the rest renormalised, then scaled by how
+much of the signal was present, so shared saves alone cannot read as high as
+shared rankings and scores. See `Backend/taste.js`.
+
+- `GET /api/discover/similar?limit=8` - other people ranked by that percentage.
+  Candidates are shortlisted in SQL on shared titles before anything is scored,
+  and the scores are cached briefly. Visibility is re-checked on every request, so
+  going private removes you from other people's suggestions immediately.
+
 ## Versioning
 
 - Current mounts: `/api/*`
