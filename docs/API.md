@@ -116,6 +116,31 @@ shared rankings and scores. See `Backend/taste.js`.
   rated, 3 or more apart). 403 for a private account you do not follow, 400 for
   yourself.
 
+## Seasons
+
+Optional, per season ratings for shows and anime. A title with no season rows
+behaves exactly as before, so this is additive everywhere.
+
+- `GET /api/user/games/:ref/seasons` - the season list with your entries merged
+  in, plus `derived`. The catalog side is filled lazily on first view: TMDB
+  returns the whole season list on the series detail response, so listing costs
+  one call and no per-season requests. Season 0 (specials) is excluded.
+- `PUT /api/user/games/:ref/seasons/:number` - `{ status, score }` using the
+  same status vocabulary and the same 1..10 score as the title level. A decimal
+  is rounded; anything outside 1..10 is refused rather than clamped.
+- `DELETE /api/user/games/:ref/seasons/:number` - clears that season.
+
+The overall is recomputed after every season write and stored on
+`user_game_lists.score`, so the library badge, Top 10, stats, and Similar Taste
+stay correct without knowing seasons exist. Seasons are weighted by episode
+count, only rated seasons count, and the result is rounded to a whole score. With
+no season rated the user's own overall is left alone. See `Backend/seasons.js`.
+
+Anime returns an empty list for now: Kitsu models each season as its own
+top-level entry rather than a child of one show, so an anime's seasons are its
+sibling catalog entries reached through the sequel chain. That is franchise
+grouping and is not yet implemented.
+
 ## Versioning
 
 - Current mounts: `/api/*`

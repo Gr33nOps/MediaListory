@@ -435,6 +435,17 @@ function renderCollectionRow(game) {
         '</span>';
     }
 
+    // Shows and anime can carry per season ratings. The button is only a
+    // disclosure: the panel loads on first open so the library list itself stays
+    // exactly as cheap to render as before.
+    var seasonRef = game.media_ref || game.game_id;
+    var seasonsHtml = '';
+    if (mediaType === 'series' || mediaType === 'anime') {
+        seasonsHtml = '<button type="button" class="coll-seasons-btn" data-ref="' + esc(seasonRef) + '"' +
+            ' aria-expanded="false" aria-controls="seasons-' + esc(seasonRef) + '"' +
+            ' title="Rate individual seasons">Seasons</button>';
+    }
+
     var editActions = isEditMode
         ? '<div class="coll-item-edit-actions">' +
               '<button class="btn btn-secondary btn-sm update-btn" data-game-id="' + game.game_id + '">Edit</button>' +
@@ -452,6 +463,7 @@ function renderCollectionRow(game) {
                     '<span class="status-dot-inline" style="background:' + statusColor + ';"></span>' +
                     '<span class="coll-item-status">' + esc(statusText) + '</span>' +
                     progressHtml +
+                    seasonsHtml +
                 '</div>' +
                 (game.notes ? '<div class="coll-note" title="Your review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
@@ -460,6 +472,7 @@ function renderCollectionRow(game) {
                 editActions +
             '</div>' +
         '</div>' +
+        (seasonsHtml ? '<div class="coll-seasons" id="seasons-' + esc(seasonRef) + '" hidden></div>' : '') +
     '</div>';
 }
 
@@ -1188,3 +1201,135 @@ function logout() {
     }
 }
 window.logout = logout;
+
+/* ── Season ratings ────────────────────────────────────────────────────────
+   A disclosure under a show or anime row in the library. Entirely optional:
+   rate the title as you always have and never open this, and nothing changes.
+   Rate seasons and the overall is recalculated from them, weighted by episode
+   count and rounded to a whole score, which is what the badge on the row shows.
+
+   The controls are the same status dropdown and the same 1..10 score used at the
+   title level, so there is one vocabulary to learn rather than two. */
+
+var seasonCache = {};
+
+function seasonScoreOptions(selected) {
+    var out = '<option value="">No score</option>';
+    for (var i = 10; i >= 1; i--) {
+        out += '<option value="' + i + '"' + (Number(selected) === i ? ' selected' : '') + '>' + i + '</option>';
+    }
+    return out;
+}
+
+function seasonRowHtml(ref, s) {
+    var eps = s.episode_count ? s.episode_count + ' eps' : '';
+    var label = s.name && !/^season\s/i.test(s.name) ? s.name : ('Season ' + s.season_number);
+    return '<div class="coll-season" data-season="' + s.season_number + '">' +
+        '<span class="coll-season-num">' + s.season_number + '</span>' +
+        '<span class="coll-season-main">' +
+            '<span class="coll-season-name">' + esc(label) + '</span>' +
+            (eps ? '<span class="coll-season-eps">' + eps + '</span>' : '') +
+        '</span>' +
+        '<label class="sr-only" for="ss-st-' + ref + '-' + s.season_number + '">Status for season ' + s.season_number + '</label>' +
+        '<select class="filter-select coll-season-status" id="ss-st-' + ref + '-' + s.season_number + '">' +
+            '<option value="">Not set</option>' +
+            (typeof statusOptions === 'function' ? statusOptions('series', s.status) : '') +
+        '</select>' +
+        '<label class="sr-only" for="ss-sc-' + ref + '-' + s.season_number + '">Score for season ' + s.season_number + '</label>' +
+        '<select class="filter-select coll-season-score" id="ss-sc-' + ref + '-' + s.season_number + '">' +
+            seasonScoreOptions(s.score) +
+        '</select>' +
+    '</div>';
+}
+
+function renderSeasons(panel, ref, data) {
+    var seasons = (data && data.seasons) || [];
+    if (!seasons.length) {
+        panel.innerHTML = '<p class="coll-season-empty">No season list for this title yet.</p>';
+        return;
+    }
+    var note = data.derived
+        ? '<p class="coll-season-note">Overall <strong>' + Number(data.derived) + '</strong>, calculated from the seasons you rated.</p>'
+        : '<p class="coll-season-note">Rate any season and the overall is worked out from them. Leave them blank to keep scoring the show yourself.</p>';
+
+    panel.innerHTML = note + seasons.map(function (s) { return seasonRowHtml(ref, s); }).join('');
+
+    panel.querySelectorAll('.coll-season').forEach(function (row) {
+        var number = row.dataset.season;
+        row.querySelectorAll('select').forEach(function (sel) {
+            sel.addEventListener('change', function () { saveSeason(ref, number, row, panel); });
+        });
+    });
+}
+
+async function loadSeasons(ref, panel) {
+    panel.innerHTML = '<p class="coll-season-empty">Loading seasons...</p>';
+    try {
+        var r = await fetch(API_BASE + '/user/games/' + encodeURIComponent(ref) + '/seasons', {
+            headers: { Authorization: 'Bearer ' + authToken }
+        });
+        if (!r.ok) { panel.innerHTML = '<p class="coll-season-empty">Could not load seasons.</p>'; return; }
+        var d = await r.json();
+        seasonCache[ref] = d;
+        renderSeasons(panel, ref, d);
+    } catch (_) {
+        panel.innerHTML = '<p class="coll-season-empty">Could not reach the server.</p>';
+    }
+}
+
+async function saveSeason(ref, number, row, panel) {
+    var status = row.querySelector('.coll-season-status').value;
+    var score = row.querySelector('.coll-season-score').value;
+    try {
+        var r = await fetch(API_BASE + '/user/games/' + encodeURIComponent(ref) + '/seasons/' + encodeURIComponent(number), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+            body: JSON.stringify({ status: status || null, score: score === '' ? null : Number(score) })
+        });
+        var d = await r.json().catch(function () { return {}; });
+        if (!r.ok) { if (typeof notify === 'function') notify(d.error || 'Could not save that season.', 'error'); return; }
+
+        seasonCache[ref] = d;
+        renderSeasons(panel, ref, d);
+
+        // Keep the row's badge honest without reloading the whole library.
+        if (d.overall != null) {
+            var item = panel.closest('.coll-item');
+            var badge = item && item.querySelector('.coll-score-badge');
+            if (badge) badge.textContent = d.overall;
+            var cached = (myGamesCache || []).find(function (g) {
+                return String(g.media_ref || g.game_id) === String(ref);
+            });
+            if (cached) cached.score = d.overall;
+        }
+    } catch (_) {
+        if (typeof notify === 'function') notify('Could not reach the server.', 'error');
+    }
+}
+
+/* One delegated listener rather than per-row wiring, so rows re-rendered by
+   sorting or filtering keep working. */
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.coll-seasons-btn');
+    if (!btn) return;
+    // The row itself opens the detail modal; this control must not trigger that.
+    e.preventDefault();
+    e.stopPropagation();
+
+    var ref = btn.dataset.ref;
+    var panel = document.getElementById('seasons-' + ref);
+    if (!panel) return;
+
+    var opening = panel.hidden;
+    panel.hidden = !opening;
+    btn.setAttribute('aria-expanded', String(opening));
+    if (opening && !panel.dataset.loaded) {
+        panel.dataset.loaded = '1';
+        loadSeasons(ref, panel);
+    }
+});
+
+// Changing a dropdown inside the panel must not bubble up and open the modal.
+document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('.coll-seasons')) e.stopPropagation();
+}, true);

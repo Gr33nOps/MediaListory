@@ -384,7 +384,10 @@ try {
 
 try {
   const libraryRoutes = require('./library');
+  const seasonRoutes = require('./seasons');
+  const seasonSources = require('./seasonSources');
   app.use('/api/user', libraryRoutes(db, verifyToken, checkBanned));
+  app.use('/api/user', seasonRoutes(db, verifyToken, checkBanned, { fetchSeasons: seasonSources.fetchSeasons }));
   console.log('  Library routes loaded');
 } catch (error) {
   console.error('  Error loading library routes:', error.message);
@@ -460,6 +463,8 @@ try {
   const homeRoutes = require('./home');
   const profileRoutes = require('./profile');
   const libraryRoutes = require('./library');
+  const seasonRoutes = require('./seasons');
+  const seasonSources = require('./seasonSources');
   const friendsRoutes = require('./friends');
   const userProfileRoutes = require('./userProfile');
   const adminRoutes = require('./admin');
@@ -472,6 +477,7 @@ try {
   app.use('/api/v1', homeRoutes(db));
   app.use('/api/v1/user', profileRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/user', libraryRoutes(db, verifyToken, checkBanned));
+  app.use('/api/v1/user', seasonRoutes(db, verifyToken, checkBanned, { fetchSeasons: seasonSources.fetchSeasons }));
   app.use('/api/v1', friendsRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/users', userProfileRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/admin', adminRoutes(db, verifyToken, verifyModerator, verifyAdmin, logModeratorActivity));

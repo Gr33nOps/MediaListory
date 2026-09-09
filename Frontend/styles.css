@@ -5363,3 +5363,83 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 @media (prefers-reduced-motion: reduce) {
     .pf-cmp-row { transition: none; }
 }
+
+/* ══ Season ratings ═════════════════════════════════════════════════════════
+   A disclosure inside the collection row. .coll-item is a flex row, so the
+   panel wraps onto its own line rather than being nested in a new wrapper,
+   which keeps the row's own layout and its dividing border untouched. */
+
+.coll-item { flex-wrap: wrap; }
+
+.coll-seasons-btn {
+    padding: 2px 9px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.coll-seasons-btn:hover { color: var(--text-primary); border-color: var(--border); }
+.coll-seasons-btn[aria-expanded="true"] { color: var(--cat-series-light); border-color: currentColor; }
+.coll-seasons-btn:focus-visible { outline: 2px solid var(--cat-series); outline-offset: 2px; }
+
+.coll-seasons {
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+    cursor: default;
+}
+
+.coll-season-note { margin: 0 0 10px; font-size: 0.8rem; color: var(--text-dim); }
+.coll-season-note strong { color: var(--cat-series-light); }
+.coll-season-empty { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+
+.coll-season {
+    display: grid;
+    /* minmax(0, ...) on every flexible track: a plain 1fr floors at min-content,
+       so a long season name refuses to shrink and shoves the two selects past
+       the edge of the row instead of ellipsing. */
+    grid-template-columns: 1.6em minmax(0, 1fr) minmax(0, 150px) minmax(0, 120px);
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+}
+.coll-season-num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+.coll-season-main { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.coll-season-name {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.coll-season-eps { font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0; }
+/* Fill the grid track and be allowed to shrink with it. Without min-width: 0 a
+   select keeps its own intrinsic width and spills out of the cell. */
+.coll-season .filter-select {
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    .coll-season { grid-template-columns: 1.4em 1fr; row-gap: 6px; }
+    .coll-season .filter-select { grid-column: span 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .coll-seasons-btn { transition: none; }
+}
