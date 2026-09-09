@@ -119,7 +119,11 @@ const EXTRA_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean)
   .map((s) => normalizeFrontendUrl(s))
   .filter((s) => /^https?:\/\//i.test(s));
-const ALLOWED_ORIGINS = new Set([FRONTEND_URL, ...EXTRA_ORIGINS]);
+// This service still serves the frontend statically as a same-origin fallback
+// (see the "/" static handler below), so its own origin must stay allowed
+// even when FRONTEND_URL points elsewhere (e.g. the Vercel split).
+const BACKEND_ORIGIN = process.env.BACKEND_URL ? normalizeFrontendUrl(process.env.BACKEND_URL) : null;
+const ALLOWED_ORIGINS = new Set([FRONTEND_URL, BACKEND_ORIGIN, ...EXTRA_ORIGINS].filter(Boolean));
 
 app.use(cors({
   origin(origin, callback) {
