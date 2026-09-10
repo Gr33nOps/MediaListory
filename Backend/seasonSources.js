@@ -30,7 +30,7 @@
    TV or ONA run is left out: specials, recaps and movies are not seasons and
    should not become numbered ones. */
 
-const { membersToSeasons, franchiseOf, isSeasonLike } = require('./franchise');
+const { membersToSeasons, franchiseOf, franchiseKey, isSeasonLike } = require('./franchise');
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const KITSU_BASE = 'https://kitsu.io/api/edge';
@@ -89,19 +89,41 @@ function kitsuMedia(id, attributes) {
   };
 }
 
-/* The franchise siblings that share this title's stem. One call. */
-async function seasonsByTitle(name) {
-  const { base } = franchiseOf(name);
+/* The franchise siblings that share this title's stem, oldest first. One call. */
+async function membersByTitle(name) {
+  const { base, key } = franchiseOf(name);
   if (!base) return [];
 
   const res = await fetch(`${KITSU_BASE}/anime?filter[text]=${encodeURIComponent(base)}&page[limit]=20`, { headers: KITSU_HEADERS });
   if (!res.ok) return [];
   const body = await res.json();
 
-  const candidates = (body.data || [])
+  return (body.data || [])
     .map((a) => kitsuMedia(a.id, a.attributes))
-    .filter((m) => m.name);
-  return membersToSeasons(base, candidates);
+    .filter((m) => m.name && franchiseKey(m.name) === key)
+    .sort((a, b) => {
+      const ta = Date.parse(a.released || '') || Number.MAX_SAFE_INTEGER;
+      const tb = Date.parse(b.released || '') || Number.MAX_SAFE_INTEGER;
+      return ta - tb;
+    });
+}
+
+async function seasonsByTitle(name) {
+  const { base } = franchiseOf(name);
+  if (!base) return [];
+  return membersToSeasons(base, await membersByTitle(name));
+}
+
+/* Everything in this title's run - films and specials included, not just the
+   seasons.
+
+   One call, and that is the whole point: this is used while someone waits for a
+   detail panel to open. The sequel-chain walk that answers for arc-named
+   franchises costs a request per hop - fourteen seconds for Demon Slayer - which
+   is fine behind a disclosure the user deliberately opened and not fine in front
+   of a modal. Callers that want the thorough answer ask for the chain directly. */
+async function franchiseMembers(game) {
+  return membersByTitle(game && game.name).catch(() => []);
 }
 
 /* One hop of the relationship graph: this entry's direct sequel and prequel. */
@@ -130,7 +152,7 @@ async function neighbours(kitsuId) {
 /* Walk the sequel chain to the whole run, in broadcast order. Starts by walking
    backwards, because the entry someone added may be the third season, not the
    first. */
-async function seasonsByChain(kitsuId) {
+async function chainByRelations(kitsuId) {
   if (!kitsuId) return [];
 
   let head = String(kitsuId);
@@ -164,10 +186,16 @@ async function seasonsByChain(kitsuId) {
   if (!headBody.data) return [];
   chain.unshift(kitsuMedia(headBody.data.id, headBody.data.attributes));
 
-  /* Numbered by the chain's own order rather than by air date: the chain is the
-     provider saying "this one follows that one", which is better evidence. */
+  return chain.filter((m) => m.name);
+}
+
+/* Seasons are the chain minus everything that is not a season, numbered by the
+   chain's own order rather than by air date: the chain is the provider saying
+   "this one follows that one", which is better evidence than a date. */
+async function seasonsByChain(kitsuId) {
+  const chain = await chainByRelations(kitsuId);
   return chain
-    .filter((m) => m.name && isSeasonLike(m))
+    .filter(isSeasonLike)
     .map((m, i) => ({
       season_number: i + 1,
       name: m.name,
@@ -203,4 +231,4 @@ async function fetchSeasons(game) {
   return [];
 }
 
-module.exports = { fetchSeasons, fetchTmdbSeasons, fetchKitsuSeasons };
+module.exports = { fetchSeasons, fetchTmdbSeasons, fetchKitsuSeasons, chainByRelations, franchiseMembers };

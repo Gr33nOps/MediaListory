@@ -261,6 +261,14 @@ function initPage() {
             return;
         }
         // "More like this" opens that game's detail.
+        var serEl = e.target.closest('.detail-series-item');
+        if (serEl && serEl.dataset.seriesRef) {
+            e.preventDefault();
+            e.stopPropagation();
+            showGameDetails(serEl.dataset.seriesRef);
+            return;
+        }
+
         var simEl = e.target.closest('.detail-similar-card');
         if (simEl && simEl.dataset.similarRef) {
             var modalBody = document.querySelector('#gameModal .modal-content');
@@ -569,6 +577,50 @@ function getRatingColor(score) {
     return '#ef4444';
 }
 
+
+/* ── The run a title belongs to ──────────────────────────────────────────────
+   Deliberately not styled as another "More like this" strip. That one is a
+   guess at taste; this is a position in a sequence, so it reads left to right
+   in order, each entry says where it sits, and the title you are already
+   looking at is marked and not clickable. Without that anchor a row of posters
+   is just more thumbnails. */
+
+var RELATION_WORD = {
+    prequel: 'Prequel',
+    sequel: 'Sequel',
+    earlier: 'Earlier',
+    later: 'Later',
+    current: 'You are here'
+};
+
+function seriesSectionHtml(relations) {
+    if (!Array.isArray(relations) || !relations.length) return '';
+    var hasOther = relations.some(function (r) { return r.relation !== 'current'; });
+    if (!hasOther) return '';
+
+    var items = relations.map(function (r) {
+        var here = r.relation === 'current';
+        var year = r.released ? String(r.released).slice(0, 4) : '';
+        var word = RELATION_WORD[r.relation] || '';
+        var img = '<img src="' + esc(r.image || '/img/no-image.svg') + '" alt="" loading="lazy"' +
+            ' onerror="this.src=\'/img/no-image.svg\'">';
+        var caption =
+            '<span class="dsr-rel">' + esc(word) + (year && !here ? ' \u00B7 ' + esc(year) : '') + '</span>' +
+            '<span class="ds-name">' + esc(r.name) + '</span>';
+
+        // The current entry is a label, not a control: clicking it would reload
+        // the page you are already on.
+        if (here) {
+            return '<div class="detail-series-item is-here" aria-current="true">' + img + caption + '</div>';
+        }
+        return '<button type="button" class="detail-series-item" data-series-ref="' + esc(r.id) + '"' +
+            ' title="' + esc(r.name) + '">' + img + caption + '</button>';
+    }).join('');
+
+    return '<div class="detail-section"><h3 class="detail-h">In this series</h3>' +
+        '<div class="detail-series">' + items + '</div></div>';
+}
+
 function displaySearchResults(games, replace) {
     if (replace === undefined) replace = true;
     var container = document.getElementById('searchResults');
@@ -694,6 +746,18 @@ async function showGameDetails(gameId) {
                             name: s.name,
                             background_image: 'https:' + s.cover.url.replace('t_thumb', 't_cover_big')
                         };
+                    }),
+                    // IGDB works in bare numeric ids; everything in this app
+                    // addresses a game by its catalog ref, including the click
+                    // that opens one of these.
+                    relations:        (igdbGame.relations || []).map(function (r) {
+                        return {
+                            id: 'igdb_' + r.id,
+                            name: r.name,
+                            released: r.released,
+                            image: r.image,
+                            relation: r.relation
+                        };
                     })
                 };
             }
@@ -809,6 +873,8 @@ async function showGameDetails(gameId) {
                   '</div></div>'
                 : '';
 
+            var seriesHtml = seriesSectionHtml(game.relations);
+
             var similarHtml = (game.similar && game.similar.length)
                 ? '<div class="detail-section"><h3 class="detail-h">More like this</h3><div class="detail-similar">' +
                     game.similar.map(function (s) {
@@ -886,6 +952,7 @@ async function showGameDetails(gameId) {
                         '</div>' +
                         '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
                     '</div>' +
+                    seriesHtml +
                     similarHtml +
                 '</div>';
 

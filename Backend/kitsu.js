@@ -6,6 +6,8 @@ const { sanitizeToken, clampInt, rankSearchResults } = require('./igdbUtils');
 const { mediaToRow } = require('./tmdbUtils');
 const { normalizeKitsuAnime, categoriesFromIncluded } = require('./kitsuUtils');
 const { collapseFranchises, franchiseOf } = require('./franchise');
+const { buildRelations, hasRelations } = require('./relations');
+const { franchiseMembers } = require('./seasonSources');
 
 const KITSU_BASE = 'https://kitsu.io/api/edge';
 
@@ -86,6 +88,29 @@ module.exports = (verifyToken, checkBanned, db) => {
      Coverage grows as the catalog gets used, and when the table knows nothing
      this simply does nothing. As everywhere else, an entry is only folded into
      a parent that is present in the same response - never hidden on a guess. */
+  /* A run we already worked out and stored, for a franchise whose titles share
+     no stem to match on. media_seasons is filled whenever anyone expands the
+     seasons of a title, so coverage grows with use; when it holds nothing this
+     returns nothing and the detail panel simply has no series strip. */
+  async function cachedRun(ref) {
+    if (!db) return [];
+    try {
+      const parent = await db('media_seasons').where('external_ref', ref).first('game_id');
+      if (!parent) return [];
+      const rows = await db('media_seasons')
+        .where('game_id', parent.game_id).orderBy('season_number')
+        .select('name', 'air_date', 'poster_image', 'external_ref');
+      return rows
+        .filter((r) => r.external_ref)
+        .map((r) => ({
+          id: r.external_ref,
+          name: r.name,
+          released: r.air_date ? new Date(r.air_date).toISOString().slice(0, 10) : null,
+          background_image: r.poster_image
+        }));
+    } catch (_) { return []; }
+  }
+
   async function foldKnownSeasons(items) {
     if (!db || items.length < 2) return items;
 
@@ -232,6 +257,19 @@ module.exports = (verifyToken, checkBanned, db) => {
                 .map(({ _main, ...c }) => c);
             }
           } catch (_) {}
+        }
+        if (normalized) {
+          /* Kitsu records real prequel/sequel edges between entries, so an
+             anime's run is narrative order rather than release order and can be
+             called what it is. */
+          let run = await franchiseMembers({ name: normalized.name }).catch(() => []);
+          if (run.length < 2) run = await cachedRun(normalized.id);
+          const rel = buildRelations(
+            run.map((m) => ({ id: m.id, name: m.name, released: m.released, image: m.background_image })),
+            normalized.id,
+            { ordered: true, narrative: true }
+          );
+          if (hasRelations(rel)) normalized.relations = rel;
         }
         const payload = normalized ? [normalized] : [];
         cache.set(cacheKey, payload, TTL.detail);

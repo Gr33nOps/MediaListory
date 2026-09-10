@@ -6,8 +6,11 @@ const { sanitizeToken, clampInt, rankSearchResults } = require('./igdbUtils');
 const {
   tmdbEndpointFor,
   normalizeTmdb,
-  mediaToRow
+  mediaToRow,
+  tmdbImage,
+  externalRef
 } = require('./tmdbUtils');
+const { buildRelations, hasRelations } = require('./relations');
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
@@ -97,6 +100,29 @@ module.exports = (verifyToken, checkBanned, db) => {
     await respectRateLimit();
     const url = `${TMDB_BASE}${pathPart}?${search.toString()}`;
     return fetch(url, { method: 'GET', headers });
+  }
+
+  /* The other films in this one's collection.
+
+     Only movies have this: TMDB models a film series as a `collection` and
+     hands the id back on the detail response, so it costs one extra call. TV
+     has no equivalent - TMDB does not record that one show follows another - so
+     shows get no series strip rather than a guessed one. */
+  async function collectionRelations(detail, currentRef) {
+    const collectionId = detail && detail.belongs_to_collection && detail.belongs_to_collection.id;
+    if (!collectionId) return [];
+
+    const res = await tmdbFetch(`/collection/${collectionId}`, { language: 'en-US' });
+    if (!res.ok) return [];
+    const body = await res.json();
+
+    const entries = (body.parts || []).map((part) => ({
+      id: externalRef('movie', part.id),
+      name: part.title || part.name,
+      released: part.release_date || null,
+      image: tmdbImage(part.poster_path, 'w185')
+    }));
+    return buildRelations(entries, currentRef);
   }
 
   function sendError(res, error, fallbackMessage) {
@@ -401,6 +427,10 @@ module.exports = (verifyToken, checkBanned, db) => {
           if (response.ok) {
             const data = await response.json();
             const normalized = normalizeTmdb(mediaType, data);
+            if (normalized) {
+              const rel = await collectionRelations(data, normalized.id).catch(() => []);
+              if (hasRelations(rel)) normalized.relations = rel;
+            }
             const payload = normalized ? [normalized] : [];
             cache.set(cacheKey, payload, TTL.detail);
             persistMedia(payload).catch(() => {});

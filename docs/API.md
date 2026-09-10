@@ -153,6 +153,34 @@ shared rankings and scores. See `Backend/taste.js`.
   instead of adding a second copy. Deliberately not `GET /games`, which carries
   every title's description and runs to tens of kilobytes.
 
+## Series relations
+
+Detail responses carry `relations` when the provider knows what else belongs to
+the same run: `[{ id, name, released, image, relation }]` in order, including the
+title being viewed, marked `current`. Kept apart from `similar` on purpose -
+recommendations are a guess at taste, this is a fact about the work.
+
+How much can honestly be claimed differs by provider, and the labels follow:
+
+- **Anime** - Kitsu records real `prequel`/`sequel` edges, so the run is
+  narrative order and is labelled `prequel`/`sequel`. Resolved from the cheap
+  title search; a franchise whose titles share no stem falls back to whatever
+  `media_seasons` already holds, because the sequel-chain walk that would answer
+  properly costs a request per hop and a detail panel cannot wait for it.
+- **Movies** - TMDB `belongs_to_collection` then `/collection/{id}`. One extra
+  call, release order, labelled `earlier`/`later`.
+- **Games** - IGDB collections, expanded inline on the detail query so it costs
+  nothing extra. Main games and standalone expansions only; remakes, remasters
+  and ports are the same game again. Labelled `earlier`/`later`.
+- **Shows** - nothing. TMDB does not record that one series follows another, and
+  neither does Wikidata reliably, so shows get no strip rather than a guessed one.
+
+`earlier`/`later` rather than `prequel`/`sequel` wherever only release order is
+known: release order is not story order, and Star Wars is the standing
+counter-example. Nothing is returned at all when the title being viewed is not
+itself in the list, since "before" and "after" would then mean nothing. Long runs
+are trimmed to the entries nearest the one being viewed.
+
 ## Seasons
 
 Optional, per season ratings for shows and anime. A title with no season rows

@@ -150,6 +150,14 @@
         return;
       }
       // "More like this" opens that title's detail.
+      var serEl = e.target.closest('.detail-series-item');
+      if (serEl && serEl.dataset.seriesRef) {
+        e.preventDefault();
+        e.stopPropagation();
+        showDetails(serEl.dataset.seriesRef);
+        return;
+      }
+
       var simEl = e.target.closest('.detail-similar-card');
       if (simEl && simEl.dataset.similarRef) {
         var modalBody = document.querySelector('#gameModal .modal-content');
@@ -222,6 +230,50 @@
       return true;
     });
   }
+
+
+/* ── The run a title belongs to ──────────────────────────────────────────────
+   Deliberately not styled as another "More like this" strip. That one is a
+   guess at taste; this is a position in a sequence, so it reads left to right
+   in order, each entry says where it sits, and the title you are already
+   looking at is marked and not clickable. Without that anchor a row of posters
+   is just more thumbnails. */
+
+var RELATION_WORD = {
+    prequel: 'Prequel',
+    sequel: 'Sequel',
+    earlier: 'Earlier',
+    later: 'Later',
+    current: 'You are here'
+};
+
+function seriesSectionHtml(relations) {
+    if (!Array.isArray(relations) || !relations.length) return '';
+    var hasOther = relations.some(function (r) { return r.relation !== 'current'; });
+    if (!hasOther) return '';
+
+    var items = relations.map(function (r) {
+        var here = r.relation === 'current';
+        var year = r.released ? String(r.released).slice(0, 4) : '';
+        var word = RELATION_WORD[r.relation] || '';
+        var img = '<img src="' + esc(r.image || '/img/no-image.svg') + '" alt="" loading="lazy"' +
+            ' onerror="this.src=\'/img/no-image.svg\'">';
+        var caption =
+            '<span class="dsr-rel">' + esc(word) + (year && !here ? ' \u00B7 ' + esc(year) : '') + '</span>' +
+            '<span class="ds-name">' + esc(r.name) + '</span>';
+
+        // The current entry is a label, not a control: clicking it would reload
+        // the page you are already on.
+        if (here) {
+            return '<div class="detail-series-item is-here" aria-current="true">' + img + caption + '</div>';
+        }
+        return '<button type="button" class="detail-series-item" data-series-ref="' + esc(r.id) + '"' +
+            ' title="' + esc(r.name) + '">' + img + caption + '</button>';
+    }).join('');
+
+    return '<div class="detail-section"><h3 class="detail-h">In this series</h3>' +
+        '<div class="detail-series">' + items + '</div></div>';
+}
 
   function skeletonCards(n) {
     var one = '<div class="skeleton-card"><div class="skeleton skel-poster"></div>' +
@@ -428,6 +480,8 @@
           }).join('') +
         '</div></div>'
       : '';
+    var seriesHtml = seriesSectionHtml(media.relations);
+
     var similarHtml = (media.similar && media.similar.length)
       ? '<div class="detail-section"><h3 class="detail-h">More like this</h3><div class="detail-similar">' +
           media.similar.map(function (s) {
@@ -468,7 +522,7 @@
             '<div class="game-detail-badges">' + releasedBadge + ratingBadge + '</div>' +
           '</div>' +
         '</div>' +
-        genreTagsHtml + infoGridHtml + descHtml + trailerHtml + watchHtml + castHtml +
+        genreTagsHtml + infoGridHtml + descHtml + trailerHtml + watchHtml + seriesHtml + castHtml +
         '<div class="add-to-list">' +
           '<h3>' + (owned ? 'In your library' : 'Add to My Library') + '</h3>' +
           (owned ? '<p class="atl-owned-note">Saved as <strong>' +

@@ -8,6 +8,7 @@ const {
   rankSearchResults,
   mapIgdbToRow
 } = require('./igdbUtils');
+const { buildRelations, hasRelations } = require('./relations');
 
 const GAME_FIELDS =
   'name, cover.url, rating, rating_count, summary, first_release_date, ' +
@@ -18,7 +19,11 @@ const GAME_FIELDS =
 const DETAIL_FIELDS =
   GAME_FIELDS + ', storyline, screenshots.url, videos.video_id, videos.name, ' +
   'game_modes.name, player_perspectives.name, ' +
-  'similar_games.name, similar_games.cover.url, similar_games.total_rating';
+  'similar_games.name, similar_games.cover.url, similar_games.total_rating, ' +
+  // The series this game belongs to. IGDB calls it a collection and will expand
+  // its members inline, so the whole run costs nothing beyond the detail call.
+  'collections.name, collections.games.name, collections.games.cover.url, ' +
+  'collections.games.first_release_date, collections.games.game_type';
 
 const ALLOWED_SORT = {
   release: 'first_release_date',
@@ -173,6 +178,39 @@ module.exports = (verifyToken, checkBanned, db) => {
       body.message = error.message;
     }
     return res.status(500).json(body);
+  }
+
+  /* The other games in this one's series.
+
+     IGDB has no prequel/sequel edge, only membership of a collection, so the
+     entries are ordered by release date and labelled earlier/later - which is
+     all we actually know. Ports, bundles and expansions are left out: they are
+     the same game again, not the one before or after it. */
+  /* Main games and standalone expansions only. Remakes, remasters, ports and
+     enhanced editions are the same game again - listing them as "earlier" would
+     put four versions of The Witcher between it and its sequel. */
+  const SERIES_GAME_TYPES = new Set([0, 4]);
+
+  function seriesRelations(game) {
+    const collections = Array.isArray(game && game.collections) ? game.collections : [];
+    const entries = [];
+    for (const collection of collections) {
+      for (const member of (collection.games || [])) {
+        if (!member || !member.name) continue;
+        if (member.game_type != null && !SERIES_GAME_TYPES.has(Number(member.game_type))) continue;
+        entries.push({
+          id: member.id,
+          name: member.name,
+          released: member.first_release_date
+            ? new Date(member.first_release_date * 1000).toISOString().slice(0, 10)
+            : null,
+          image: member.cover && member.cover.url
+            ? 'https:' + String(member.cover.url).replace('t_thumb', 't_cover_small')
+            : null
+        });
+      }
+    }
+    return buildRelations(entries, game.id);
   }
 
   function buildGamesQuery(body, opts = {}) {
@@ -500,6 +538,14 @@ module.exports = (verifyToken, checkBanned, db) => {
       // re-orders the fetched results only - it never removes any of them.
       if (searchTerm && Array.isArray(data)) {
         data = rankSearchResults(data, searchTerm, (g) => g && g.name);
+      }
+
+      if (detailId && Array.isArray(data) && data[0]) {
+        const rel = seriesRelations(data[0]);
+        if (hasRelations(rel)) data[0].relations = rel;
+        // The expanded collection is only raw material for that strip; sending
+        // it on would add kilobytes the client never reads.
+        delete data[0].collections;
       }
 
       cache.set(cacheKey, data, detailId ? TTL.detail : TTL.list);
