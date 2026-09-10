@@ -1,6 +1,6 @@
 /* Home dashboard: greeting/pitch, "Up Next" (in-progress shows & anime with a
-   one-tap +1), and a Trending row per category. Cards link to the relevant
-   browse page with ?open=<ref>, which opens that title's detail there. */
+   one-tap +1), and a Trending row per category. Cards link straight to
+   the title's own page (title.html?ref=<ref>). */
 (function () {
   var API = (typeof API_BASE === 'string' && API_BASE) ? API_BASE : '/api';
   // Every data call goes through apiFetch so it is counted by the cold-start
@@ -27,9 +27,8 @@
 
   function posterCard(item) {
     var ref = item.id;
-    var page = PAGE_FOR[item.media_type] || 'home.html';
     var rating = item.rating ? '<span class="card-rating">★ ' + esc(Number(item.rating).toFixed(1)) + '</span>' : '';
-    return '<a class="dash-card" href="' + page + '?open=' + encodeURIComponent(ref) + '" title="' + esc(item.name) + '">' +
+    return '<a class="dash-card" href="title.html?ref=' + encodeURIComponent(ref) + '" title="' + esc(item.name) + '">' +
       '<div class="dash-card-poster">' +
         '<img src="' + esc(item.background_image || '/img/no-image.svg') + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' + rating +
       '</div>' +
@@ -88,9 +87,8 @@
     var cards = items.map(function (g) {
       var prog = g.progress || 0;
       var pct = Math.min(100, Math.round(prog / g.episode_count * 100));
-      var page = PAGE_FOR[g.media_type];
       return '<div class="dash-upnext-card">' +
-        '<a class="dash-upnext-poster" href="' + page + '?open=' + encodeURIComponent(g.game_id) + '" title="' + esc(g.name) + '">' +
+        '<a class="dash-upnext-poster" href="title.html?ref=' + encodeURIComponent(g.game_id) + '" title="' + esc(g.name) + '">' +
           '<img src="' + esc(g.background_image || '/img/no-image.svg') + '" alt="' + esc(g.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
         '</a>' +
         '<div class="dash-upnext-info">' +

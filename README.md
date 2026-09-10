@@ -62,7 +62,11 @@ Admin and moderator dashboards ship with it for handling reports and bans.
 
 ## Credits
 
-Movie and TV data from [TMDB](https://www.themoviedb.org/), anime from [Kitsu](https://kitsu.io/), and games from [IGDB](https://www.igdb.com/), a Twitch service. MediaListory uses these APIs but is not endorsed or certified by any of them. Every poster, title, and detail belongs to its owner.
+Movie and TV data from [TMDB](https://www.themoviedb.org/), anime from [Kitsu](https://kitsu.io/), and games from [IGDB](https://www.igdb.com/), a Twitch service.
+
+Detail pages add a little on top of that catalogue, from sources that need no key: game prices from [CheapShark](https://www.cheapshark.com/), anime scores and studios from [MyAnimeList](https://myanimelist.net/) via [Jikan](https://jikan.moe/), opening and ending themes from [AnimeThemes](https://animethemes.moe/), and episode dates from [TVmaze](https://www.tvmaze.com/), whose data is used under [CC BY-SA](https://creativecommons.org/licenses/by-sa/4.0/).
+
+MediaListory uses these APIs but is not endorsed or certified by any of them. Every poster, title, and detail belongs to its owner.
 
 ---
 
@@ -92,7 +96,7 @@ npm install
 ```
 
 1. Fill `.env` from [`.env.example`](.env.example): Neon `DATABASE_URL`, Neon Auth, JWT, Twitch/IGDB, and TMDB. Kitsu needs no key, and Google/GitHub OAuth is optional. The database string comes from the Neon Console under Connect, and the auth values from `neon neon-auth status --project-id <id> --branch production`.
-2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql), then the migrations in [`DB/migrations/`](DB/migrations/) in order, through `neon psql` or the Neon SQL editor. See [`DB/README.md`](DB/README.md).
+2. Apply the schema to Neon: [`DB/schema.postgres.sql`](DB/schema.postgres.sql), then the migrations in [`DB/migrations/`](DB/migrations/) in order, through `neon psql` or the Neon SQL editor. See [`DB/README.md`](DB/README.md). `add-external-id-map.sql` is worth applying even though nothing breaks without it: the detail-page extras fall back to resolving their ids live on every view, which is slower and spends more of the upstream budget.
 3. Start it:
 
 ```bash
@@ -135,6 +139,7 @@ semgrep scan --config p/security-audit --config p/secrets --config p/javascript 
 ```text
 MediaListory/
 ├── Backend/          Express API, plus the TMDB, Kitsu, and IGDB proxies
+│                     and enrich.js for the keyless secondary sources
 ├── Frontend/         Static pages, CSS, JS
 ├── DB/
 │   ├── schema.postgres.sql

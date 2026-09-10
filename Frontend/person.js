@@ -84,7 +84,7 @@
 
   function creditRowHtml(credit) {
     var page = BROWSE_PAGE[credit.media_type];
-    var href = page ? page + '?open=' + encodeURIComponent(credit.ref) : null;
+    var href = page ? 'title.html?ref=' + encodeURIComponent(credit.ref) : null;
     var year = creditYear(credit);
 
     var meta = [];

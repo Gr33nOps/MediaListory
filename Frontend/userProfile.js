@@ -139,13 +139,6 @@ function initPage() {
         });
     });
 
-    if (typeof bindModal === 'function') bindModal('gameModal', 'closeModalBtn');
-    else document.getElementById('closeModalBtn').addEventListener('click', function() {
-        document.getElementById('gameModal').style.display = 'none';
-    });
-    document.getElementById('gameModal').addEventListener('click', function(e) {
-        if (e.target.id === 'gameModal' && typeof closeModal === 'function') closeModal('gameModal');
-    });
 
     document.getElementById('clGameModal').addEventListener('click', function(e) {
         if (e.target.id === 'clGameModal') upCloseModal('clGameModal');
@@ -347,148 +340,11 @@ function renderCollectionRow(game) {
     '</div>';
 }
 
-async function showGameDetails(gameId) {
-    var ref = String(gameId);
-    // Movies / series come from TMDB and are returned already normalized.
-    var tmdbMatch = ref.match(/^tmdb_(movie|series)_(\d+)$/);
-    if (tmdbMatch) { return showTmdbDetails(tmdbMatch[1], Number(tmdbMatch[2])); }
-    try {
-        var igdbId = ref.replace('igdb_', '');
-
-        var r = await fetch(`${API_BASE}/igdb/games`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + authToken
-            },
-            body: JSON.stringify({ id: Number(igdbId) })
-        });
-
-        var igdbGames = await r.json();
-        if (!r.ok || !igdbGames.length) return;
-
-        var ig         = igdbGames[0];
-        var publishers = [];
-        var developers = [];
-        (ig.involved_companies || []).forEach(function(ic) {
-            if (ic.company) {
-                if (ic.publisher) publishers.push(ic.company.name);
-                if (ic.developer) developers.push(ic.company.name);
-            }
-        });
-
-        var score = null;
-        if (ig.total_rating && ig.total_rating_count >= 5)           score = Math.round(ig.total_rating);
-        else if (ig.aggregated_rating && ig.aggregated_rating_count >= 3) score = Math.round(ig.aggregated_rating);
-
-        var rc       = !score ? '#666' : score >= 90 ? '#10b981' : score >= 75 ? '#3b82f6' : score >= 50 ? '#f59e0b' : '#ef4444';
-        var coverUrl = ig.cover
-            ? 'https:' + ig.cover.url.replace('t_thumb', 't_cover_big')
-            : '/img/no-image.svg';
-
-        var released = ig.first_release_date
-            ? new Date(ig.first_release_date * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-            : null;
-
-        var infoItems = [
-            released          ? { label: 'Released',  value: released }                                           : null,
-            publishers.length ? { label: 'Publisher', value: publishers.join(', ') }                              : null,
-            developers.length ? { label: 'Developer', value: developers.join(', ') }                              : null,
-            ig.platforms && ig.platforms.length ? { label: 'Platforms', value: ig.platforms.map(function(p) { return p.name; }).join(' / ') } : null
-        ].filter(Boolean);
-
-        var genreTagsHtml = (ig.genres || []).length
-            ? '<div class="game-detail-genres">' + ig.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name) + '</span>'; }).join('') + '</div>'
-            : '';
-
-        var infoGridHtml = infoItems.length
-            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + i.label + '</div><div class="game-detail-info-value">' + i.value + '</div></div>'; }).join('') + '</div>'
-            : '';
-
-        var scoreSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
-
-        document.getElementById('gameDetails').innerHTML =
-            '<div class="game-detail-hero">' +
-                '<img src="' + coverUrl + '" alt="' + esc(ig.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-            '</div>' +
-            '<div class="game-detail-body">' +
-                '<div class="game-detail-title-row">' +
-                    '<img src="' + coverUrl + '" alt="' + esc(ig.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                    '<div class="game-detail-title-meta">' +
-                        '<div class="game-detail-title">' + esc(ig.name) + '</div>' +
-                        '<div class="game-detail-badges">' +
-                            '<span class="game-detail-score" style="background:' + rc + ';">' + scoreSvg + ' ' + (score ? score + '/100' : 'No Rating') + '</span>' +
-                            (released ? '<span class="game-detail-date">' + released + '</span>' : '') +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-                genreTagsHtml +
-                infoGridHtml +
-                (ig.summary ? '<p class="game-detail-desc">' + esc(ig.summary) + '</p>' : '') +
-            '</div>';
-
-        if (typeof openModal === 'function') openModal('gameModal');
-        else document.getElementById('gameModal').style.display = 'flex';
-    } catch (e) {
-        console.error('Show game details error:', e);
-    }
-}
-
-async function showTmdbDetails(kind, tmdbId) {
-    try {
-        var endpoint = kind === 'series' ? '/tmdb/series' : '/tmdb/movies';
-        var r = await fetch(`${API_BASE}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-            body: JSON.stringify({ id: tmdbId })
-        });
-        var arr = await r.json();
-        if (!r.ok || !Array.isArray(arr) || !arr.length) return;
-        var m = arr[0];
-
-        var heroBg = m.backdrop_image || m.background_image || '/img/no-image.svg';
-        var coverUrl = m.background_image || heroBg;
-        var released = m.released ? new Date(m.released).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
-        var creditLabel = kind === 'series' ? 'Creator' : 'Director';
-        var studioLabel = kind === 'series' ? 'Network' : 'Studio';
-        var names = function(list) { return (list || []).map(function(x) { return x.name || x; }).filter(Boolean); };
-
-        var infoItems = [
-            released ? { label: 'Released', value: released } : null,
-            names(m.developers).length ? { label: creditLabel, value: names(m.developers).join(', ') } : null,
-            names(m.publishers).length ? { label: studioLabel, value: names(m.publishers).join(', ') } : null
-        ].filter(Boolean);
-
-        var genreTagsHtml = (m.genres || []).length
-            ? '<div class="game-detail-genres">' + m.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name || g) + '</span>'; }).join('') + '</div>'
-            : '';
-        var infoGridHtml = infoItems.length
-            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(i.label) + '</div><div class="game-detail-info-value">' + esc(i.value) + '</div></div>'; }).join('') + '</div>'
-            : '';
-
-        document.getElementById('gameDetails').innerHTML =
-            '<div class="game-detail-hero"><img src="' + esc(heroBg) + '" alt="' + esc(m.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'"></div>' +
-            '<div class="game-detail-body">' +
-                '<div class="game-detail-title-row">' +
-                    '<img src="' + esc(coverUrl) + '" alt="' + esc(m.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                    '<div class="game-detail-title-meta">' +
-                        '<div class="game-detail-title">' + esc(m.name) + '</div>' +
-                        '<div class="game-detail-badges">' + (released ? '<span class="game-detail-date">' + esc(released) + '</span>' : '') + '</div>' +
-                    '</div>' +
-                '</div>' + genreTagsHtml + infoGridHtml +
-                (m.description ? '<p class="game-detail-desc">' + esc(m.description) + '</p>' : '') +
-            '</div>';
-
-        if (typeof openModal === 'function') openModal('gameModal');
-        else document.getElementById('gameModal').style.display = 'flex';
-    } catch (e) {
-        console.error('Show TMDB details error:', e);
-    }
-}
-
-function closeGameModal() {
-    if (typeof closeModal === 'function') closeModal('gameModal');
-    else document.getElementById('gameModal').style.display = 'none';
+/* A title on someone's profile opens its own page, the same as everywhere
+   else, instead of a popup over their list. From there the visitor can add it
+   to their own library. */
+function showGameDetails(gameId) {
+    if (gameId) window.location.href = 'title.html?ref=' + encodeURIComponent(gameId);
 }
 
 async function upLoadLists() {
@@ -930,7 +786,8 @@ function pfEsc(v) {
 }
 
 function pfOpenHref(mediaType, ref) {
-    return (PF_PAGE_FOR[mediaType] || 'home.html') + '?open=' + encodeURIComponent(ref);
+    // Straight to the title's own page rather than a browse grid that bounces there.
+    return 'title.html?ref=' + encodeURIComponent(ref);
 }
 
 function pfPoster(src, alt) {
