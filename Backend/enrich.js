@@ -124,7 +124,13 @@ module.exports = (verifyToken, checkBanned, deps = {}) => {
         ANIMETHEMES + '/anime?filter[has]=resources&filter[site]=MyAnimeList' +
         '&filter[external_id]=' + encodeURIComponent(malId) +
         '&include=animethemes.song.artists',
-        { strict: true }
+        // AnimeThemes is consistently slow - 12-15s even for a bare query with
+        // no extra fields, measured directly against their API, not something
+        // on our end. The default 4s timeout was killing every single request
+        // before it could finish, so this section never once appeared. It is
+        // fetched after the page has already rendered, so a longer wait here
+        // costs nothing visible - worst case the section simply arrives late.
+        { strict: true, timeoutMs: 20000 }
       );
       const anime = body && Array.isArray(body.anime) && body.anime[0];
       const list = (anime && Array.isArray(anime.animethemes)) ? anime.animethemes : [];
