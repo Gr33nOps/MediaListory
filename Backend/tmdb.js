@@ -142,6 +142,19 @@ module.exports = (verifyToken, checkBanned, db) => {
     if (cached) return cached;
 
     const endpoint = tmdbEndpointFor(mediaType);
+
+    /* TMDB's search endpoint takes a query and nothing else: no sort_by, no
+       genre, no year. Discover takes all of them. So searching silently drops
+       every filter and the sort, and the client has to be able to say so.
+
+       Set before the cache is consulted, because it depends only on the request
+       - set after, it would appear on the first response and never again. */
+    if (!detailId) {
+      const searching = !!sanitizeToken(body.search, 80);
+      // No sort works during a search here, so the control has nothing to offer.
+      res.setHeader('X-Sort-State', searching ? 'unavailable' : 'applied');
+      res.setHeader('X-Filters-Applied', searching ? '0' : '1');
+    }
     const response = await tmdbFetch(`/genre/${endpoint}/list`, { language: 'en-US' });
     const data = await response.json();
     if (!response.ok) {

@@ -4227,6 +4227,22 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .detail-similar-card:hover img { transform: translateY(-3px); border-color: var(--accent); }
 .ds-name { font-size: 0.76rem; font-weight: 600; margin-top: 6px; line-height: 1.25; color: var(--text-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
+/* Why a control is off right now. One line, attached to the row it explains,
+   with the single action that gives the control back - not a banner, not a card,
+   because the answer is one sentence long. */
+.query-state-notice {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    margin: 8px 0 0; font-size: 0.82rem; color: var(--text-muted);
+}
+.query-state-notice .link-btn { font-size: 0.82rem; }
+
+/* Disabled, not hidden: a control that disappears reads as a bug, and the user
+   still needs to see which sort they had chosen. */
+.filter-select.is-locked, .btn.is-locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* The run a title belongs to. Same card size as "More like this" so the modal
    keeps one rhythm, but each entry carries where it sits in the sequence, and
    the title you are already on is outlined and inert rather than a link back to

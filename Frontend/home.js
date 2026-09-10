@@ -515,6 +515,8 @@ async function fetchGames(replace) {
             allGames     = replace ? transformedGames : allGames.concat(transformedGames);
             hasMoreGames = data.length === apiGamesPerPage;
 
+            if (typeof applyQueryStateNotice === 'function') applyQueryStateNotice(queryStateFrom(response));
+
             collectFilterOptions(transformedGames);
             // Before rendering, so the first paint already carries the badges.
             if (typeof loadLibraryIndex === 'function') await loadLibraryIndex();

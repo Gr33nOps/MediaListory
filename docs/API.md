@@ -153,6 +153,28 @@ shared rankings and scores. See `Backend/taste.js`.
   instead of adding a second copy. Deliberately not `GET /games`, which carries
   every title's description and runs to tens of kilobytes.
 
+## Query state headers
+
+List responses say what they actually honoured, because the answer differs per
+provider and changes with the query - and a copy of those rules in the browser
+would drift the first time a provider changed.
+
+- `X-Sort-State`: `applied` | `ignored` | `unavailable`. `ignored` means this
+  choice did not apply but another would, so the control stays usable;
+  `unavailable` means no sort applies and the control is disabled.
+- `X-Filters-Applied`: `1` | `0`.
+
+Both are set before the cache is consulted, since they depend only on the
+request. Set after, the notice would appear on the first response and never
+again. Exposed to the browser through CORS.
+
+Where it bites: TMDB's `/search/` endpoint takes a query and nothing else, so
+searching movies or shows drops the sort *and* every filter. IGDB's native
+search brings its own relevance order and returns 406 if a sort is sent with it,
+but where-clause filters still combine. Kitsu applies text, filters and sort
+together - except that Popularity during a search is really relevance, so that
+one choice is reported `ignored`.
+
 ## Series relations
 
 Detail responses carry `relations` when the provider knows what else belongs to

@@ -478,6 +478,18 @@ module.exports = (verifyToken, checkBanned, db) => {
         ? `detail:${detailId}`
         : `list:${crypto.createHash('sha1').update(JSON.stringify(body)).digest('hex')}`;
 
+      /* IGDB's native search carries its own relevance order and returns 406
+         if a sort is sent with it, so searching means the sort is dropped.
+         Filters are where-clauses and do still combine.
+
+         Set before the cache is consulted: it depends only on the request, and
+         setting it after would show the notice once and never again. */
+      if (!detailId) {
+        // No sort works during a search here either: IGDB rejects the clause.
+        res.setHeader('X-Sort-State', sanitizeToken(body.search, 80) ? 'unavailable' : 'applied');
+        res.setHeader('X-Filters-Applied', '1');
+      }
+
       const cached = cache.get(cacheKey);
       if (cached) {
         res.setHeader('X-Cache', 'HIT');

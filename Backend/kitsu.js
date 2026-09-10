@@ -212,6 +212,22 @@ module.exports = (verifyToken, checkBanned, db) => {
       ? `detail:${detailId}`
       : `list:${crypto.createHash('sha1').update(JSON.stringify(body)).digest('hex')}`;
 
+    /* Kitsu applies filter[text], every filter[...] and sort together, so a
+       search keeps its filters and its sort - with one exception. Relevance is
+       what orders a text search, so a Popularity choice is not what ordered
+       these results and should not claim to be.
+
+       Set before the cache is consulted: it depends only on the request, and
+       setting it after would show the notice once and never again. */
+    if (!detailId) {
+      const searching = !!sanitizeToken(body.search, 80);
+      const wantsPopularity = !body.sort || body.sort === 'popularity';
+      /* Only this choice is being ignored, not the control: Top Rated and the
+         date sorts do apply to a search here, so the select must stay usable. */
+      res.setHeader('X-Sort-State', (searching && wantsPopularity) ? 'ignored' : 'applied');
+      res.setHeader('X-Filters-Applied', '1');
+    }
+
     const cached = cache.get(cacheKey);
     if (cached) {
       res.setHeader('X-Cache', 'HIT');

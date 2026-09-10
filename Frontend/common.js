@@ -1451,6 +1451,87 @@
 })(typeof window !== 'undefined' ? window : globalThis);
 
 
+
+/* ── When a search overrules the sort and filters ────────────────────────────
+   Searching does not mean the same thing at every provider. TMDB's search
+   endpoint takes a query and nothing else, so a search throws away the sort and
+   every filter. IGDB's search brings its own relevance order and refuses an
+   explicit sort, but keeps filters. Kitsu keeps both, except that "popularity"
+   during a search is really relevance.
+
+   None of that is guessable from the browser, and hardcoding it here would
+   drift the first time a provider changed, so the server says what it honoured
+   and this reflects it. The controls stay put and stay readable - they are
+   disabled, not hidden, because a control that vanishes reads as a bug - and a
+   line underneath says why, with the one action that gives them back. */
+
+function applyQueryStateNotice(state) {
+    var notice = document.getElementById('queryStateNotice');
+    if (!notice) {
+        var host = document.querySelector('.search-container');
+        if (!host) return;
+        notice = document.createElement('p');
+        notice.id = 'queryStateNotice';
+        notice.className = 'query-state-notice';
+        notice.hidden = true;
+        host.appendChild(notice);
+    }
+
+    var sortEl = document.getElementById('sortBy');
+    var filterBtn = document.getElementById('filterBtn');
+    var sortState = (state && state.sortState) || 'applied';
+    var filtersOff = state && state.filtersApplied === false;
+
+    /* Disabled only when nothing the control offers would work. When it is just
+       this choice that does not apply, the select stays usable - otherwise
+       picking the sort that would have worked becomes impossible. */
+    var sortDead = sortState === 'unavailable';
+    if (sortEl) {
+        sortEl.disabled = sortDead;
+        sortEl.classList.toggle('is-locked', sortState !== 'applied');
+        if (sortDead) sortEl.title = 'Search results come back in best-match order. Clear the search to sort.';
+        else if (sortState === 'ignored') sortEl.title = 'Best match orders these results. Another sort will still apply.';
+        else sortEl.removeAttribute('title');
+    }
+    if (filterBtn) {
+        filterBtn.disabled = !!filtersOff;
+        filterBtn.classList.toggle('is-locked', !!filtersOff);
+        if (filtersOff) filterBtn.title = 'This search cannot be filtered. Clear it to use filters.';
+        else filterBtn.removeAttribute('title');
+    }
+
+    if (sortState === 'applied' && !filtersOff) { notice.hidden = true; notice.innerHTML = ''; return; }
+
+    var message;
+    if (sortState === 'ignored') {
+        message = 'Best match orders these results, not Popularity. Another sort will still apply.';
+    } else {
+        var what = (sortDead && filtersOff) ? 'Sorting and filters are' : sortDead ? 'Sorting is' : 'Filters are';
+        message = what + ' off while searching \u2014 results come back in best-match order.';
+    }
+    notice.innerHTML = '<span>' + esc(message) + '</span>' +
+        '<button type="button" class="link-btn" id="queryStateClear">Clear search</button>';
+    notice.hidden = false;
+
+    var clear = document.getElementById('queryStateClear');
+    if (clear) {
+        clear.addEventListener('click', function () {
+            var box = document.getElementById('searchInput');
+            if (box) { box.value = ''; }
+            if (typeof window.__clearSearch === 'function') window.__clearSearch();
+        });
+    }
+}
+
+/* Reads the two headers the list endpoints set. Absent headers mean the caller
+   is talking to something that does not report state, so nothing is claimed. */
+function queryStateFrom(response) {
+    var sort = response.headers.get('X-Sort-State');
+    var filters = response.headers.get('X-Filters-Applied');
+    if (sort === null && filters === null) return null;
+    return { sortState: sort || 'applied', filtersApplied: filters !== '0' };
+}
+
 /* ── What is already in the library ──────────────────────────────────────────
    Browse and search pages ask this to show that a title is already tracked, so
    nobody adds the same thing three times wondering whether it took. Loaded once

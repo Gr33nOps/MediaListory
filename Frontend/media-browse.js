@@ -318,6 +318,8 @@ function seriesSectionHtml(relations) {
         body: JSON.stringify(payload)
       });
 
+      if (typeof applyQueryStateNotice === 'function') applyQueryStateNotice(queryStateFrom(r));
+
       var data = await r.json();
       if (r.ok && Array.isArray(data)) {
         // Before rendering, so the first paint already carries the badges.
@@ -681,6 +683,9 @@ function seriesSectionHtml(relations) {
     el.textContent = text;
     el.style.color = type === 'error' ? 'var(--red-light)' : 'var(--green-light)';
   }
+
+  // The notice's "Clear search" needs a way back into this page's own reload.
+  window.__clearSearch = function () { doSearch(); };
 
   function doSearch() {
     var term = byId('searchInput').value.trim();

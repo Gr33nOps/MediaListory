@@ -141,7 +141,7 @@ app.use(cors({
   credentials: true,
   // The anime grid collapses a franchise into one tile, so a full page of
   // results no longer means "there is more". The server says so outright.
-  exposedHeaders: ['X-Has-More']
+  exposedHeaders: ['X-Has-More', 'X-Sort-State', 'X-Filters-Applied']
 }));
 
 app.use(express.json({ limit: '400kb' })); // headroom for uploaded data: URI avatars
