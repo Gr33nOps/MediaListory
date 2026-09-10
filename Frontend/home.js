@@ -623,6 +623,17 @@ function seriesSectionHtml(relations) {
         '<div class="detail-series">' + items + '</div></div>';
 }
 
+/* Studio names in the info grid, each leading to that studio's own page where
+   IGDB knows which one it is. A company with no id stays plain text rather than
+   becoming a link that goes nowhere. */
+function companyListHtml(companies) {
+    return (companies || []).map(function (c) {
+        return c.ref
+            ? '<a class="info-link" href="person.html?ref=' + esc(c.ref) + '">' + esc(c.name) + '</a>'
+            : esc(c.name);
+    }).join(', ');
+}
+
 function displaySearchResults(games, replace) {
     if (replace === undefined) replace = true;
     var container = document.getElementById('searchResults');
@@ -694,8 +705,11 @@ async function showGameDetails(gameId) {
                 if (igdbGame.involved_companies) {
                     igdbGame.involved_companies.forEach(function(ic) {
                         if (ic.company) {
-                            if (ic.publisher) publishers.push({ name: ic.company.name });
-                            if (ic.developer) developers.push({ name: ic.company.name });
+                            // The id as well as the name: games credit studios,
+                            // not people, and a studio is a real thing to open.
+                            var entry = { name: ic.company.name, ref: ic.company.id ? 'igdb_company_' + ic.company.id : null };
+                            if (ic.publisher) publishers.push(entry);
+                            if (ic.developer) developers.push(entry);
                         }
                     });
                 }
@@ -796,10 +810,10 @@ async function showGameDetails(gameId) {
                     ? { label: 'Released', value: new Date(game.released).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }
                     : null,
                 game.publishers && game.publishers.length
-                    ? { label: 'Publisher', value: game.publishers.map(function(p) { return p.name; }).join(', ') }
+                    ? { label: 'Publisher', valueHtml: companyListHtml(game.publishers) }
                     : null,
                 game.developers && game.developers.length
-                    ? { label: 'Developer', value: game.developers.map(function(d) { return d.name; }).join(', ') }
+                    ? { label: 'Developer', valueHtml: companyListHtml(game.developers) }
                     : null,
                 game.platforms && game.platforms.length
                     ? { label: 'Platforms', value: game.platforms.map(function(p) { return p.name; }).join(' · ') }
@@ -829,7 +843,10 @@ async function showGameDetails(gameId) {
             if (infoItems.length) {
                 infoGridHtml = '<div class="game-detail-info-grid">' +
                     infoItems.map(function(item) {
-                        return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(item.label) + '</div><div class="game-detail-info-value">' + esc(item.value) + '</div></div>';
+                        // valueHtml is assembled from esc()-escaped parts by the
+                        // helper that builds it; value is escaped here.
+                        var value = item.valueHtml || esc(item.value);
+                        return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(item.label) + '</div><div class="game-detail-info-value">' + value + '</div></div>';
                     }).join('') +
                 '</div>';
             }

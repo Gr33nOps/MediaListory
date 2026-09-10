@@ -261,6 +261,10 @@ module.exports = (verifyToken, checkBanned, db) => {
                 const img = c.image || {};
                 const main = mc.attributes && mc.attributes.role === 'main';
                 return {
+                  // Kitsu's cast is the cast of the story, so this is the
+                  // character's own id - what the profile page resolves.
+                  id: rel.id,
+                  ref: `kitsu_char_${rel.id}`,
                   name: c.name,
                   character: main ? 'Main character' : 'Supporting',
                   image: img.original || img.large || img.medium || null,

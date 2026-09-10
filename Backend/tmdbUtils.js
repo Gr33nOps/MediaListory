@@ -120,7 +120,13 @@ function castFrom(credits, limit) {
   const cast = credits && Array.isArray(credits.cast) ? credits.cast : [];
   return cast
     .slice(0, limit || 12)
-    .map((c) => ({ id: c.id, name: c.name, character: c.character || '', image: tmdbImage(c.profile_path, 'w185') }))
+    .map((c) => ({
+      id: c.id,
+      ref: `tmdb_person_${c.id}`,
+      name: c.name,
+      character: c.character || '',
+      image: tmdbImage(c.profile_path, 'w185')
+    }))
     .filter((c) => c.name);
 }
 

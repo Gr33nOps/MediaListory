@@ -275,6 +275,56 @@ function seriesSectionHtml(relations) {
         '<div class="detail-series">' + items + '</div></div>';
 }
 
+  /* People matching the search, above the titles.
+
+     Searching a cast member's name otherwise returns whatever films happen to
+     mention them, which is rarely the thing being looked for. TMDB is the only
+     provider here with a people index, so this runs for films and shows and is
+     simply absent for anime and games - a row that never fills is worse than no
+     row. It never blocks or breaks the title results beside it. */
+  async function loadPeopleFor(term) {
+    var host = byId('peopleFound');
+    if (!host) {
+      var results = byId('searchResults');
+      if (!results || !results.parentNode) return;
+      host = document.createElement('section');
+      host.id = 'peopleFound';
+      host.className = 'people-found';
+      host.hidden = true;
+      results.parentNode.insertBefore(host, results);
+    }
+
+    if (!term || (MEDIA_TYPE !== 'movie' && MEDIA_TYPE !== 'series')) {
+      host.hidden = true;
+      host.innerHTML = '';
+      return;
+    }
+
+    try {
+      var r = await apiFetch('/people/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: term })
+      });
+      if (!r.ok) { host.hidden = true; host.innerHTML = ''; return; }
+      var people = await r.json();
+      if (!Array.isArray(people) || !people.length) { host.hidden = true; host.innerHTML = ''; return; }
+
+      host.innerHTML = '<h2 class="detail-h">People</h2><div class="people-strip">' +
+        people.map(function (p) {
+          return '<a class="people-strip-card" href="person.html?ref=' + esc(p.ref) + '">' +
+            '<img src="' + esc(p.image || '/img/no-image.svg') + '" alt="" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+            '<span class="people-strip-name">' + esc(p.name) + '</span>' +
+            (p.note ? '<span class="people-strip-note">' + esc(p.note) + '</span>' : '') +
+          '</a>';
+        }).join('') + '</div>';
+      host.hidden = false;
+    } catch (e) {
+      host.hidden = true;
+      host.innerHTML = '';
+    }
+  }
+
   function skeletonCards(n) {
     var one = '<div class="skeleton-card"><div class="skeleton skel-poster"></div>' +
       '<div class="skel-info"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w50"></div></div></div>';
@@ -471,14 +521,20 @@ function seriesSectionHtml(relations) {
           '<a class="detail-trailer-fallback" href="https://www.youtube.com/watch?v=' + esc(media.trailer.key) + '" target="_blank" rel="noopener noreferrer">Trouble playing? Watch on YouTube ↗</a>' +
         '</div>'
       : '';
+    /* A cast entry leads somewhere now - a person for film and television, the
+       character themselves for anime, since Kitsu's cast is the cast of the
+       story. Entries the provider gave no id for stay as plain text rather than
+       becoming links that go nowhere. */
     var castHtml = (media.cast && media.cast.length)
       ? '<div class="detail-section"><h3 class="detail-h">Cast</h3><div class="detail-cast">' +
           media.cast.map(function (c) {
-            return '<div class="detail-cast-card">' +
+            var inner =
               '<img src="' + esc(c.image || '/img/no-image.svg') + '" alt="' + esc(c.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
               '<div class="dc-name">' + esc(c.name) + '</div>' +
-              (c.character ? '<div class="dc-char">' + esc(c.character) + '</div>' : '') +
-            '</div>';
+              (c.character ? '<div class="dc-char">' + esc(c.character) + '</div>' : '');
+            return c.ref
+              ? '<a class="detail-cast-card is-linked" href="person.html?ref=' + esc(c.ref) + '">' + inner + '</a>'
+              : '<div class="detail-cast-card">' + inner + '</div>';
           }).join('') +
         '</div></div>'
       : '';
@@ -693,6 +749,7 @@ function seriesSectionHtml(relations) {
     var sortBy = byId('sortBy');
     if (term) { if (sortBy) sortBy.value = 'popularity-desc'; currentSort = 'popularity'; currentSortOrder = 'desc'; }
     currentPage = 1; hasMore = true; window.scrollTo(0, 0); fetchMedia(true);
+    loadPeopleFor(term);
   }
 
   function applyFilters() {

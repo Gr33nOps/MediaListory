@@ -4227,6 +4227,132 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .detail-similar-card:hover img { transform: translateY(-3px); border-color: var(--accent); }
 .ds-name { font-size: 0.76rem; font-weight: 600; margin-top: 6px; line-height: 1.25; color: var(--text-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
+
+/* ── Profile page: a person, a character, or a studio ────────────────────────
+   Split header rather than a centred one: the portrait carries the recognition
+   and the words carry the information, so they sit side by side and the eye
+   starts on the left with the name.
+
+   Facts are a definition list, not stat tiles - "Born 1974" is a label and a
+   value, and boxing it would make five of them look like a dashboard.
+
+   Credits are a list, not a poster grid. A filmography is read: who they
+   played, in what, when. A wall of covers answers none of that, so the poster
+   is small, to the left, and there to help you recognise the title. */
+
+.person-back { display: inline-block; margin: 4px 0 18px; }
+
+.person-head {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+    margin-bottom: 34px;
+}
+
+.person-portrait {
+    width: 200px;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-deep);
+    display: block;
+}
+
+/* A studio's logo is a wordmark on transparency, not a portrait: cropping it to
+   a poster shape would cut the name in half. */
+.person-portrait.is-logo {
+    aspect-ratio: 3 / 2;
+    object-fit: contain;
+    padding: 18px;
+}
+
+.person-name {
+    font-family: var(--font-display, inherit);
+    font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+}
+
+.person-facts { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0 0 18px; }
+.person-fact dt {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+.person-fact dd { margin: 0; font-size: 0.92rem; font-weight: 600; }
+
+.person-bio { max-width: 68ch; }
+.person-bio-text { margin: 0 0 6px; font-size: 0.95rem; line-height: 1.65; color: var(--text-secondary, var(--text-muted)); }
+.person-bio-text.is-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.person-source { display: inline-block; margin-top: 12px; }
+
+.person-section { margin-bottom: 34px; }
+
+.person-gallery { display: grid; grid-auto-flow: column; grid-auto-columns: 108px; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.person-gallery img { width: 108px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-subtle); display: block; }
+
+.person-credits-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.person-credit-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.pt-count { opacity: 0.6; font-variant-numeric: tabular-nums; }
+
+.person-credits { list-style: none; margin: 0; padding: 0; }
+.person-credit + .person-credit { border-top: 1px solid var(--border-subtle); }
+.pc-link {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 8px;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 8px;
+}
+a.pc-link:hover { background: var(--accent-dim); }
+a.pc-link:hover .pc-title { color: var(--accent-light); }
+.pc-poster { width: 44px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 5px; border: 1px solid var(--border-subtle); display: block; }
+.pc-text { min-width: 0; }
+.pc-title { display: block; font-weight: 600; font-size: 0.95rem; line-height: 1.3; }
+.pc-role { display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+.pc-year { font-size: 0.84rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* A cast face is now a way in, so it has to look like one. */
+.detail-cast-card.is-linked { cursor: pointer; }
+.detail-cast-card.is-linked:hover img { border-color: var(--accent); }
+.detail-cast-card.is-linked:hover .dc-name { color: var(--accent-light); }
+
+/* Studio credits in the games info grid, once they lead somewhere. */
+.info-link { color: inherit; text-decoration: none; border-bottom: 1px solid var(--border-subtle); }
+.info-link:hover { color: var(--accent-light); border-bottom-color: var(--accent); }
+
+/* People turned up by a search, above the titles they were found in. */
+.people-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 96px; gap: 14px; overflow-x: auto; padding: 2px 0 10px; }
+.people-strip-card { text-align: center; text-decoration: none; color: inherit; }
+.people-strip-card img { width: 96px; height: 96px; object-fit: cover; border-radius: 50%; border: 1px solid var(--border-subtle); display: block; }
+.people-strip-card:hover img { border-color: var(--accent); }
+.people-strip-name { display: block; font-size: 0.8rem; font-weight: 600; margin-top: 8px; line-height: 1.25; }
+.people-strip-note { display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; line-height: 1.25;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.people-found { margin: 0 0 10px; }
+
+@media (max-width: 700px) {
+    .person-head { grid-template-columns: 132px minmax(0, 1fr); gap: 18px; }
+    .person-portrait { width: 132px; }
+    .person-facts { gap: 6px 18px; }
+    .pc-link { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; }
+    .pc-poster { width: 38px; }
+}
+
 /* Why a control is off right now. One line, attached to the row it explains,
    with the single action that gives the control back - not a banner, not a card,
    because the answer is one sentence long. */

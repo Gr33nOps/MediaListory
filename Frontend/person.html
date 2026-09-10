@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Profile - MediaListory</title>
+    <meta name="description" content="Track, rate, and share the movies, shows, anime, and games you love with MediaListory.">
+    <meta name="robots" content="noindex,follow">
+    <script>try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <!-- seo:start -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/favicon.svg" color="#3b82f6">
+    <meta name="theme-color" content="#0b1220">
+    <!-- seo:end -->
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div id="main-content" tabindex="-1" class="container">
+        <nav class="navbar" id="appNav" data-brand="MediaListory"></nav>
+
+        <a class="link-btn person-back" id="personBack" href="#">&larr; Back</a>
+
+        <div id="personState" class="empty-state">Loading profile...</div>
+
+        <article id="personBody" hidden>
+            <header class="person-head">
+                <img id="personImage" class="person-portrait" src="/img/no-image.svg" alt="">
+                <div class="person-head-text">
+                    <h1 class="person-name" id="personName"></h1>
+                    <dl class="person-facts" id="personFacts"></dl>
+                    <div class="person-bio" id="personBio" hidden></div>
+                    <a class="link-btn person-source" id="personSource" target="_blank" rel="noopener noreferrer" hidden></a>
+                </div>
+            </header>
+
+            <section class="person-section" id="personGallerySection" hidden>
+                <h2 class="detail-h">Photos</h2>
+                <div class="person-gallery" id="personGallery"></div>
+            </section>
+
+            <section class="person-section" id="personCreditsSection" hidden>
+                <div class="person-credits-head">
+                    <h2 class="detail-h" id="personCreditsTitle">Credits</h2>
+                    <div class="person-credit-tabs" id="personCreditTabs" role="tablist" aria-label="Filter credits by category"></div>
+                </div>
+                <ul class="person-credits" id="personCredits"></ul>
+            </section>
+        </article>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="person.js"></script>
+</body>
+</html>

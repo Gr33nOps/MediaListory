@@ -153,6 +153,42 @@ shared rankings and scores. See `Backend/taste.js`.
   instead of adding a second copy. Deliberately not `GET /games`, which carries
   every title's description and runs to tens of kilobytes.
 
+## People
+
+Profiles for the names beside a title. Three providers mean three different
+ideas of what that name is, and the endpoint does not pretend otherwise - but it
+normalises them to one shape so one page renders all three.
+
+- `POST /api/people` - `{ ref }` where ref is `tmdb_person_<id>`,
+  `kitsu_char_<id>` or `igdb_company_<id>`. Returns
+  `{ ref, kind, name, image, summary, facts[], gallery[], credits[], source }`.
+  A field a provider has nothing to say about is absent, not blank, and the page
+  leaves it out.
+- `POST /api/people/search` - `{ query }`, TMDB people only. Returns
+  `[{ ref, name, image, note }]`. Fails to an empty list rather than an error:
+  it renders beside title results and must never break them.
+
+Why each category resolves to what it does:
+
+- **Movies and shows** resolve to a **person**. TMDB knows actors, with a
+  biography, photographs and credits across film and television. Credits are
+  ordered by TMDB popularity, which is the only "known for" signal it gives -
+  but appearances as oneself are dropped first, along with talk and news
+  formats. Without that, Cillian Murphy's page opened with three chat-show guest
+  spots above Peaky Blinders, because a nightly show outranks a film.
+- **Anime** resolves to a **character**. Kitsu's cast is the cast of the story,
+  not the voice actors, which is what the detail panel already shows - so the
+  profile is the character's, with the anime they appear in. Appearances come
+  from `/characters/{id}/media-characters`; the filter form of that query
+  returns 400.
+- **Games** resolve to a **company**. IGDB records studios and publishers, not
+  individuals. A person profile for a game credit would be an invention; the
+  studio is real and is what someone clicking a developer's name is asking
+  about. A studio that both made and published a game has it listed once.
+
+Credits link to `<category>.html?open=<ref>`, the deep link the browse pages
+already honour.
+
 ## Query state headers
 
 List responses say what they actually honoured, because the answer differs per

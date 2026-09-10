@@ -14,6 +14,9 @@ const GAME_FIELDS =
   'name, cover.url, rating, rating_count, summary, first_release_date, ' +
   'aggregated_rating, aggregated_rating_count, total_rating, total_rating_count, ' +
   'genres.name, platforms.name, involved_companies.company.name, ' +
+  // The id as well as the name: a studio credit is only clickable if we know
+  // which studio it is.
+  'involved_companies.company.id, ' +
   'involved_companies.publisher, involved_companies.developer';
 
 const DETAIL_FIELDS =
@@ -700,6 +703,11 @@ module.exports = (verifyToken, checkBanned, db) => {
     setTimeout(warmCatalogCaches, 15_000);
     setInterval(warmCatalogCaches, warmMs);
   }
+
+  /* The people endpoint needs to ask IGDB about companies, and the credential
+     and token handling that makes that possible lives in this closure. Handing
+     out the fetch is far better than a second copy of the auth dance. */
+  router.igdbFetch = igdbFetch;
 
   return router;
 };

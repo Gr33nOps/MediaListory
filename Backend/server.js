@@ -435,8 +435,15 @@ try {
 
 try {
   const igdbRoutes = require('./igdb');
-  app.use('/api/igdb', igdbLimiter, igdbRoutes(optionalAuth, passThrough, db));
+  const igdbRouter = igdbRoutes(optionalAuth, passThrough, db);
+  app.use('/api/igdb', igdbLimiter, igdbRouter);
   console.log('  IGDB proxy routes loaded');
+
+  // Profiles for the names beside a title: TMDB people, Kitsu characters and
+  // IGDB companies, normalised to one shape so one page renders all three.
+  const peopleRoutes = require('./people');
+  app.use('/api/people', peopleRoutes(optionalAuth, passThrough, { igdbFetch: igdbRouter.igdbFetch }));
+  console.log('  People routes loaded');
 } catch (error) {
   console.error('  Error loading IGDB proxy routes:', error.message);
   process.exit(1);
@@ -485,7 +492,9 @@ try {
   app.use('/api/v1/users', userProfileRoutes(db, verifyToken, checkBanned));
   app.use('/api/v1/admin', adminRoutes(db, verifyToken, verifyModerator, verifyAdmin, logModeratorActivity));
   app.use('/api/v1/moderator', moderatorRoutes(db, verifyToken, verifyModerator, logModeratorActivity));
-  app.use('/api/v1/igdb', igdbLimiter, igdbRoutes(optionalAuth, passThrough, db));
+  const igdbV1 = igdbRoutes(optionalAuth, passThrough, db);
+  app.use('/api/v1/igdb', igdbLimiter, igdbV1);
+  app.use('/api/v1/people', require('./people')(optionalAuth, passThrough, { igdbFetch: igdbV1.igdbFetch }));
   app.use('/api/v1/tmdb', igdbLimiter, tmdbRoutes(optionalAuth, passThrough, db));
   app.use('/api/v1/kitsu', igdbLimiter, kitsuRoutes(optionalAuth, passThrough, db));
   console.log('  /api/v1 aliases loaded');
