@@ -4327,7 +4327,16 @@ a.pc-link:hover .pc-title { color: var(--accent-light); }
 .pc-year { font-size: 0.84rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* A cast face is now a way in, so it has to look like one. */
-.detail-cast-card.is-linked { cursor: pointer; }
+/* These became anchors so a face can be opened. Anchors bring the browser's own
+   blue and underline with them, which is not this app's link language - the name
+   should read exactly as it did before, and only answer on hover. */
+.detail-cast-card.is-linked {
+    cursor: pointer;
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+.detail-cast-card.is-linked .dc-name { color: var(--text-primary); transition: color 0.15s; }
 .detail-cast-card.is-linked:hover img { border-color: var(--accent); }
 .detail-cast-card.is-linked:hover .dc-name { color: var(--accent-light); }
 
