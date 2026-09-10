@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Title - MediaListory</title>
+    <meta name="description" content="Track, rate, and share the movies, shows, anime, and games you love with MediaListory.">
+    <meta name="robots" content="noindex,follow">
+    <script>try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <!-- seo:start -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/favicon.svg" color="#3b82f6">
+    <meta name="theme-color" content="#0b1220">
+    <!-- seo:end -->
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div id="main-content" tabindex="-1" class="container">
+        <nav class="navbar" id="appNav" data-brand="MediaListory"></nav>
+        <script>
+            /* The nav is drawn by common.js as soon as it loads, before title.js
+               knows what it is showing - so the category is read off the ref
+               here, synchronously, and the right tab and accent come up first time. */
+            (function () {
+                var r = new URLSearchParams(location.search).get('ref') || '';
+                var cat = /^igdb_/.test(r) ? 'games' : /^tmdb_movie_/.test(r) ? 'movies'
+                    : /^tmdb_series_/.test(r) ? 'series' : /^kitsu_/.test(r) ? 'anime' : '';
+                if (!cat) return;
+                document.getElementById('appNav').setAttribute('data-active', cat);
+                document.body.setAttribute('data-page', cat);
+            })();
+        </script>
+
+        <a class="link-btn person-back" id="titleBack" href="#">Back</a>
+
+        <div id="titleState" class="empty-state">Loading…</div>
+
+        <article id="titleBody" class="title-page" hidden></article>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="quick-add.js"></script>
+    <script src="title.js"></script>
+</body>
+</html>

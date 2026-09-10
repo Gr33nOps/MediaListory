@@ -106,7 +106,7 @@ function displayActivity(items) {
         const name = a.user.display_name || a.user.username;
         const verb = activityVerb(a);
         const page = PAGE_FOR_MEDIA[a.media.media_type] || 'home.html';
-        const href = `${page}?open=${encodeURIComponent(a.media.media_ref || '')}`;
+        const href = a.media.media_ref ? `title.html?ref=${encodeURIComponent(a.media.media_ref)}` : page;
         const thumb = a.media.background_image
             ? `<img class="activity-thumb" src="${esc(a.media.background_image)}" alt="" loading="lazy">`
             : `<span class="activity-thumb activity-thumb-empty"></span>`;

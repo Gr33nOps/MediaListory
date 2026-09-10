@@ -240,11 +240,24 @@ module.exports = (verifyToken, checkBanned, db) => {
     const now = Math.floor(Date.now() / 1000);
     const TRENDING_WINDOW = 60 * 60 * 24 * 540; // ~18 months of recent releases
 
-    // Main games + remakes/remasters/etc. Exclude DLC/mods/episodes via game_type.
-    // version_parent / parent_game null drops editions that are child versions.
+    /* Main games + remakes/remasters/ports. Exclude DLC/mods/episodes via
+       game_type, and version_parent = null still drops edition variants (GOTY,
+       Definitive and friends), which really are the same release again.
+
+       parent_game, though, cannot simply be required null: IGDB points a remake
+       or remaster at the original through it, so that one clause was hiding
+       every one of them. Searching "Resident Evil 2" returned the 1998 original
+       and a fan demake but not the 2019 remake. A remake is its own release
+       that people play and rate separately, so it is allowed through on the
+       strength of its game_type.
+       Ports and expanded editions stay excluded when they hang off a parent:
+       those are the same game on another machine, and letting them through put
+       six identical "Resident Evil 2" rows on one page. A remake, remaster or
+       standalone expansion is a different thing to play. */
+    const OWN_RELEASE_TYPES = '(4,8,9)'; // standalone expansion, remake, remaster
     const where = [
       'version_parent = null',
-      'parent_game = null',
+      `(parent_game = null | game_type = ${OWN_RELEASE_TYPES})`,
       'game_type = (0,4,8,9,10,11)'
     ];
 

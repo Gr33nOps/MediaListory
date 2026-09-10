@@ -938,7 +938,7 @@
         html += '<div class="gsearch-group"><div class="gsearch-group-h">' + esc(g.label) + '</div>';
         items.forEach(function (it) {
           var year = it.released ? (' · ' + new Date(it.released).getFullYear()) : '';
-          html += '<a class="gsearch-item" data-idx="' + (idx++) + '" role="option" href="' + PAGE_FOR[it.media_type] + '?open=' + encodeURIComponent(it.id) + '">' +
+          html += '<a class="gsearch-item" data-idx="' + (idx++) + '" role="option" href="title.html?ref=' + encodeURIComponent(it.id) + '">' +
             '<img src="' + esc(it.background_image || '/img/no-image.svg') + '" alt="" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
             '<span class="gsearch-item-txt"><span class="gsearch-item-name">' + esc(it.name) + '</span>' +
             '<span class="gsearch-item-meta">' + single + esc(year) + '</span></span>' +
@@ -1030,7 +1030,7 @@
   // wrap it with edge fades + prev/next arrows. Idempotent; call after render.
   function enhanceScrollers(root) {
     var scope = root || document;
-    scope.querySelectorAll('.dash-scroller, .detail-cast, .detail-similar, .detail-shots').forEach(function (sc) {
+    scope.querySelectorAll('.dash-scroller, .detail-cast, .detail-similar, .detail-shots, .detail-series, .person-gallery, .people-strip').forEach(function (sc) {
       if (sc.parentNode && sc.parentNode.classList.contains('scroller')) return;
       var wrap = document.createElement('div');
       wrap.className = 'scroller';
@@ -1063,6 +1063,173 @@
     });
   }
   global.enhanceScrollers = enhanceScrollers;
+
+  /* ── Secondary sources on a detail view ───────────────────────────────────
+     Price, MyAnimeList score, opening/ending themes and episode dates come
+     from smaller APIs that sit outside the IGDB/TMDB/Kitsu core. They are
+     fetched only after the detail view has already rendered, so a slow or
+     missing source costs nothing: the block simply never appears.
+
+     One helper serves both detail views (games in home.js, everything else in
+     media-browse.js) so the two stay in step. */
+
+  function enrichNum(n) {
+    return typeof n === 'number' && isFinite(n) ? n.toLocaleString() : '';
+  }
+
+  // "Fri 18 Sep" for something upcoming, "18 Sep 2025" once it has aired.
+  function enrichDate(iso, upcoming) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString(undefined, upcoming
+      ? { weekday: 'short', day: 'numeric', month: 'short' }
+      : { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // "S02E10" - or nothing at all for specials and TV movies, which carry a
+  // season but no episode number.
+  function enrichEpisodeCode(ep) {
+    if (!ep || ep.season == null || ep.number == null) return '';
+    var pad = function (v) { return (v < 10 ? '0' : '') + v; };
+    return 'S' + pad(ep.season) + 'E' + pad(ep.number);
+  }
+
+  function enrichEpisodeLine(label, ep, upcoming) {
+    if (!ep) return '';
+    var code = enrichEpisodeCode(ep);
+    var when = enrichDate(ep.airdate, upcoming);
+    var title = ep.name ? '“' + esc(ep.name) + '”' : '';
+    var bits = [code, title].filter(Boolean).join(' ');
+    if (!bits && !when) return '';
+    return '<p class="detail-ep">' +
+      '<span class="detail-ep-label">' + esc(label) + '</span>' +
+      '<span class="detail-ep-body">' + bits +
+        (when ? '<span class="detail-ep-when">' + esc(when) + '</span>' : '') +
+      '</span></p>';
+  }
+
+  function enrichSource(text, href) {
+    var inner = href
+      ? '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' + esc(text) + ' ↗</a>'
+      : esc(text);
+    return '<p class="detail-src">' + inner + '</p>';
+  }
+
+  function enrichDealHtml(deal) {
+    if (!deal || !deal.price) return '';
+    // Currency is stated outright: CheapShark quotes US dollars regardless of
+    // where the visitor is, and an unlabelled "$9.99" would imply otherwise.
+    var price = '$' + esc(deal.price) + ' USD' + (deal.store ? ' at ' + esc(deal.store) : '');
+    var head = deal.url
+      ? '<a class="detail-deal-price" href="' + esc(deal.url) + '" target="_blank" rel="noopener noreferrer">' + price + ' ↗</a>'
+      : '<span class="detail-deal-price">' + price + '</span>';
+    var was = (deal.retail && deal.percentOff > 0)
+      ? '<span class="detail-deal-was">was $' + esc(deal.retail) + ' · ' + esc(String(deal.percentOff)) + '% off</span>'
+      : '';
+    return '<div class="detail-section">' +
+      '<h3 class="detail-h">Best price today</h3>' +
+      '<p class="detail-deal">' + head + was + '</p>' +
+      enrichSource('Prices from CheapShark', 'https://www.cheapshark.com/') +
+      '</div>';
+  }
+
+  function enrichMalHtml(mal) {
+    if (!mal || mal.score == null) return '';
+    var rows = '';
+    var votes = enrichNum(mal.scoredBy);
+    rows += '<div class="detail-prov-row"><span class="detail-prov-label">Score</span>' +
+      '<span class="detail-prov-value"><strong>' + esc(mal.score.toFixed(2)) + '</strong><span class="dr-sub">/10</span>' +
+      (votes ? ' <span class="detail-prov-note">from ' + esc(votes) + ' members</span>' : '') +
+      '</span></div>';
+    if (mal.rank) {
+      rows += '<div class="detail-prov-row"><span class="detail-prov-label">Rank</span>' +
+        '<span class="detail-prov-value">#' + esc(String(mal.rank)) + '</span></div>';
+    }
+    if (mal.studios && mal.studios.length) {
+      rows += '<div class="detail-prov-row"><span class="detail-prov-label">Studio</span>' +
+        '<span class="detail-prov-value">' + esc(mal.studios.join(', ')) + '</span></div>';
+    }
+    if (mal.broadcast) {
+      rows += '<div class="detail-prov-row"><span class="detail-prov-label">Airs</span>' +
+        '<span class="detail-prov-value">' + esc(mal.broadcast) + '</span></div>';
+    }
+    return '<div class="detail-section">' +
+      '<h3 class="detail-h">On MyAnimeList</h3>' +
+      '<div class="detail-providers">' + rows + '</div>' +
+      enrichSource('View on MyAnimeList', mal.url) +
+      '</div>';
+  }
+
+  function enrichThemesHtml(themes) {
+    if (!themes || !themes.length) return '';
+    // An ordered list, because openings and endings genuinely come in order.
+    var items = themes.map(function (t) {
+      return '<li class="detail-theme">' +
+        '<span class="detail-theme-label">' + esc(t.label) + '</span>' +
+        '<span class="detail-theme-title">' + esc(t.title) + '</span>' +
+        (t.artists ? '<span class="detail-theme-artist">' + esc(t.artists) + '</span>' : '') +
+        '</li>';
+    }).join('');
+    return '<div class="detail-section">' +
+      '<h3 class="detail-h">Openings and endings</h3>' +
+      '<ol class="detail-themes">' + items + '</ol>' +
+      enrichSource('Themes from AnimeThemes', 'https://animethemes.moe/') +
+      '</div>';
+  }
+
+  function enrichEpisodesHtml(eps) {
+    if (!eps) return '';
+    var body = enrichEpisodeLine('Next', eps.next, true) +
+               enrichEpisodeLine('Last aired', eps.previous, false);
+    if (!body) return '';
+    // Only say a show has finished when TVmaze is sure of it.
+    var note = (!eps.next && eps.status === 'Ended')
+      ? '<p class="detail-ep-note">This show has finished airing.</p>' : '';
+    return '<div class="detail-section">' +
+      '<h3 class="detail-h">Episodes</h3>' + body + note +
+      enrichSource('Episode dates from TVmaze', eps.url) +
+      '</div>';
+  }
+
+  /**
+   * Fetch the secondary sources for one title and append whatever came back.
+   * Returns a cancel function - call it when the detail view closes so a slow
+   * response cannot write into a modal the visitor has already left.
+   */
+  function mountEnrichment(container, kind, id) {
+    var cancelled = false;
+    if (!container || !kind || !id) return function () {};
+
+    apiFetch('/enrich/' + kind + '/' + encodeURIComponent(id))
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (cancelled || !data || !container.isConnected) return;
+
+        var html = kind === 'game'
+          ? enrichDealHtml(data.deal)
+          : kind === 'anime'
+            ? enrichMalHtml(data.mal) + enrichThemesHtml(data.themes)
+            : enrichEpisodesHtml(data.episodes);
+        if (!html) return; // Nothing to say, so nothing is added.
+
+        // Straight after the library panel: saving is what you came to do, so a
+        // long list of themes must never push it down the page.
+        var anchorEl = container.querySelector('.add-to-list');
+        if (anchorEl && anchorEl.parentNode) {
+          // nosemgrep: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method -- html is built only from esc()-escaped values above
+          anchorEl.insertAdjacentHTML('afterend', html);
+        } else {
+          // nosemgrep: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method -- html is built only from esc()-escaped values above
+          container.insertAdjacentHTML('beforeend', html);
+        }
+      })
+      .catch(function () { /* Secondary data only - the page is already usable. */ });
+
+    return function () { cancelled = true; };
+  }
+
+  global.mountEnrichment = mountEnrichment;
 
   // ── Loading skeletons ─────────────────────────────────────────────────────
   // Shared placeholders so every data view (browse, collection, profiles) shows
@@ -1500,27 +1667,12 @@ function applyQueryStateNotice(state) {
         else filterBtn.removeAttribute('title');
     }
 
-    if (sortState === 'applied' && !filtersOff) { notice.hidden = true; notice.innerHTML = ''; return; }
-
-    var message;
-    if (sortState === 'ignored') {
-        message = 'Best match orders these results, not Popularity. Another sort will still apply.';
-    } else {
-        var what = (sortDead && filtersOff) ? 'Sorting and filters are' : sortDead ? 'Sorting is' : 'Filters are';
-        message = what + ' off while searching \u2014 results come back in best-match order.';
-    }
-    notice.innerHTML = '<span>' + esc(message) + '</span>' +
-        '<button type="button" class="link-btn" id="queryStateClear">Clear search</button>';
-    notice.hidden = false;
-
-    var clear = document.getElementById('queryStateClear');
-    if (clear) {
-        clear.addEventListener('click', function () {
-            var box = document.getElementById('searchInput');
-            if (box) { box.value = ''; }
-            if (typeof window.__clearSearch === 'function') window.__clearSearch();
-        });
-    }
+    /* The sentence that used to sit here said out loud what the controls
+       already show: a greyed-out Sort next to a search box is self-explanatory,
+       and the reason is still one hover away in the tooltip. Printing it beside
+       every search was a banner nobody needed twice. */
+    notice.hidden = true;
+    notice.innerHTML = '';
 }
 
 /* Reads the two headers the list endpoints set. Absent headers mean the caller

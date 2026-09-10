@@ -148,13 +148,8 @@ function initCollectionTab() {
     document.getElementById('doneEditingBtn').addEventListener('click', function() { toggleEditMode(false); });
 
     if (typeof bindModal === 'function') {
-        bindModal('gameModal', 'closeModalBtn');
         bindModal('updateModal');
         bindModal('removeModal');
-    } else {
-        document.getElementById('closeModalBtn').addEventListener('click', function() {
-            document.getElementById('gameModal').style.display = 'none';
-        });
     }
     document.getElementById('confirmUpdateBtn').addEventListener('click', confirmUpdate);
     document.getElementById('cancelUpdateBtn').addEventListener('click', closeUpdateModal);
@@ -483,76 +478,11 @@ function renderCollectionRow(game) {
 }
 
 // Build the detail info grid with labels appropriate to the media type.
-function buildDetailInfoItems(game) {
-    var mediaType = game.media_type || 'game';
-    var names = function(list) { return (list || []).map(function(x) { return x.name || x; }).filter(Boolean); };
-    var items = [];
-    if (game.released) {
-        items.push({ label: 'Released', value: new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) });
-    }
-    var devs = names(game.developers);
-    var pubs = names(game.publishers);
-    if (mediaType === 'movie') {
-        if (devs.length) items.push({ label: 'Director', value: devs.join(', ') });
-        if (pubs.length) items.push({ label: 'Studio', value: pubs.join(', ') });
-    } else if (mediaType === 'series' || mediaType === 'anime') {
-        if (devs.length) items.push({ label: mediaType === 'anime' ? 'Studio' : 'Creator', value: devs.join(', ') });
-        if (pubs.length) items.push({ label: 'Network', value: pubs.join(', ') });
-        if (game.episode_count) items.push({ label: 'Episodes', value: String(game.episode_count) });
-    } else {
-        if (pubs.length) items.push({ label: 'Publisher', value: pubs.join(', ') });
-        if (devs.length) items.push({ label: 'Developer', value: devs.join(', ') });
-        var plats = names(game.platforms);
-        if (plats.length) items.push({ label: 'Platforms', value: plats.join(' · ') });
-    }
-    return items;
-}
-
-async function showGameDetails(gameId) {
-    try {
-        var response = await fetch(`${API_BASE}/games/${gameId}`);
-        var game = await response.json();
-        if (!response.ok) return;
-
-        var heroBg = game.background_image || '/img/no-image.svg';
-        var infoItems = buildDetailInfoItems(game);
-
-        var genreTagsHtml = (game.genres || []).length
-            ? '<div class="game-detail-genres">' + game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name || g) + '</span>'; }).join('') + '</div>'
-            : '';
-
-        var infoGridHtml = infoItems.length
-            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(i.label) + '</div><div class="game-detail-info-value">' + esc(i.value) + '</div></div>'; }).join('') + '</div>'
-            : '';
-
-        var releasedBadge = game.released
-            ? '<span class="game-detail-date">' + new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) + '</span>'
-            : '';
-
-        document.getElementById('gameDetails').innerHTML =
-            '<div class="game-detail-hero">' +
-                '<img src="' + heroBg + '" alt="' + esc(game.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-            '</div>' +
-            '<div class="game-detail-body">' +
-                '<div class="game-detail-title-row">' +
-                    '<img src="' + heroBg + '" alt="' + esc(game.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                    '<div class="game-detail-title-meta">' +
-                        '<div class="game-detail-title">' + esc(game.name) + '</div>' +
-                        '<div class="game-detail-badges">' + releasedBadge + '</div>' +
-                    '</div>' +
-                '</div>' +
-                genreTagsHtml +
-                infoGridHtml +
-                (game.description ? '<p class="game-detail-desc">' + game.description + '</p>' : '') +
-            '</div>';
-        var GCAT = { movie: 'movies', series: 'series', anime: 'anime', game: 'games' };
-        var gmEl = document.getElementById('gameModal');
-        if (gmEl) gmEl.setAttribute('data-cat', GCAT[game.media_type || 'game'] || 'games');
-        if (typeof openModal === 'function') openModal('gameModal');
-        else document.getElementById('gameModal').style.display = 'flex';
-    } catch (error) {
-        console.error('Show game details error:', error);
-    }
+/* Opening a saved title goes to its own page rather than a popup over the
+   library. That page already knows the title is in your library, so it opens
+   with your status, score and note ready to edit. */
+function showGameDetails(gameId) {
+    if (gameId) window.location.href = 'title.html?ref=' + encodeURIComponent(gameId);
 }
 
 function toggleEditMode(isEdit) {
@@ -694,11 +624,6 @@ async function confirmRemove() {
             setTimeout(function() { closeRemoveModal(); loadMyGames(); }, 1500);
         } else { showError(msgDiv, d.error || 'Failed to remove game'); }
     } catch (e) { showError(msgDiv, 'Network error. Please try again.'); }
-}
-
-function closeGameModal() {
-    if (typeof closeModal === 'function') closeModal('gameModal');
-    else document.getElementById('gameModal').style.display = 'none';
 }
 
 function initCustomListsTab() {
@@ -983,39 +908,9 @@ function clRenderGameRow(g, listId, editMode) {
     '</div>';
 }
 
-async function clShowGameDetails(gameId) {
-    try {
-        var response = await fetch(`${API_BASE}/games/${gameId}`);
-        var game = await response.json();
-        if (!response.ok) return;
-        var heroBg = game.background_image || '/img/no-image.svg';
-        var infoItems = buildDetailInfoItems(game);
-
-        var genreTagsHtml = (game.genres || []).length
-            ? '<div class="game-detail-genres">' + game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name || g) + '</span>'; }).join('') + '</div>'
-            : '';
-        var infoGridHtml = infoItems.length
-            ? '<div class="game-detail-info-grid">' + infoItems.map(function(i) { return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(i.label) + '</div><div class="game-detail-info-value">' + esc(i.value) + '</div></div>'; }).join('') + '</div>'
-            : '';
-        var releasedBadge = game.released
-            ? '<span class="game-detail-date">' + new Date(game.released).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) + '</span>'
-            : '';
-
-        document.getElementById('clGameDetails').innerHTML =
-            '<div class="game-detail-hero"><img src="' + heroBg + '" alt="' + esc(game.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'"></div>' +
-            '<div class="game-detail-body">' +
-                '<div class="game-detail-title-row">' +
-                    '<img src="' + heroBg + '" alt="' + esc(game.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                    '<div class="game-detail-title-meta">' +
-                        '<div class="game-detail-title">' + esc(game.name) + '</div>' +
-                        '<div class="game-detail-badges">' + releasedBadge + '</div>' +
-                    '</div>' +
-                '</div>' +
-                genreTagsHtml + infoGridHtml +
-                (game.description ? '<p class="game-detail-desc">' + game.description + '</p>' : '') +
-            '</div>';
-        clOpenModal('clGameModal');
-    } catch (error) { console.error('Show CL game details error:', error); }
+/* A game in a custom list opens its own page, the same as everywhere else. */
+function clShowGameDetails(gameId) {
+    if (gameId) window.location.href = 'title.html?ref=' + encodeURIComponent(gameId);
 }
 
 function clOpenListForm(list) {

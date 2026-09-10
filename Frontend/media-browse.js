@@ -51,12 +51,6 @@
   var isLoading = false;
   var hasMore = true;
   var lastResults = {}; // ref -> normalized media object (for add-to-library)
-  var userCustomLists = [];
-
-  var ANIME_STATUS_LABEL = {
-    finished: 'Finished airing', current: 'Currently airing',
-    upcoming: 'Upcoming', tba: 'To be announced', unreleased: 'Unreleased'
-  };
 
   function byId(id) { return document.getElementById(id); }
 
@@ -88,7 +82,6 @@
     onClick('resetFiltersBtn', resetFilters);
     onClick('prevPageBtn', prevPage);
     onClick('nextPageBtn', nextPage);
-    if (typeof bindModal === 'function') bindModal('gameModal', 'closeModalBtn');
 
     var searchInput = byId('searchInput');
     if (searchInput) {
@@ -123,71 +116,40 @@
       bindActivatableCards(document, '.game-card', function (card) { showDetails(card.dataset.gameId); });
     }
 
-    document.addEventListener('click', function (e) {
-      if (e.target.classList.contains('show-more-btn')) {
-        e.stopPropagation();
-        var wrap = e.target.closest('.game-card-desc, .game-detail-desc');
-        if (!wrap) return;
-        var shortEl = wrap.querySelector('.desc-short');
-        var fullEl = wrap.querySelector('.desc-full');
-        var expanding = fullEl && fullEl.classList.contains('hidden');
-        if (shortEl) shortEl.classList.toggle('hidden', expanding);
-        if (fullEl) fullEl.classList.toggle('hidden', !expanding);
-        e.target.textContent = expanding ? 'Show less' : 'Show more';
-        return;
-      }
-      if (e.target.classList.contains('add-to-list-btn')) {
-        addToLibrary(e.target.dataset.gameId);
-        return;
-      }
-      // Play trailer inline: swap the thumbnail facade for a lazy YouTube embed.
-      var trailerEl = e.target.closest('.detail-trailer');
-      if (trailerEl && trailerEl.dataset.yt) {
-        var key = trailerEl.dataset.yt;
-        trailerEl.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(key) +
-          '?autoplay=1&rel=0&modestbranding=1&playsinline=1" title="Trailer" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>';
-        trailerEl.classList.add('playing');
-        return;
-      }
-      // "More like this" opens that title's detail.
-      var serEl = e.target.closest('.detail-series-item');
-      if (serEl && serEl.dataset.seriesRef) {
-        e.preventDefault();
-        e.stopPropagation();
-        showDetails(serEl.dataset.seriesRef);
-        return;
-      }
+    /* The plus on a card saves straight from the grid. It sits on top of the
+       card's own activation, so it stops the click before the card can
+       navigate - clicking anywhere else still opens the full page. */
+    if (window.MGLQuickAdd) {
+      window.MGLQuickAdd.bind(byId('searchResults'), function (ref) { return lastResults[ref]; }, MEDIA_TYPE);
+    }
 
-      var simEl = e.target.closest('.detail-similar-card');
-      if (simEl && simEl.dataset.similarRef) {
-        var modalBody = document.querySelector('#gameModal .modal-content');
-        if (modalBody) modalBody.scrollTop = 0;
-        showDetails(simEl.dataset.similarRef);
-        return;
-      }
+    // Card blurbs can still expand in place on the grid.
+    document.addEventListener('click', function (e) {
+      if (!e.target.classList.contains('show-more-btn')) return;
+      e.stopPropagation();
+      var wrap = e.target.closest('.game-card-desc');
+      if (!wrap) return;
+      var shortEl = wrap.querySelector('.desc-short');
+      var fullEl = wrap.querySelector('.desc-full');
+      var expanding = fullEl && fullEl.classList.contains('hidden');
+      if (shortEl) shortEl.classList.toggle('hidden', expanding);
+      if (fullEl) fullEl.classList.toggle('hidden', !expanding);
+      e.target.textContent = expanding ? 'Show less' : 'Show more';
     });
 
     loadGenres();
     populateDynamicFilters();
-    loadUserCustomLists();
     fetchMedia(true);
 
-    // Deep link from the dashboard / a shared card: ?open=<ref> opens a detail.
+    // Deep link from the dashboard or a shared card. Titles have their own page
+    // now, so ?open= forwards to it rather than opening anything here.
     var openRef = new URLSearchParams(location.search).get('open');
     if (openRef && /^[a-z]+_[a-z_]*\d+$/i.test(openRef)) {
-      setTimeout(function () { showDetails(openRef); }, 250);
+      showDetails(openRef);
     }
   }
 
   function onClick(id, fn) { var el = byId(id); if (el) el.addEventListener('click', fn); }
-
-  async function loadUserCustomLists() {
-    if (guest()) { userCustomLists = []; return; }
-    try {
-      var r = await apiFetch('/user/lists');
-      if (r.ok) { var d = await r.json(); userCustomLists = d.lists || []; }
-    } catch (_) {}
-  }
 
   async function loadGenres() {
     var select = byId('genre');
@@ -232,48 +194,6 @@
   }
 
 
-/* ── The run a title belongs to ──────────────────────────────────────────────
-   Deliberately not styled as another "More like this" strip. That one is a
-   guess at taste; this is a position in a sequence, so it reads left to right
-   in order, each entry says where it sits, and the title you are already
-   looking at is marked and not clickable. Without that anchor a row of posters
-   is just more thumbnails. */
-
-var RELATION_WORD = {
-    prequel: 'Prequel',
-    sequel: 'Sequel',
-    earlier: 'Earlier',
-    later: 'Later',
-    current: 'You are here'
-};
-
-function seriesSectionHtml(relations) {
-    if (!Array.isArray(relations) || !relations.length) return '';
-    var hasOther = relations.some(function (r) { return r.relation !== 'current'; });
-    if (!hasOther) return '';
-
-    var items = relations.map(function (r) {
-        var here = r.relation === 'current';
-        var year = r.released ? String(r.released).slice(0, 4) : '';
-        var word = RELATION_WORD[r.relation] || '';
-        var img = '<img src="' + esc(r.image || '/img/no-image.svg') + '" alt="" loading="lazy"' +
-            ' onerror="this.src=\'/img/no-image.svg\'">';
-        var caption =
-            '<span class="dsr-rel">' + esc(word) + (year && !here ? ' \u00B7 ' + esc(year) : '') + '</span>' +
-            '<span class="ds-name">' + esc(r.name) + '</span>';
-
-        // The current entry is a label, not a control: clicking it would reload
-        // the page you are already on.
-        if (here) {
-            return '<div class="detail-series-item is-here" aria-current="true">' + img + caption + '</div>';
-        }
-        return '<button type="button" class="detail-series-item" data-series-ref="' + esc(r.id) + '"' +
-            ' title="' + esc(r.name) + '">' + img + caption + '</button>';
-    }).join('');
-
-    return '<div class="detail-section"><h3 class="detail-h">In this series</h3>' +
-        '<div class="detail-series">' + items + '</div></div>';
-}
 
   /* People matching the search, above the titles.
 
@@ -418,10 +338,14 @@ function seriesSectionHtml(relations) {
       var ratingHtml = m.rating ? '<span class="card-rating">★ ' + esc(Number(m.rating).toFixed(1)) + '</span>' : '';
       // Says "you already have this" before the user clicks in and adds it twice.
       var ownedHtml = typeof ownedBadgeHtml === 'function' ? ownedBadgeHtml(m.id) : '';
+      // Saves from the grid without opening (and paying for) the full title.
+      var quickHtml = window.MGLQuickAdd
+        ? window.MGLQuickAdd.buttonHtml(m.id, typeof libraryEntry === 'function' && !!libraryEntry(m.id))
+        : '';
       return '<div class="game-card" data-game-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="' + esc(label) + '">' +
         '<div class="game-image-wrapper">' +
           '<img src="' + esc(imgSrc) + '" alt="' + esc((m.name || NOUN) + ' cover') + '" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-          ratingHtml + ownedHtml +
+          ratingHtml + ownedHtml + quickHtml +
         '</div>' +
         '<div class="game-info">' +
           '<div class="game-title">' + esc(m.name) + '</div>' +
@@ -434,311 +358,21 @@ function seriesSectionHtml(relations) {
     // nosemgrep: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method -- html is assembled only from esc()-escaped values above
     else container.insertAdjacentHTML('beforeend', html);
   }
+  /* Opening a title is a navigation, not an overlay.
 
-  async function showDetails(ref) {
-    var media = lastResults[ref];
-    try {
-      var parsed = ref.match(/_(\d+)$/);
-      if (parsed) {
-        var r = await apiFetch(ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: Number(parsed[1]) })
-        });
-        var arr = await r.json();
-        if (r.ok && Array.isArray(arr) && arr.length) { media = arr[0]; lastResults[ref] = media; }
-      }
-    } catch (_) {}
-    if (!media) { if (typeof toast === 'function') toast('Could not load details.', 'error'); return; }
+     This used to build the whole detail view into a modal over the grid. A
+     title now has its own address, so it can be linked, shared, opened in a new
+     tab and left with the browser's own Back - and on a phone it is a page
+     rather than a scrolling box inside one. title.js renders every category,
+     which is also why the per-category copies of this went away.
 
-    var heroBg = media.backdrop_image || media.background_image || '/img/no-image.svg';
-    var coverSrc = media.background_image || heroBg;
-
-    var creditLabel = MEDIA_TYPE === 'series' ? 'Creator' : 'Director';
-    var studioLabel = MEDIA_TYPE === 'series' ? 'Network' : 'Studio';
-    // Release date is shown as a badge under the title, so it is intentionally
-    // omitted from the info grid below to avoid printing it twice.
-    var infoItems = [
-      (media.developers && media.developers.length) ? { label: creditLabel, value: media.developers.map(function (d) { return d.name || d; }).join(', ') } : null,
-      (media.publishers && media.publishers.length) ? { label: studioLabel, value: media.publishers.map(function (p) { return p.name || p; }).join(', ') } : null,
-      (MEDIA_TYPE === 'series' && media.number_of_seasons) ? { label: 'Seasons', value: String(media.number_of_seasons) } : null,
-      ((MEDIA_TYPE === 'series' || MEDIA_TYPE === 'anime') && media.number_of_episodes) ? { label: 'Episodes', value: String(media.number_of_episodes) } : null,
-      (MEDIA_TYPE === 'anime' && media.subtype) ? { label: 'Type', value: String(media.subtype) } : null,
-      (MEDIA_TYPE === 'anime' && media.episode_length) ? { label: 'Episode length', value: media.episode_length + ' min' } : null,
-      (MEDIA_TYPE === 'anime' && media.status) ? { label: 'Status', value: ANIME_STATUS_LABEL[media.status] || media.status } : null,
-      (MEDIA_TYPE === 'anime' && media.age_rating) ? { label: 'Rating', value: String(media.age_rating) } : null,
-      (MEDIA_TYPE === 'movie' && media.runtime) ? { label: 'Runtime', value: media.runtime + ' min' } : null
-    ].filter(Boolean);
-
-    /* Already tracked? Then this panel is for editing what is saved, not for
-       adding a second copy. Same controls, filled in and relabelled - a
-       separate edit screen would be a second place for the same job. */
-    var owned = typeof libraryEntry === 'function' ? libraryEntry(media.id) : null;
-
-    var customListOptions = userCustomLists.map(function (list) {
-      return '<option value="custom_' + esc(list.id) + '">' + esc(list.name) + '</option>';
-    }).join('');
-
-    var genreTagsHtml = (media.genres && media.genres.length)
-      ? '<div class="game-detail-genres">' + media.genres.map(function (g) { return '<span class="game-detail-genre-tag">' + esc(g.name || g) + '</span>'; }).join('') + '</div>'
-      : '';
-
-    var infoGridHtml = infoItems.length
-      ? '<div class="game-detail-info-grid">' + infoItems.map(function (it) {
-          return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(it.label) + '</div><div class="game-detail-info-value">' + esc(it.value) + '</div></div>';
-        }).join('') + '</div>'
-      : '';
-
-    var releasedBadge = media.released
-      ? '<span class="game-detail-date">' + esc(new Date(media.released).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })) + '</span>'
-      : '';
-    var ratingBadge = media.rating
-      ? '<span class="detail-rating" title="Average rating">★ ' + esc(Number(media.rating).toFixed(1)) + '<span class="dr-sub">/5</span></span>'
-      : '';
-
-    // ── Detail extras (cast, trailer, where-to-watch, similar) ──────────────
-    function provRow(label, arr) {
-      if (!arr || !arr.length) return '';
-      return '<div class="detail-prov-row"><span class="detail-prov-label">' + label + '</span>' +
-        '<div class="detail-prov-logos">' + arr.map(function (p) {
-          return '<img src="' + esc(p.logo || '/img/no-image.svg') + '" alt="' + esc(p.name) + '" title="' + esc(p.name) + '" loading="lazy">';
-        }).join('') + '</div></div>';
-    }
-    var watchHtml = media.providers
-      ? '<div class="detail-section"><h3 class="detail-h">Where to watch</h3>' +
-          '<div class="detail-providers">' +
-            provRow('Stream', media.providers.flatrate) + provRow('Rent', media.providers.rent) + provRow('Buy', media.providers.buy) +
-          '</div>' +
-          (media.providers.link ? '<a class="link-btn" href="' + esc(media.providers.link) + '" target="_blank" rel="noopener noreferrer">More options ↗</a>' : '') +
-        '</div>'
-      : '';
-    var trailerHtml = (media.trailer && media.trailer.key)
-      ? '<div class="detail-section"><h3 class="detail-h">Trailer</h3>' +
-          '<div class="detail-trailer" data-yt="' + esc(media.trailer.key) + '">' +
-            '<img src="https://i.ytimg.com/vi/' + esc(media.trailer.key) + '/hqdefault.jpg" alt="Play trailer" loading="lazy" onerror="this.src=\'https://i.ytimg.com/vi/' + esc(media.trailer.key) + '/hqdefault.jpg\'">' +
-            '<span class="detail-trailer-play" aria-hidden="true"></span>' +
-          '</div>' +
-          '<a class="detail-trailer-fallback" href="https://www.youtube.com/watch?v=' + esc(media.trailer.key) + '" target="_blank" rel="noopener noreferrer">Trouble playing? Watch on YouTube ↗</a>' +
-        '</div>'
-      : '';
-    /* A cast entry leads somewhere now - a person for film and television, the
-       character themselves for anime, since Kitsu's cast is the cast of the
-       story. Entries the provider gave no id for stay as plain text rather than
-       becoming links that go nowhere. */
-    var castHtml = (media.cast && media.cast.length)
-      ? '<div class="detail-section"><h3 class="detail-h">Cast</h3><div class="detail-cast">' +
-          media.cast.map(function (c) {
-            var inner =
-              '<img src="' + esc(c.image || '/img/no-image.svg') + '" alt="' + esc(c.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-              '<div class="dc-name">' + esc(c.name) + '</div>' +
-              (c.character ? '<div class="dc-char">' + esc(c.character) + '</div>' : '');
-            return c.ref
-              ? '<a class="detail-cast-card is-linked" href="person.html?ref=' + esc(c.ref) + '">' + inner + '</a>'
-              : '<div class="detail-cast-card">' + inner + '</div>';
-          }).join('') +
-        '</div></div>'
-      : '';
-    var seriesHtml = seriesSectionHtml(media.relations);
-
-    var similarHtml = (media.similar && media.similar.length)
-      ? '<div class="detail-section"><h3 class="detail-h">More like this</h3><div class="detail-similar">' +
-          media.similar.map(function (s) {
-            return '<button type="button" class="detail-similar-card" data-similar-ref="' + esc(s.id) + '" title="' + esc(s.name) + '">' +
-              '<img src="' + esc(s.background_image) + '" alt="' + esc(s.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-              '<span class="ds-name">' + esc(s.name) + '</span>' +
-            '</button>';
-          }).join('') +
-        '</div></div>'
-      : '';
-
-    var descHtml = '';
-    if (media.description) {
-      var d = String(media.description);
-      if (d.length > 420) {
-        descHtml = '<div class="game-detail-desc">' +
-          '<p class="desc-short">' + esc(d.slice(0, 420)) + '…</p>' +
-          '<p class="desc-full hidden">' + esc(d) + '</p>' +
-          '<button type="button" class="link-btn show-more-btn">Show more</button></div>';
-      } else {
-        descHtml = '<p class="game-detail-desc">' + esc(d) + '</p>';
-      }
-    }
-
-    var defaultLabel = MEDIA_TYPE === 'series' ? 'My Shows Library (Default)'
-      : MEDIA_TYPE === 'anime' ? 'My Anime Library (Default)'
-      : 'My Movie Library (Default)';
-
-    byId('gameDetails').innerHTML =
-      '<div class="game-detail-hero">' +
-        '<img src="' + esc(heroBg) + '" alt="' + esc(media.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-      '</div>' +
-      '<div class="game-detail-body">' +
-        '<div class="game-detail-title-row">' +
-          '<img src="' + esc(coverSrc) + '" alt="' + esc(media.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-          '<div class="game-detail-title-meta">' +
-            '<div class="game-detail-title">' + esc(media.name) + '</div>' +
-            '<div class="game-detail-badges">' + releasedBadge + ratingBadge + '</div>' +
-          '</div>' +
-        '</div>' +
-        genreTagsHtml + infoGridHtml + descHtml + trailerHtml + watchHtml + seriesHtml + castHtml +
-        '<div class="add-to-list">' +
-          '<h3>' + (owned ? 'In your library' : 'Add to My Library') + '</h3>' +
-          (owned ? '<p class="atl-owned-note">Saved as <strong>' +
-            esc(typeof statusLabel === 'function' ? statusLabel(owned.status, MEDIA_TYPE) : (owned.status || '')) + '</strong>' +
-            (owned.score ? ', rated <strong>' + esc(String(owned.score)) + '/10</strong>' : ', not rated yet') +
-            '. Change it below.</p>' : '') +
-          '<div style="margin-bottom:12px;">' +
-            '<label>Add to list</label>' +
-            '<select id="gameListSelect" class="filter-select" style="width:100%;margin:0;">' +
-              '<option value="default">' + esc(defaultLabel) + '</option>' + customListOptions +
-            '</select>' +
-          '</div>' +
-          '<div class="atl-controls">' +
-            '<div class="atl-field atl-field-status">' +
-              '<label>Status</label>' +
-              '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' + statusOptions(MEDIA_TYPE, (owned && owned.status) || 'completed') + '</select>' +
-            '</div>' +
-            '<div class="atl-field">' +
-              '<label>Your score (1-10)</label>' +
-              '<div class="score-input-container" style="margin:0;">' +
-                '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--"' +
-                  (owned && owned.score ? ' value="' + esc(String(owned.score)) + '"' : '') + '>' +
-                '<div class="score-controls">' +
-                  '<button type="button" class="score-btn" id="mbScoreUp" aria-label="Increase score">+</button>' +
-                  '<button type="button" class="score-btn" id="mbScoreDown" aria-label="Decrease score">−</button>' +
-                '</div>' +
-              '</div>' +
-            '</div>' +
-            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + esc(media.id) + '">' +
-              (owned ? 'Save changes' : 'Add to Library') + '</button>' +
-          '</div>' +
-          '<div class="atl-note">' +
-            '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
-            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Write a quick review or note, or leave it blank."></textarea>' +
-          '</div>' +
-          '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
-        '</div>' +
-        similarHtml +
-      '</div>';
-
-    if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'mbScoreUp', 'mbScoreDown', null);
-    if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(byId('gameDetails'));
-    if (typeof openModal === 'function') openModal('gameModal');
+     Every existing caller still works: the grid, the "More like this" cards,
+     the series strip and the ?open= deep link all hand over a ref. */
+  function showDetails(ref) {
+    if (!ref) return;
+    window.location.href = 'title.html?ref=' + encodeURIComponent(ref);
   }
 
-  function mediaToGameData(media) {
-    return {
-      media_type: media.media_type,
-      provider: media.provider,
-      provider_id: media.provider_id,
-      tmdb_id: media.tmdb_id,
-      name: media.name,
-      background_image: media.background_image,
-      description: media.description,
-      rating: media.rating,
-      metacritic_score: media.metacritic_score,
-      released: media.released,
-      number_of_episodes: media.number_of_episodes,
-      genres: media.genres || [],
-      developers: media.developers || [],
-      publishers: media.publishers || []
-    };
-  }
-
-  async function addToLibrary(ref) {
-    if (guest()) { promptSignIn('Create a free account to build your library.'); return; }
-    var media = lastResults[ref];
-    if (!media) { if (typeof toast === 'function') toast('Please reopen this title and try again.', 'error'); return; }
-
-    var statusSelect = byId('gameStatus');
-    var scoreInput = byId('gameScore');
-    var listSelect = byId('gameListSelect');
-    var messageEl = byId('addGameMessage');
-    var noteInput = byId('gameNote');
-    var listValue = listSelect ? listSelect.value : 'default';
-    var status = statusSelect ? statusSelect.value : 'plan_to_play';
-    var score = scoreInput ? scoreInput.value : '';
-    var note = noteInput ? noteInput.value.trim() : '';
-
-    if (score && (parseInt(score) < 1 || parseInt(score) > 10)) {
-      showMsg(messageEl, 'Score must be between 1 and 10.', 'error');
-      return;
-    }
-
-    var gameData = mediaToGameData(media);
-    var scoreVal = score ? parseInt(score) : null;
-
-    try {
-      var owned = typeof libraryEntry === 'function' ? libraryEntry(ref) : null;
-
-      if (listValue === 'default' && owned && owned.id) {
-        // Editing what is already saved. Never send an empty note over a real
-        // one: a blank box means "left alone", not "delete what I wrote".
-        var patch = { status: status, score: scoreVal };
-        if (note) patch.notes = note;
-        var upResp = await apiFetch('/user/games/' + encodeURIComponent(owned.id), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patch)
-        });
-        var upData = await upResp.json().catch(function () { return {}; });
-        if (!upResp.ok) { showMsg(messageEl, upData.error || 'Could not save that.', 'error'); return; }
-        if (typeof setLibraryEntry === 'function') setLibraryEntry(ref, { id: owned.id, status: status, score: scoreVal });
-        if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(ref);
-        showMsg(messageEl, 'Updated in your library.', 'success');
-        return;
-      }
-
-      if (listValue === 'default') {
-        var addResp = await apiFetch('/user/games', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ game_id: media.id, game_data: gameData, status: status, score: scoreVal, notes: note || undefined })
-        });
-        var addData = await addResp.json();
-        if (!addResp.ok) {
-          var already = addData.error === 'Game already in your list';
-          showMsg(messageEl, already ? 'Already in your library.' : (addData.error || 'Failed to add.'), already ? 'success' : 'error');
-          return;
-        }
-        /* An anime that is already a season of something in the library is
-           saved there instead of becoming a second entry for the same show.
-           Say so, because it is not what was clicked. */
-        if (typeof setLibraryEntry === 'function' && !addData.folded_into) {
-          setLibraryEntry(ref, { id: addData.game_id, status: status, score: scoreVal });
-        }
-        if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(ref);
-        showMsg(messageEl, addData.folded_into ? addData.message : 'Added to your library.', 'success');
-        return;
-      }
-
-      // Custom list: the list-add endpoint accepts game_data and upserts the catalog
-      // row itself, so no separate default-collection write is needed.
-      var listId = listValue.replace('custom_', '');
-      var listResp = await apiFetch('/user/lists/' + listId + '/games', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game_data: gameData, status: status, score: scoreVal, note: note || undefined })
-      });
-      var listData = await listResp.json();
-      if (!listResp.ok) {
-        var dup = listData.error === 'Game already in this list';
-        showMsg(messageEl, dup ? 'Already in that list.' : ('Failed: ' + (listData.error || 'error')), dup ? 'success' : 'error');
-        return;
-      }
-      var matched = userCustomLists.find(function (l) { return String(l.id) === String(listId); });
-      showMsg(messageEl, 'Added to "' + (matched ? matched.name : 'list') + '".', 'success');
-      loadUserCustomLists();
-    } catch (err) {
-      showMsg(messageEl, 'Network error. Please try again.', 'error');
-    }
-  }
-
-  function showMsg(el, text, type) {
-    if (!el) return;
-    el.textContent = text;
-    el.style.color = type === 'error' ? 'var(--red-light)' : 'var(--green-light)';
-  }
 
   // The notice's "Clear search" needs a way back into this page's own reload.
   window.__clearSearch = function () { doSearch(); };

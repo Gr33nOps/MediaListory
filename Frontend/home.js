@@ -186,13 +186,6 @@ function initPage() {
     onClick('filterBtn', toggleFilterSection);
     onClick('applyFiltersBtn', applyFilters);
     onClick('resetFiltersBtn', resetFilters);
-    if (typeof bindModal === 'function') {
-        bindModal('gameModal', 'closeModalBtn');
-    } else {
-        onClick('closeModalBtn', function() {
-            document.getElementById('gameModal').style.display = 'none';
-        });
-    }
 
     var searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -237,6 +230,19 @@ function initPage() {
     onClick('prevPageBtn', goToPreviousPage);
     onClick('nextPageBtn', goToNextPage);
 
+    /* The plus on a card saves straight from the grid. It sits on top of the
+       card's own activation, so it stops the click before the card can
+       navigate - clicking anywhere else still opens the full page. */
+    if (window.MGLQuickAdd) {
+        window.MGLQuickAdd.bind(
+            document.getElementById('searchResults'),
+            function (ref) {
+                return allGames.find(function (g) { return String(g.id) === String(ref); }) || null;
+            },
+            'game'
+        );
+    }
+
     if (typeof bindActivatableCards === 'function') {
         bindActivatableCards(document, '.game-card', function(card) {
             showGameDetails(card.dataset.gameId);
@@ -251,31 +257,6 @@ function initPage() {
     }
 
     document.addEventListener('click', function(e) {
-        // Play the game trailer inline (swap facade for a lazy YouTube embed).
-        var trailerEl = e.target.closest('.detail-trailer');
-        if (trailerEl && trailerEl.dataset.yt && !trailerEl.classList.contains('playing')) {
-            var key = trailerEl.dataset.yt;
-            trailerEl.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(key) +
-                '?autoplay=1&rel=0&modestbranding=1&playsinline=1" title="Trailer" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe>';
-            trailerEl.classList.add('playing');
-            return;
-        }
-        // "More like this" opens that game's detail.
-        var serEl = e.target.closest('.detail-series-item');
-        if (serEl && serEl.dataset.seriesRef) {
-            e.preventDefault();
-            e.stopPropagation();
-            showGameDetails(serEl.dataset.seriesRef);
-            return;
-        }
-
-        var simEl = e.target.closest('.detail-similar-card');
-        if (simEl && simEl.dataset.similarRef) {
-            var modalBody = document.querySelector('#gameModal .modal-content');
-            if (modalBody) modalBody.scrollTop = 0;
-            showGameDetails(simEl.dataset.similarRef);
-            return;
-        }
         if (e.target.classList.contains('show-more-btn')) {
             e.stopPropagation();
             var wrap = e.target.closest('.game-card-desc, .game-detail-desc');
@@ -287,11 +268,6 @@ function initPage() {
             if (fullEl) fullEl.classList.toggle('hidden', !expanding);
             e.target.textContent = expanding ? 'Show less' : 'Show more';
             return;
-        }
-        if (e.target.classList.contains('add-to-list-btn')) {
-            var gameId   = e.target.dataset.gameId;
-            var gameData = e.target.dataset.gameData;
-            addToList(gameId, gameData ? JSON.parse(gameData) : null);
         }
     });
 
@@ -325,11 +301,10 @@ function initPage() {
     loadUserCustomLists();
     fetchGames(true);
 
-    // Deep link from the dashboard: ?open=igdb_<id> opens that game's detail.
+    // Old ?open=igdb_<id> links (bookmarks, shared URLs) still work: titles
+    // have their own page now, so this just forwards there.
     var openRef = new URLSearchParams(window.location.search).get('open');
-    if (openRef && /^igdb_\d+$/i.test(openRef)) {
-        setTimeout(function () { showGameDetails(openRef); }, 250);
-    }
+    if (openRef && /^igdb_\d+$/i.test(openRef)) showGameDetails(openRef);
 }
 
 async function loadUserCustomLists() {
@@ -580,48 +555,6 @@ function getRatingColor(score) {
 }
 
 
-/* ── The run a title belongs to ──────────────────────────────────────────────
-   Deliberately not styled as another "More like this" strip. That one is a
-   guess at taste; this is a position in a sequence, so it reads left to right
-   in order, each entry says where it sits, and the title you are already
-   looking at is marked and not clickable. Without that anchor a row of posters
-   is just more thumbnails. */
-
-var RELATION_WORD = {
-    prequel: 'Prequel',
-    sequel: 'Sequel',
-    earlier: 'Earlier',
-    later: 'Later',
-    current: 'You are here'
-};
-
-function seriesSectionHtml(relations) {
-    if (!Array.isArray(relations) || !relations.length) return '';
-    var hasOther = relations.some(function (r) { return r.relation !== 'current'; });
-    if (!hasOther) return '';
-
-    var items = relations.map(function (r) {
-        var here = r.relation === 'current';
-        var year = r.released ? String(r.released).slice(0, 4) : '';
-        var word = RELATION_WORD[r.relation] || '';
-        var img = '<img src="' + esc(r.image || '/img/no-image.svg') + '" alt="" loading="lazy"' +
-            ' onerror="this.src=\'/img/no-image.svg\'">';
-        var caption =
-            '<span class="dsr-rel">' + esc(word) + (year && !here ? ' \u00B7 ' + esc(year) : '') + '</span>' +
-            '<span class="ds-name">' + esc(r.name) + '</span>';
-
-        // The current entry is a label, not a control: clicking it would reload
-        // the page you are already on.
-        if (here) {
-            return '<div class="detail-series-item is-here" aria-current="true">' + img + caption + '</div>';
-        }
-        return '<button type="button" class="detail-series-item" data-series-ref="' + esc(r.id) + '"' +
-            ' title="' + esc(r.name) + '">' + img + caption + '</button>';
-    }).join('');
-
-    return '<div class="detail-section"><h3 class="detail-h">In this series</h3>' +
-        '<div class="detail-series">' + items + '</div></div>';
-}
 
 /* Studio names in the info grid, each leading to that studio's own page where
    IGDB knows which one it is. A company with no id stays plain text rather than
@@ -657,15 +590,19 @@ function displaySearchResults(games, replace) {
         }
 
         // Poster-first tile: cover + title + year. Genres, platforms and the
-        // summary all live in the detail modal.
+        // summary all live on the title's own page.
         var cardLabel = 'View details for ' + (game.name || 'game');
         var ratingHtml = game.rating ? '<span class="card-rating">★ ' + esc(Number(game.rating).toFixed(1)) + '</span>' : '';
         // Says "you already have this" before the user adds it a second time.
         var ownedHtml = typeof ownedBadgeHtml === 'function' ? ownedBadgeHtml(game.id) : '';
+        // Saves from the grid without opening (and paying for) the full title.
+        var quickHtml = window.MGLQuickAdd
+            ? window.MGLQuickAdd.buttonHtml(game.id, typeof libraryEntry === 'function' && !!libraryEntry(game.id))
+            : '';
         return '<div class="game-card" data-game-id="' + esc(game.id) + '" role="button" tabindex="0" aria-label="' + esc(cardLabel) + '">' +
             '<div class="game-image-wrapper">' +
                 '<img src="' + esc(imgSrc) + '" alt="' + esc(game.name || 'Game') + ' cover" class="game-image" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                ratingHtml + ownedHtml +
+                ratingHtml + ownedHtml + quickHtml +
             '</div>' +
             '<div class="game-info">' +
                 '<div class="game-title">' + esc(game.name) + '</div>' +
@@ -681,486 +618,19 @@ function displaySearchResults(games, replace) {
         container.insertAdjacentHTML('beforeend', html);
     }
 }
+/* Opening a game is a navigation, not an overlay.
 
-async function showGameDetails(gameId) {
-    try {
-        var game;
-
-        if (gameId.startsWith('igdb_')) {
-            var igdbId = gameId.replace('igdb_', '');
-
-            var response = await fetch(`${API_BASE}/igdb/games`, {
-                method: 'POST',
-                headers: authHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ id: Number(igdbId) })
-            });
-
-            var igdbGames = await response.json();
-
-            if (response.ok && igdbGames.length > 0) {
-                var igdbGame   = igdbGames[0];
-                var publishers = [];
-                var developers = [];
-
-                if (igdbGame.involved_companies) {
-                    igdbGame.involved_companies.forEach(function(ic) {
-                        if (ic.company) {
-                            // The id as well as the name: games credit studios,
-                            // not people, and a studio is a real thing to open.
-                            var entry = { name: ic.company.name, ref: ic.company.id ? 'igdb_company_' + ic.company.id : null };
-                            if (ic.publisher) publishers.push(entry);
-                            if (ic.developer) developers.push(entry);
-                        }
-                    });
-                }
-
-                var displayRating = null;
-                var igdbScore     = null;
-                if (igdbGame.total_rating && igdbGame.total_rating_count >= 5) {
-                    displayRating = (igdbGame.total_rating / 20).toFixed(1);
-                    igdbScore     = Math.round(igdbGame.total_rating);
-                } else if (igdbGame.aggregated_rating && igdbGame.aggregated_rating_count >= 3) {
-                    displayRating = (igdbGame.aggregated_rating / 20).toFixed(1);
-                    igdbScore     = Math.round(igdbGame.aggregated_rating);
-                }
-
-                // Pick the first "Trailer" video, else the first video of any kind.
-                var vids = igdbGame.videos || [];
-                var vid = vids.find(function (v) { return /trailer/i.test(v.name || ''); }) || vids[0];
-
-                game = {
-                    id:               gameId,
-                    igdb_id:          igdbGame.id,
-                    name:             igdbGame.name,
-                    background_image: igdbGame.cover
-                        ? 'https:' + igdbGame.cover.url.replace('t_thumb', 't_cover_big')
-                        : null,
-                    screenshot_image: igdbGame.cover
-                        ? 'https:' + igdbGame.cover.url.replace('t_thumb', 't_screenshot_big')
-                        : null,
-                    rating:           displayRating,
-                    description:      igdbGame.summary || 'No description available',
-                    released:         igdbGame.first_release_date
-                        ? new Date(igdbGame.first_release_date * 1000).toISOString().split('T')[0]
-                        : null,
-                    metacritic_score: igdbScore,
-                    rating_count:     igdbGame.total_rating_count || igdbGame.rating_count || 0,
-                    playtime:         0,
-                    genres:           igdbGame.genres    || [],
-                    platforms:        igdbGame.platforms || [],
-                    publishers:       publishers,
-                    developers:       developers,
-                    game_modes:       (igdbGame.game_modes || []).map(function (m) { return m.name; }).filter(Boolean),
-                    perspectives:     (igdbGame.player_perspectives || []).map(function (p) { return p.name; }).filter(Boolean),
-                    trailer:          vid && vid.video_id ? { key: vid.video_id } : null,
-                    screenshots:      (igdbGame.screenshots || []).slice(0, 8).map(function (s) {
-                        return 'https:' + s.url.replace('t_thumb', 't_screenshot_big');
-                    }),
-                    similar:          (igdbGame.similar_games || []).filter(function (s) { return s.cover; }).slice(0, 12).map(function (s) {
-                        return {
-                            id: 'igdb_' + s.id,
-                            name: s.name,
-                            background_image: 'https:' + s.cover.url.replace('t_thumb', 't_cover_big')
-                        };
-                    }),
-                    // IGDB works in bare numeric ids; everything in this app
-                    // addresses a game by its catalog ref, including the click
-                    // that opens one of these.
-                    relations:        (igdbGame.relations || []).map(function (r) {
-                        return {
-                            id: 'igdb_' + r.id,
-                            name: r.name,
-                            released: r.released,
-                            image: r.image,
-                            relation: r.relation
-                        };
-                    })
-                };
-            }
-        } else {
-            var resp = await fetch(`${API_BASE}/games/${gameId}`);
-            game = await resp.json();
-        }
-
-        if (game) {
-            /* Already tracked? Then this panel edits what is saved rather than
-               adding a second copy. Same controls, filled in and relabelled. */
-            var ownedEntry = typeof libraryEntry === 'function' ? libraryEntry(game.id) : null;
-
-            var gameDataStr = JSON.stringify({
-                igdb_id:          game.igdb_id,
-                name:             game.name,
-                background_image: game.background_image,
-                rating:           game.rating,
-                description:      game.description,
-                released:         game.released,
-                metacritic_score: game.metacritic_score,
-                playtime:         game.playtime,
-                genres:           game.genres,
-                platforms:        game.platforms,
-                publishers:       game.publishers,
-                developers:       game.developers
-            }).replace(/"/g, '&quot;');
-
-            var heroBg   = game.screenshot_image || game.background_image || '/img/no-image.svg';
-            var coverSrc = game.background_image || heroBg;
-
-            var infoItems = [
-                game.released
-                    ? { label: 'Released', value: new Date(game.released).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }
-                    : null,
-                game.publishers && game.publishers.length
-                    ? { label: 'Publisher', valueHtml: companyListHtml(game.publishers) }
-                    : null,
-                game.developers && game.developers.length
-                    ? { label: 'Developer', valueHtml: companyListHtml(game.developers) }
-                    : null,
-                game.platforms && game.platforms.length
-                    ? { label: 'Platforms', value: game.platforms.map(function(p) { return p.name; }).join(' · ') }
-                    : null,
-                game.game_modes && game.game_modes.length
-                    ? { label: 'Modes', value: game.game_modes.join(' · ') }
-                    : null,
-                game.perspectives && game.perspectives.length
-                    ? { label: 'Perspective', value: game.perspectives.join(' · ') }
-                    : null
-            ].filter(Boolean);
-
-            var customListOptions = userCustomLists.length > 0
-                ? userCustomLists.map(function(list) {
-                    return '<option value="custom_' + esc(list.id) + '">' + esc(list.name) + '</option>';
-                }).join('')
-                : '';
-
-            var genreTagsHtml = '';
-            if (game.genres && game.genres.length) {
-                genreTagsHtml = '<div class="game-detail-genres">' +
-                    game.genres.map(function(g) { return '<span class="game-detail-genre-tag">' + esc(g.name) + '</span>'; }).join('') +
-                '</div>';
-            }
-
-            var infoGridHtml = '';
-            if (infoItems.length) {
-                infoGridHtml = '<div class="game-detail-info-grid">' +
-                    infoItems.map(function(item) {
-                        // valueHtml is assembled from esc()-escaped parts by the
-                        // helper that builds it; value is escaped here.
-                        var value = item.valueHtml || esc(item.value);
-                        return '<div class="game-detail-info-item"><div class="game-detail-info-label">' + esc(item.label) + '</div><div class="game-detail-info-value">' + value + '</div></div>';
-                    }).join('') +
-                '</div>';
-            }
-
-            var releasedBadge = game.released
-                ? '<span class="game-detail-date">' + esc(new Date(game.released).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })) + '</span>'
-                : '';
-            var ratingBadge = game.rating
-                ? '<span class="detail-rating" title="Average rating">★ ' + esc(Number(game.rating).toFixed(1)) + '<span class="dr-sub">/5</span></span>'
-                : '';
-
-            var descHtml = '';
-            if (game.description) {
-                var d = String(game.description);
-                if (d.length > 420) {
-                    descHtml =
-                        '<div class="game-detail-desc">' +
-                            '<p class="desc-short">' + esc(d.slice(0, 420)) + '…</p>' +
-                            '<p class="desc-full hidden">' + esc(d) + '</p>' +
-                            '<button type="button" class="link-btn show-more-btn">Show more</button>' +
-                        '</div>';
-                } else {
-                    descHtml = '<p class="game-detail-desc">' + esc(d) + '</p>';
-                }
-            }
-
-            var trailerHtml = (game.trailer && game.trailer.key)
-                ? '<div class="detail-section"><h3 class="detail-h">Trailer</h3>' +
-                    '<div class="detail-trailer" data-yt="' + esc(game.trailer.key) + '">' +
-                      '<img src="https://i.ytimg.com/vi/' + esc(game.trailer.key) + '/hqdefault.jpg" alt="Play trailer" loading="lazy">' +
-                      '<span class="detail-trailer-play" aria-hidden="true"></span>' +
-                    '</div>' +
-                    '<a class="detail-trailer-fallback" href="https://www.youtube.com/watch?v=' + esc(game.trailer.key) + '" target="_blank" rel="noopener noreferrer">Trouble playing? Watch on YouTube ↗</a>' +
-                  '</div>'
-                : '';
-
-            var shotsHtml = (game.screenshots && game.screenshots.length)
-                ? '<div class="detail-section"><h3 class="detail-h">Screenshots</h3><div class="detail-shots">' +
-                    game.screenshots.map(function (u) {
-                        return '<a class="detail-shot" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' +
-                            '<img src="' + esc(u) + '" alt="Screenshot" loading="lazy" onerror="this.closest(\'.detail-shot\').style.display=\'none\'"></a>';
-                    }).join('') +
-                  '</div></div>'
-                : '';
-
-            var seriesHtml = seriesSectionHtml(game.relations);
-
-            var similarHtml = (game.similar && game.similar.length)
-                ? '<div class="detail-section"><h3 class="detail-h">More like this</h3><div class="detail-similar">' +
-                    game.similar.map(function (s) {
-                        return '<button type="button" class="detail-similar-card" data-similar-ref="' + esc(s.id) + '" title="' + esc(s.name) + '">' +
-                            '<img src="' + esc(s.background_image) + '" alt="' + esc(s.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                            '<span class="ds-name">' + esc(s.name) + '</span>' +
-                        '</button>';
-                    }).join('') +
-                  '</div></div>'
-                : '';
-
-            document.getElementById('gameDetails').innerHTML =
-                '<div class="game-detail-hero">' +
-                    '<img src="' + esc(heroBg) + '" alt="' + esc(game.name) + ' banner" class="game-detail-hero-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                '</div>' +
-                '<div class="game-detail-body">' +
-                    '<div class="game-detail-title-row">' +
-                        '<img src="' + esc(coverSrc) + '" alt="' + esc(game.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-                        '<div class="game-detail-title-meta">' +
-                            '<div class="game-detail-title">' + esc(game.name) + '</div>' +
-                            '<div class="game-detail-badges">' + releasedBadge + ratingBadge + '</div>' +
-                        '</div>' +
-                    '</div>' +
-                    genreTagsHtml +
-                    infoGridHtml +
-                    descHtml +
-                    trailerHtml +
-                    shotsHtml +
-                    '<div class="add-to-list">' +
-                        '<h3>' + (ownedEntry ? 'In your library' : 'Add to My Library') + '</h3>' +
-                        (ownedEntry ? '<p class="atl-owned-note">Saved as <strong>' +
-                            esc(typeof statusLabel === 'function' ? statusLabel(ownedEntry.status, 'game') : (ownedEntry.status || '')) + '</strong>' +
-                            (ownedEntry.score ? ', rated <strong>' + esc(String(ownedEntry.score)) + '/10</strong>' : ', not rated yet') +
-                            '. Change it below.</p>' : '') +
-                        '<div style="margin-bottom:12px;">' +
-                            '<label>Add to list</label>' +
-                            '<select id="gameListSelect" class="filter-select" style="width:100%;margin:0;" onchange="handleListSelectChange()">' +
-                                '<option value="default">My Games Library (Default)</option>' +
-                                customListOptions +
-                            '</select>' +
-                        '</div>' +
-                        '<div class="atl-controls">' +
-                            '<div class="atl-field atl-field-status">' +
-                                '<label>Status</label>' +
-                                '<select id="gameStatus" class="filter-select" style="width:100%;margin:0;">' +
-                                    (typeof statusOptions === 'function'
-                                      ? statusOptions('game', (ownedEntry && ownedEntry.status) || 'completed')
-                                      : '<option value="playing">In progress</option>' +
-                                    '<option value="completed" selected>Completed</option>' +
-                                    '<option value="plan_to_play">Planned</option>' +
-                                    '<option value="on_hold">On hold</option>' +
-                                    '<option value="dropped">Dropped</option>') +
-                                '</select>' +
-                            '</div>' +
-                            '<div class="atl-field">' +
-                                '<label>Your score (1-10)</label>' +
-                                '<div class="score-input-container" style="margin:0;">' +
-                                    '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--"' +
-                                        (ownedEntry && ownedEntry.score ? ' value="' + esc(String(ownedEntry.score)) + '"' : '') + '>' +
-                                    '<div class="score-controls">' +
-                                        '<button type="button" class="score-btn" id="scoreUpBtn" aria-label="Increase score">+</button>' +
-                                        '<button type="button" class="score-btn" id="scoreDownBtn" aria-label="Decrease score">−</button>' +
-                                    '</div>' +
-                                '</div>' +
-                            '</div>' +
-                            '<button class="btn btn-primary add-to-list-btn atl-add" data-game-id="' + game.id + '" data-game-data="' + gameDataStr + '">' +
-                                (ownedEntry ? 'Save changes' : 'Add to Library') + '</button>' +
-                        '</div>' +
-                        '<div class="atl-note">' +
-                            '<label for="gameNote">Review or note <span class="atl-optional">optional</span></label>' +
-                            '<textarea id="gameNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Write a quick review or note, or leave it blank."></textarea>' +
-                        '</div>' +
-                        '<div id="customListNote" style="display:none;margin-top:12px;padding:10px 14px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:var(--radius-md);font-size:0.82rem;color:var(--accent-light);">' +
-                            'The game will be added to your selected custom list with the status above.' +
-                        '</div>' +
-                        '<span id="addGameMessage" style="display:block;margin-top:10px;font-size:13px;font-weight:600;"></span>' +
-                    '</div>' +
-                    seriesHtml +
-                    similarHtml +
-                '</div>';
-
-            if (typeof openModal === 'function') openModal('gameModal');
-            else document.getElementById('gameModal').style.display = 'flex';
-
-            if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'scoreUpBtn', 'scoreDownBtn', null);
-            if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(document.getElementById('gameDetails'));
-        }
-    } catch (error) {
-        console.error('Show game details error:', error);
-    }
+   This used to build the whole detail view into a modal over the grid. A title
+   now has its own address, so it can be linked, shared, opened in a new tab and
+   left with the browser's own Back - and on a phone it is a page rather than a
+   scrolling box inside one. title.js renders every category from the same code,
+   which is why the games-only copy of this is gone. */
+function showGameDetails(gameId) {
+    if (!gameId) return;
+    window.location.href = 'title.html?ref=' + encodeURIComponent(gameId);
 }
 
-function handleListSelectChange() {
-    var select = document.getElementById('gameListSelect');
-    var note   = document.getElementById('customListNote');
-    if (select && note) {
-        note.style.display = select.value !== 'default' ? 'block' : 'none';
-    }
-}
 
-async function addToList(gameId, gameData) {
-    if (isGuest()) { promptSignIn('Create a free account to build your library.'); return; }
-    var statusSelect = document.getElementById('gameStatus');
-    var scoreInput   = document.getElementById('gameScore');
-    var listSelect   = document.getElementById('gameListSelect');
-    var messageEl    = document.getElementById('addGameMessage');
-    var listValue    = listSelect   ? listSelect.value   : 'default';
-    var noteInput    = document.getElementById('gameNote');
-    var status       = statusSelect ? statusSelect.value : 'plan_to_play';
-    var score        = scoreInput   ? scoreInput.value   : '';
-    var note         = noteInput    ? noteInput.value.trim() : '';
-
-    if (score && (parseInt(score) < 1 || parseInt(score) > 10)) {
-        showInlineMsg(messageEl, 'Score must be between 1 and 10.', 'error');
-        scoreInput.focus();
-        return;
-    }
-
-    var ownedNow = typeof libraryEntry === 'function' ? libraryEntry(gameId) : null;
-
-    if (listValue === 'default' && ownedNow && ownedNow.id) {
-        // Editing what is already saved. A blank note box means "left alone",
-        // never "delete what I wrote", so it is only sent when it has content.
-        try {
-            var patch = { status: status, score: score ? parseInt(score) : null };
-            if (note) patch.notes = note;
-            var up = await fetch(`${API_BASE}/user/games/${encodeURIComponent(ownedNow.id)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify(patch)
-            });
-            var ud = await up.json().catch(function () { return {}; });
-            if (!up.ok) { showInlineMsg(messageEl, ud.error || 'Could not save that.', 'error'); return; }
-            if (typeof setLibraryEntry === 'function') {
-                setLibraryEntry(gameId, { id: ownedNow.id, status: status, score: score ? parseInt(score) : null });
-            }
-            if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(gameId);
-            showInlineMsg(messageEl, 'Updated in your collection.', 'success');
-        } catch (error) {
-            showInlineMsg(messageEl, 'Network error. Please try again.', 'error');
-        }
-        return;
-    }
-
-    if (listValue === 'default') {
-        try {
-            var r = await fetch(`${API_BASE}/user/games`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({
-                    game_id:   gameId,
-                    game_data: gameData,
-                    status:    status,
-                    score:     score ? parseInt(score) : null,
-                    notes:     note || undefined
-                })
-            });
-            var d = await r.json();
-            if (!r.ok) {
-                if (d.error === 'Game already in your list') {
-                    showInlineMsg(messageEl, 'Already in your collection.', 'success');
-                } else {
-                    showInlineMsg(messageEl, d.error || 'Failed to add game.', 'error');
-                }
-                return;
-            }
-            if (typeof setLibraryEntry === 'function') {
-                setLibraryEntry(gameId, { id: d.game_id, status: status, score: score ? parseInt(score) : null });
-            }
-            if (typeof refreshOwnedBadge === 'function') refreshOwnedBadge(gameId);
-            showInlineMsg(messageEl, 'Game added to your collection.', 'success');
-            if (scoreInput)   scoreInput.value   = '';
-            if (statusSelect) statusSelect.value = 'completed';
-        } catch (error) {
-            console.error('Add to collection error:', error);
-            showInlineMsg(messageEl, 'Network error. Please try again.', 'error');
-        }
-
-    } else {
-        var listId = listValue.replace('custom_', '');
-
-        try {
-            var addResp = await fetch(`${API_BASE}/user/games`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({
-                    game_id:   gameId,
-                    game_data: gameData,
-                    status:    status,
-                    score:     score ? parseInt(score) : null
-                })
-            });
-            var addData = await addResp.json();
-            var wasAlreadyInCollection = !addResp.ok && addData.error === 'Game already in your list';
-
-            if (!addResp.ok && !wasAlreadyInCollection) {
-                showInlineMsg(messageEl, addData.error || 'Failed to prepare game data.', 'error');
-                return;
-            }
-
-            var gamesResp = await fetch(`${API_BASE}/user/games`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            if (!gamesResp.ok) {
-                showInlineMsg(messageEl, 'Failed to retrieve game data.', 'error');
-                return;
-            }
-            var gamesData    = await gamesResp.json();
-            var matchedGame  = gamesData.games.find(function(g) {
-                return gameData ? g.name === gameData.name : g.game_id == gameId;
-            });
-
-            if (!matchedGame) {
-                showInlineMsg(messageEl, 'Could not locate game in database.', 'error');
-                return;
-            }
-
-            if (!wasAlreadyInCollection) {
-                await fetch(`${API_BASE}/user/games/${matchedGame.game_id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-            }
-
-            var listResp = await fetch(`${API_BASE}/user/lists/${listId}/games`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ game_id: matchedGame.game_id, status: status, score: score ? parseInt(score) : null, note: note || undefined })
-            });
-            var listData = await listResp.json();
-
-            if (!listResp.ok) {
-                if (listData.error === 'Game already in this list') {
-                    showInlineMsg(messageEl, 'Already in that list.', 'success');
-                } else {
-                    showInlineMsg(messageEl, 'Failed to add to list: ' + listData.error, 'error');
-                }
-                return;
-            }
-
-            var matchedList = userCustomLists.find(function(l) { return l.id == listId; });
-            var listName    = matchedList ? matchedList.name : 'list';
-            showInlineMsg(messageEl, 'Game added to "' + listName + '".', 'success');
-            if (scoreInput)   scoreInput.value   = '';
-            if (statusSelect) statusSelect.value = 'completed';
-            loadUserCustomLists();
-
-        } catch (error) {
-            console.error('Add to custom list error:', error);
-            showInlineMsg(messageEl, 'Network error. Please try again.', 'error');
-        }
-    }
-}
-
-function showInlineMsg(el, text, type) {
-    el.textContent = text;
-    el.style.color = type === 'error' ? 'var(--red-light)' : 'var(--green-light)';
-}
 
 function populateFilterOptions() {
     var genreSelect = document.getElementById('genre');
@@ -1290,4 +760,3 @@ function showSuccess(element, message) {
     element.innerHTML = '<div class="success">' + esc(message) + '</div>';
 }
 
-window.handleListSelectChange = handleListSelectChange;

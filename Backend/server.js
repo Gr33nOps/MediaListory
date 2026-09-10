@@ -433,9 +433,14 @@ try {
   process.exit(1);
 }
 
+// Held outside the try blocks: the enrichment routes reuse these routers'
+// authenticated fetches to resolve Steam / TVmaze ids.
+let igdbRouter = null;
+let tmdbRouter = null;
+
 try {
   const igdbRoutes = require('./igdb');
-  const igdbRouter = igdbRoutes(optionalAuth, passThrough, db);
+  igdbRouter = igdbRoutes(optionalAuth, passThrough, db);
   app.use('/api/igdb', igdbLimiter, igdbRouter);
   console.log('  IGDB proxy routes loaded');
 
@@ -451,7 +456,8 @@ try {
 
 try {
   const tmdbRoutes = require('./tmdb');
-  app.use('/api/tmdb', igdbLimiter, tmdbRoutes(optionalAuth, passThrough, db));
+  tmdbRouter = tmdbRoutes(optionalAuth, passThrough, db);
+  app.use('/api/tmdb', igdbLimiter, tmdbRouter);
   console.log('  TMDB proxy routes loaded');
 } catch (error) {
   console.error('  Error loading TMDB proxy routes:', error.message);
@@ -465,6 +471,26 @@ try {
 } catch (error) {
   console.error('  Error loading Kitsu proxy routes:', error.message);
   process.exit(1);
+}
+
+/* Secondary sources: game prices (CheapShark), anime score and themes
+   (MyAnimeList via Jikan, AnimeThemes), upcoming episodes (TVmaze). Strictly
+   additive - if this fails to load, every core route still works. */
+let enrichRouter = null;
+try {
+  const buildExternalIds = require('./externalIds');
+  const enrichRoutes = require('./enrich');
+  const externalIds = buildExternalIds({
+    db,
+    igdbFetch: igdbRouter && igdbRouter.igdbFetch,
+    tmdbFetch: tmdbRouter && tmdbRouter.tmdbFetch
+  });
+  enrichRouter = enrichRoutes(optionalAuth, passThrough, { externalIds });
+  app.use('/api/enrich', igdbLimiter, enrichRouter);
+  console.log('  Enrichment routes loaded');
+} catch (error) {
+  // Deliberately not fatal: detail pages simply render without the extras.
+  console.error('  Enrichment routes unavailable:', error.message);
 }
 
 // Compatibility aliases for external clients (/api remains for this app).
@@ -497,6 +523,7 @@ try {
   app.use('/api/v1/people', require('./people')(optionalAuth, passThrough, { igdbFetch: igdbV1.igdbFetch }));
   app.use('/api/v1/tmdb', igdbLimiter, tmdbRoutes(optionalAuth, passThrough, db));
   app.use('/api/v1/kitsu', igdbLimiter, kitsuRoutes(optionalAuth, passThrough, db));
+  if (enrichRouter) app.use('/api/v1/enrich', igdbLimiter, enrichRouter);
   console.log('  /api/v1 aliases loaded');
 } catch (error) {
   console.error('  Error loading /api/v1 aliases:', error.message);
@@ -535,6 +562,9 @@ app.get('/userProfile.html', (req, res) => res.sendFile(path.join(frontendPath, 
 app.get('/terms.html', (req, res) => res.sendFile(path.join(frontendPath, 'terms.html')));
 app.get('/privacy.html', (req, res) => res.sendFile(path.join(frontendPath, 'privacy.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(frontendPath, 'dashboard.html')));
+app.get('/title.html', (req, res) => res.sendFile(path.join(frontendPath, 'title.html')));
+app.get('/person.html', (req, res) => res.sendFile(path.join(frontendPath, 'person.html')));
+app.get('/about.html', (req, res) => res.sendFile(path.join(frontendPath, 'about.html')));
 app.get('/robots.txt', (req, res) => res.sendFile(path.join(frontendPath, 'robots.txt')));
 
 // Sentry error handler must sit after routes and before our own error handler.
