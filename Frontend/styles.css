@@ -71,6 +71,9 @@
     --cat-game-light:    #fbbf24;
     --cat-game-dim:      rgba(245, 158, 11, 0.14);
     --cat-game-border:   rgba(245, 158, 11, 0.40);
+    /* Amber is too light for white text to pass contrast (2.15:1) - fills on
+       the Games page use this near-black ink instead (8.6:1). */
+    --cat-game-ink:      #1a1205;
 
     /* Active page accent. Neutral by default - only the four category pages
        (Movies / Shows / Anime / Games) get a real color, set per-page below.
@@ -204,6 +207,10 @@ img, video, canvas, svg {
     height: auto;
 }
 
+/* Native checkboxes/radios otherwise render in the browser's default blue,
+   clashing with the page's own accent (pink on Anime, amber on Games). */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: var(--bg-card); }
 ::-webkit-scrollbar-thumb {
@@ -302,7 +309,7 @@ img, video, canvas, svg {
     color: #ffffff;
     box-shadow: 0 2px 10px var(--accent-dim);
 }
-body[data-page="games"] .page-tab.active { color: #fff; }
+body[data-page="games"] .page-tab.active { color: var(--cat-game-ink); }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
@@ -406,7 +413,7 @@ body[data-page="games"] .page-tab.active { color: #fff; }
     transition: filter 0.18s ease;
 }
 .nav-cta:hover { filter: brightness(1.12); }
-body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: #fff; }
+body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: var(--cat-game-ink); }
 
 /* Profile dropdown (holds My profile, admin links, and Log out). */
 .nav-menu { position: relative; }
@@ -1835,7 +1842,7 @@ select.update-status-select option,
     filter: brightness(1.12);
     transform: translateY(-1px);
 }
-body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff; }
+body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(--cat-game-ink); }
 
 .score-clear-btn {
     background: transparent;
@@ -2157,6 +2164,7 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: #fff;
 }
 
 .detail-value { font-size: 1.1rem; color: var(--text-primary); font-weight: 500; }
+.detail-value.skeleton { display: inline-block; width: 55%; min-width: 90px; height: 1.1em; }
 .profile-actions { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
 
 .avatar-input-group label {
@@ -4135,9 +4143,8 @@ body[data-page="games"],  [data-cat="games"]  { --accent: var(--cat-game);   --a
     box-shadow: 0 0 0 3px var(--accent-dim) !important;
     transition: box-shadow 0.25s ease, border-color 0.25s ease;
 }
-/* Amber (Games) needs dark text for legible contrast on its fills. */
-/* White button text on the vibrant amber stays legible with a soft warm shadow
-   (keeps the bright brand gold instead of a burnt deep amber or harsh black). */
+/* Amber (Games) is too light to carry white text at AA contrast - these fills
+   use the dark ink token instead (8.6:1, see --cat-game-ink). */
 body[data-page="games"] .btn-primary,
 body[data-page="games"] .search-container .btn-primary,
 body[data-page="games"] .nav-actions .btn.active,
@@ -4148,8 +4155,7 @@ body[data-page="games"] .score-btn,
 body[data-page="games"] .page-tab.active,
 body[data-page="games"] .year-chip.active,
 body[data-page="games"] .cal-chip.active {
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(66, 32, 0, 0.6);
+    color: var(--cat-game-ink);
 }
 
 /* ── Mobile navigation drawer polish ──────────────────────────────────── */
@@ -4584,7 +4590,7 @@ body.gsearch-open { overflow: hidden; }
 .year-chip { padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition-fast); }
 .year-chip:hover { border-color: var(--accent-border); color: var(--text-primary); }
 .year-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-body[data-page="games"] .year-chip.active { color: #fff; }
+body[data-page="games"] .year-chip.active { color: var(--cat-game-ink); }
 
 .stats-loading, .stats-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .stats-empty p { margin-bottom: 8px; font-size: 1.05rem; color: var(--text-secondary); }
@@ -4663,7 +4669,7 @@ body[data-page="games"] .year-chip.active { color: #fff; }
 .cal-chip { padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition-fast); }
 .cal-chip:hover { border-color: var(--accent-border); color: var(--text-primary); }
 .cal-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-body[data-page="games"] .cal-chip.active { color: #fff; }
+body[data-page="games"] .cal-chip.active { color: var(--cat-game-ink); }
 
 .cal-watchlist { margin-bottom: 26px; }
 .cal-month { margin-bottom: 26px; }
@@ -5833,7 +5839,7 @@ a.detail-deal-price:focus-visible { color: var(--green-light); text-decoration: 
 .card-quick-add:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .card-quick-add.is-owned { background: var(--accent); border-color: var(--accent); color: #fff; }
 body[data-page="games"] .card-quick-add:hover,
-body[data-page="games"] .card-quick-add.is-owned { color: #1a1205; }
+body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 
 @media (hover: none) {
     .card-quick-add { opacity: 1; transform: scale(1); }

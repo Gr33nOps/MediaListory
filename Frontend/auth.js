@@ -544,7 +544,7 @@ async function handleLogin(e) {
             localStorage.setItem('currentUser', JSON.stringify(data.user));
             localStorage.setItem('lastActivity', Date.now().toString());
 
-            showSuccess(successDiv, 'Login successful! Redirecting...');
+            showSuccess(successDiv, 'Login successful! Redirecting…');
 
             setTimeout(function() {
                 if (typeof redirectAfterLogin === 'function') redirectAfterLogin('dashboard.html');
@@ -639,7 +639,7 @@ async function resendVerificationEmail() {
     }
 
     btn.disabled    = true;
-    btn.textContent = 'Sending...';
+    btn.textContent = 'Sending…';
 
     try {
         const response = await fetch(`${API_BASE}/auth/resend-verification`, {
@@ -833,7 +833,7 @@ function checkPasswordStrength(password, fillId, textId) {
     const strengthText = document.getElementById(textId);
 
     const levels = ['Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
-    const colors = ['#ff4444', '#ff8800', '#ffbb00', '#88cc00', '#00cc44'];
+    const colors = ['var(--red)', 'var(--amber-dark)', 'var(--amber)', 'var(--green-light)', 'var(--green)'];
     const widths = ['20%', '40%', '60%', '80%', '100%'];
 
     strengthFill.style.width           = widths[strength];

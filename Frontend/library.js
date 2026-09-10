@@ -173,7 +173,8 @@ function initCollectionTab() {
 
     if (typeof bindActivatableCards === 'function') {
         bindActivatableCards(document, '.coll-item.list-item', function(row) {
-            if (row.dataset.gameId) showGameDetails(row.dataset.gameId);
+            var ref = row.dataset.ref || row.dataset.gameId;
+            if (ref) showGameDetails(ref);
         });
     }
 
@@ -454,7 +455,7 @@ function renderCollectionRow(game) {
           '</div>'
         : '';
 
-    return '<div class="coll-item list-item" data-game-id="' + game.game_id + '" role="button" tabindex="0" aria-label="' + esc('View details for ' + (game.name || 'title')) + '">' +
+    return '<div class="coll-item list-item" data-game-id="' + game.game_id + '" data-ref="' + esc(game.media_ref || game.game_id) + '" role="button" tabindex="0" aria-label="' + esc('View details for ' + (game.name || 'title')) + '">' +
         '<img src="' + esc(imgSrc) + '" alt="' + esc(game.name || 'Cover') + '" class="coll-item-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
         '<div class="coll-item-body">' +
             '<div class="coll-item-main">' +
@@ -780,7 +781,7 @@ async function clExpandRow(row, listId, doFetch) {
     if (!clFilters[listId])   clFilters[listId]   = { search: '', sort: 'recently_added', status: 'all' };
     if (clIsEditMode[listId] === undefined) clIsEditMode[listId] = false;
     if (doFetch || !clListGames[listId]) {
-        body.innerHTML = '<div class="coll-empty-state"><p>Loading...</p></div>';
+        body.innerHTML = '<div class="coll-empty-state"><p>Loading…</p></div>';
         try {
             var d = await clApi('GET', '/user/lists/' + listId);
             clListGames[listId] = d.list.games || [];
@@ -804,7 +805,7 @@ function clRenderListBody(listId) {
         '<div class="cl-acc-toolbar">' +
             '<div class="cl-acc-list-header">' +
                 '<div class="cl-acc-list-header-inputs">' +
-                    '<input type="text" class="search-input cl-acc-search" placeholder="Search games..." value="' + esc(f.search) + '">' +
+                    '<input type="text" class="search-input cl-acc-search" placeholder="Search games…" value="' + esc(f.search) + '">' +
                     '<select class="filter-select cl-acc-sort">' +
                         '<option value="recently_added"' + (f.sort === 'recently_added' ? ' selected' : '') + '>Recently Added</option>' +
                         '<option value="name"'          + (f.sort === 'name'           ? ' selected' : '') + '>Name (A-Z)</option>' +
@@ -869,7 +870,7 @@ function clRenderAccGames(listId) {
     container.querySelectorAll('.cl-list-item[data-game-id]').forEach(function(row) {
         row.addEventListener('click', function(e) {
             if (e.target.closest('.btn') || e.target.closest('.coll-item-edit-actions')) return;
-            clShowGameDetails(row.dataset.gameId);
+            clShowGameDetails(row.dataset.ref || row.dataset.gameId);
         });
     });
     container.querySelectorAll('.cl-edit-game-btn').forEach(function(btn) {
@@ -895,7 +896,7 @@ function clRenderGameRow(g, listId, editMode) {
         ? '<span class="status-dot-inline" style="background:' + statusColor + ';"></span><span class="coll-item-status">' + statusLabel + '</span>'
         : '<span class="coll-item-status" style="color:var(--text-dim);">No status</span>';
 
-    return '<div class="coll-item cl-list-item" data-game-id="' + g.game_id + '" data-list-id="' + listId + '">' +
+    return '<div class="coll-item cl-list-item" data-game-id="' + g.game_id + '" data-ref="' + esc(g.media_ref || g.game_id) + '" data-list-id="' + listId + '">' +
         '<img src="' + imgSrc + '" alt="' + esc(g.name) + '" class="coll-item-img" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
         '<div class="coll-item-body">' +
             '<div class="coll-item-main">' +
@@ -934,7 +935,7 @@ async function clSubmitListForm() {
     var category  = document.getElementById('clListCategory').value || null;
     if (!name) { clShowToast('Please enter a list name', 'error'); return; }
     var btn = document.getElementById('clListFormSubmit');
-    btn.disabled = true; btn.textContent = 'Saving...';
+    btn.disabled = true; btn.textContent = 'Saving…';
     try {
         var body = { name: name, description: desc || null, cover_color: '#3a7bd5', is_public: is_public, category: category };
         if (clEditingId) { await clApi('PUT',  '/user/lists/' + clEditingId, body); clShowToast('List updated!', 'success'); }
@@ -954,7 +955,7 @@ function clOpenDeleteModal(list) {
 async function clConfirmDeleteList() {
     if (!_clPendingDeleteId) return;
     var btn = document.getElementById('clDeleteListConfirm');
-    btn.disabled = true; btn.textContent = 'Deleting...';
+    btn.disabled = true; btn.textContent = 'Deleting…';
     try {
         await clApi('DELETE', '/user/lists/' + _clPendingDeleteId);
         clShowToast('List deleted', 'success');
@@ -1170,7 +1171,7 @@ function renderSeasons(panel, ref, data) {
 }
 
 async function loadSeasons(ref, panel) {
-    panel.innerHTML = '<p class="coll-season-empty">Loading seasons...</p>';
+    panel.innerHTML = '<p class="coll-season-empty">Loading seasons…</p>';
     try {
         var r = await fetch(API_BASE + '/user/games/' + encodeURIComponent(ref) + '/seasons', {
             headers: { Authorization: 'Bearer ' + authToken }

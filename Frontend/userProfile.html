@@ -203,15 +203,15 @@
                 <div class="profile-details">
                     <div class="detail-item">
                         <label>Display Name</label>
-                        <div class="detail-value" id="displayName">-</div>
+                        <div class="detail-value skeleton" id="displayName" aria-live="polite"></div>
                     </div>
                     <div class="detail-item">
                         <label>Username</label>
-                        <div class="detail-value" id="displayUsername">-</div>
+                        <div class="detail-value skeleton" id="displayUsername" aria-live="polite"></div>
                     </div>
                     <div class="detail-item">
                         <label>Member Since</label>
-                        <div class="detail-value" id="displayCreatedAt">-</div>
+                        <div class="detail-value skeleton" id="displayCreatedAt" aria-live="polite"></div>
                     </div>
                 </div>
             </div>
@@ -267,7 +267,7 @@
                     <h2 id="gameListTitle">Collection</h2>
                     <div class="list-header-actions">
                         <label class="sr-only" for="userGamesSearch">Search this collection</label>
-                        <input type="text" id="userGamesSearch" class="search-input" placeholder="Search titles..." aria-label="Search this collection">
+                        <input type="text" id="userGamesSearch" class="search-input" placeholder="Search titles…" aria-label="Search this collection">
                         <label class="sr-only" for="userGamesSort">Sort titles</label>
                         <select id="userGamesSort" class="filter-select" aria-label="Sort titles">
                             <option value="recently_added">Recently Added</option>

@@ -93,6 +93,8 @@ async function loadProfile() {
         if (profileResponse.ok) {
             var profileData = await profileResponse.json();
             displayProfile(profileData.user);
+        } else {
+            clearProfileSkeleton();
         }
 
         showStatsSkeleton();
@@ -111,7 +113,17 @@ async function loadProfile() {
         initProfileManagers(gamesData.games);
     } catch (error) {
         console.error('Load profile error:', error);
+        clearProfileSkeleton();
     }
+}
+
+// Fallback for a failed /user/profile fetch: stop the shimmer rather than
+// leaving it animating forever over data that never arrived.
+function clearProfileSkeleton() {
+    ['displayName', 'displayUsername', 'displayEmail', 'displayCreatedAt'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && el.classList.contains('skeleton')) { el.classList.remove('skeleton'); el.textContent = '-'; }
+    });
 }
 
 function displayProfile(user) {
@@ -124,6 +136,9 @@ function displayProfile(user) {
     document.getElementById('displayUsername').textContent = user.username;
     document.getElementById('displayEmail').textContent    = user.email;
     document.getElementById('displayCreatedAt').textContent = formatDate(user.created_at);
+    ['displayName', 'displayUsername', 'displayEmail', 'displayCreatedAt'].forEach(function (id) {
+        document.getElementById(id).classList.remove('skeleton');
+    });
     document.getElementById('editDisplayName').value       = user.display_name || '';
     document.getElementById('editEmail').value             = user.email;
     var avaData = document.getElementById('editAvatarData'); if (avaData) avaData.value = user.avatar_url || '';
@@ -630,7 +645,7 @@ function renderPicker(term) {
 async function saveTop() {
     var cat = mgActiveCat;
     var refs = (mgTop[cat] || []).map(function (t) { return t.game_id; });
-    mgStatus('topStatus', 'Saving...');
+    mgStatus('topStatus', 'Saving…');
     try {
         var r = await fetch(API_BASE + '/user/profile/top/' + cat, {
             method: 'PUT',
@@ -687,7 +702,7 @@ async function saveCurrentPicks() {
     if (!list) return;
     var refs = [].slice.call(list.querySelectorAll('input[type="checkbox"]:checked'))
         .map(function (cb) { return cb.dataset.ref; });
-    mgStatus('currentStatus', 'Saving...');
+    mgStatus('currentStatus', 'Saving…');
     try {
         var r = await fetch(API_BASE + '/user/profile/current', {
             method: 'PUT',

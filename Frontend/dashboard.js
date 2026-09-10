@@ -88,7 +88,7 @@
       var prog = g.progress || 0;
       var pct = Math.min(100, Math.round(prog / g.episode_count * 100));
       return '<div class="dash-upnext-card">' +
-        '<a class="dash-upnext-poster" href="title.html?ref=' + encodeURIComponent(g.game_id) + '" title="' + esc(g.name) + '">' +
+        '<a class="dash-upnext-poster" href="title.html?ref=' + encodeURIComponent(g.media_ref || g.game_id) + '" title="' + esc(g.name) + '">' +
           '<img src="' + esc(g.background_image || '/img/no-image.svg') + '" alt="' + esc(g.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
         '</a>' +
         '<div class="dash-upnext-info">' +

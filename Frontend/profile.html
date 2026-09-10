@@ -49,19 +49,19 @@
                 <div class="profile-details">
                     <div class="detail-item">
                         <label>Display Name</label>
-                        <div class="detail-value" id="displayName">-</div>
+                        <div class="detail-value skeleton" id="displayName" aria-live="polite"></div>
                     </div>
                     <div class="detail-item">
                         <label>Username</label>
-                        <div class="detail-value" id="displayUsername">-</div>
+                        <div class="detail-value skeleton" id="displayUsername" aria-live="polite"></div>
                     </div>
                     <div class="detail-item">
                         <label>Email</label>
-                        <div class="detail-value" id="displayEmail">-</div>
+                        <div class="detail-value skeleton" id="displayEmail" aria-live="polite"></div>
                     </div>
                     <div class="detail-item">
                         <label>Member Since</label>
-                        <div class="detail-value" id="displayCreatedAt">-</div>
+                        <div class="detail-value skeleton" id="displayCreatedAt" aria-live="polite"></div>
                     </div>
                 </div>
 
@@ -181,7 +181,7 @@
             </div>
             <div id="topPicker" style="margin-top:12px;" hidden>
                 <label class="sr-only" for="topPickerSearch">Search your library</label>
-                <input type="search" id="topPickerSearch" class="form-input" placeholder="Search your library..." autocomplete="off">
+                <input type="search" id="topPickerSearch" class="form-input" placeholder="Search your library…" autocomplete="off">
                 <div class="pf-picker-results" id="topPickerResults"></div>
             </div>
         </section>
