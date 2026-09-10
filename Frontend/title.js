@@ -332,7 +332,6 @@
         '<span class="dr-sub">/5</span></span>' : '';
 
     byId('titleBody').innerHTML =
-      (hero ? '<div class="game-detail-hero"><img src="' + esc(hero) + '" alt="" class="game-detail-hero-img" loading="lazy"></div>' : '') +
       '<div class="game-detail-body">' +
         '<div class="game-detail-title-row">' +
           '<img src="' + esc(cover) + '" alt="' + esc(item.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +

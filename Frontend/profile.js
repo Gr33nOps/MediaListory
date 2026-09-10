@@ -481,6 +481,10 @@ function mgStatus(id, text, isError) {
     el.style.color = isError ? 'var(--red-light)' : 'var(--text-dim)';
 }
 
+var topEditing = false;
+var currentEditing = false;
+var mgCurrentCat = 'all';
+
 /* Called once the library has loaded, so both managers can render from it. */
 function initProfileManagers(games) {
     mgLibrary = Array.isArray(games) ? games : [];
@@ -491,7 +495,7 @@ function initProfileManagers(games) {
 
     mgCurrentPinned = mgLibrary.filter(function (g) { return g.show_on_profile; }).map(mgRef);
 
-    renderCurrentPicker();
+    renderCurrent();
     loadTopMedia();
     wireManagers();
 }
@@ -512,11 +516,76 @@ function wireManagers() {
         search.dataset.wired = '1';
         search.addEventListener('input', function () { renderPicker(search.value); });
     }
-    var save = document.getElementById('currentSaveBtn');
-    if (save && !save.dataset.wired) {
-        save.dataset.wired = '1';
-        save.addEventListener('click', saveCurrentPicks);
+    var topEdit = document.getElementById('topEditBtn');
+    var topDone = document.getElementById('topDoneBtn');
+    if (topEdit && !topEdit.dataset.wired) { topEdit.dataset.wired = '1'; topEdit.addEventListener('click', function () { setTopEditing(true); }); }
+    if (topDone && !topDone.dataset.wired) { topDone.dataset.wired = '1'; topDone.addEventListener('click', function () { setTopEditing(false); }); }
+
+    var curAdd = document.getElementById('currentAddBtn');
+    var curPicker = document.getElementById('currentPicker');
+    if (curAdd && curPicker && !curAdd.dataset.wired) {
+        curAdd.dataset.wired = '1';
+        curAdd.addEventListener('click', function () {
+            curPicker.hidden = !curPicker.hidden;
+            curAdd.textContent = curPicker.hidden ? 'Add a title' : 'Done adding';
+            if (!curPicker.hidden) renderCurrentPicker();
+        });
     }
+    var curEdit = document.getElementById('currentEditBtn');
+    var curDone = document.getElementById('currentDoneBtn');
+    if (curEdit && !curEdit.dataset.wired) { curEdit.dataset.wired = '1'; curEdit.addEventListener('click', function () { setCurrentEditing(true); }); }
+    if (curDone && !curDone.dataset.wired) { curDone.dataset.wired = '1'; curDone.addEventListener('click', function () { setCurrentEditing(false); }); }
+}
+
+/* Read-only display (both sections use it): a horizontal poster scroller, the
+   same component the home dashboard rows are built from. */
+function mgShowcase(items, emptyMsg) {
+    if (!items.length) return '<p class="pf-empty">' + mgEsc(emptyMsg) + '</p>';
+    return '<div class="dash-scroller">' + items.map(function (it) {
+        var ref = it.game_id || it.ref || mgRef(it);
+        var img = it.background_image || it.img || MG_FALLBACK;
+        return '<a class="dash-card" href="title.html?ref=' + encodeURIComponent(ref) + '" title="' + mgEsc(it.name) + '">' +
+            '<div class="dash-card-poster"><img src="' + mgEsc(img) + '" alt="' + mgEsc(it.name) + '" loading="lazy" onerror="this.src=\'' + MG_FALLBACK + '\'"></div>' +
+            '<span class="dash-card-name">' + mgEsc(it.name) + '</span>' +
+        '</a>';
+    }).join('') + '</div>';
+}
+
+/* Drag-to-reorder, keyed by ref so it works whether the backing array holds
+   objects (Top 10) or plain refs (Currently into) and regardless of filtering. */
+function mgReorderByRef(arr, refOf, fromRef, toRef) {
+    var from = arr.findIndex(function (x) { return String(refOf(x)) === String(fromRef); });
+    if (from < 0) return;
+    var moved = arr.splice(from, 1)[0];
+    var to = arr.findIndex(function (x) { return String(refOf(x)) === String(toRef); });
+    if (to < 0) { arr.push(moved); return; }
+    arr.splice(to, 0, moved);
+}
+
+function mgDragList(listEl, arr, refOf, onDone) {
+    var dragRef = null;
+    listEl.querySelectorAll('.pf-edit-row').forEach(function (row) {
+        row.setAttribute('draggable', 'true');
+        row.addEventListener('dragstart', function (e) {
+            dragRef = row.dataset.ref; row.classList.add('pf-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', dragRef); } catch (_) {}
+        });
+        row.addEventListener('dragend', function () {
+            row.classList.remove('pf-dragging');
+            listEl.querySelectorAll('.pf-drop-target').forEach(function (r) { r.classList.remove('pf-drop-target'); });
+        });
+        row.addEventListener('dragover', function (e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('pf-drop-target'); });
+        row.addEventListener('dragleave', function () { row.classList.remove('pf-drop-target'); });
+        row.addEventListener('drop', function (e) {
+            e.preventDefault(); row.classList.remove('pf-drop-target');
+            var toRef = row.dataset.ref;
+            if (!dragRef || dragRef === toRef) return;
+            mgReorderByRef(arr, refOf, dragRef, toRef);
+            dragRef = null;
+            onDone();
+        });
+    });
 }
 
 async function loadTopMedia() {
@@ -525,17 +594,26 @@ async function loadTopMedia() {
         if (!r.ok) return;
         var d = await r.json();
         mgTop = d.top || mgTop;
-        renderTopManager();
+        renderTop();
     } catch (_) { /* the section stays empty rather than blocking the page */ }
 }
 
-function renderTopManager() {
-    var tabs = document.getElementById('topCatTabs');
-    var list = document.getElementById('topEditList');
+function renderTop() {
     var wrap = document.getElementById('topManager');
-    if (!tabs || !list) return;
-
     if (wrap) wrap.setAttribute('data-accent', mgActiveCat);
+    renderTopTabs();
+    var items = mgTop[mgActiveCat] || [];
+    var sc = document.getElementById('topShowcase');
+    if (sc) {
+        sc.innerHTML = mgShowcase(items, 'Nothing ranked in ' + MG_LABEL[mgActiveCat].toLowerCase() + ' yet. Hit Edit to add some.');
+        if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(sc);
+    }
+    if (topEditing) renderTopEditList();
+}
+
+function renderTopTabs() {
+    var tabs = document.getElementById('topCatTabs');
+    if (!tabs) return;
     tabs.innerHTML = MG_ORDER.map(function (cat) {
         var n = (mgTop[cat] || []).length;
         var on = cat === mgActiveCat;
@@ -546,54 +624,61 @@ function renderTopManager() {
         b.addEventListener('click', function () {
             mgActiveCat = b.dataset.cat;
             mgStatus('topStatus', '');
-            renderTopManager();
+            renderTop();
             var picker = document.getElementById('topPicker');
-            if (picker && !picker.hidden) renderPicker(document.getElementById('topPickerSearch').value);
+            if (topEditing && picker && !picker.hidden) renderPicker(document.getElementById('topPickerSearch').value);
         });
     });
+}
 
+function renderTopEditList() {
+    var list = document.getElementById('topEditList');
+    if (!list) return;
     var items = mgTop[mgActiveCat] || [];
     if (!items.length) {
-        list.innerHTML = '<p class="pf-empty">Nothing ranked in ' + MG_LABEL[mgActiveCat].toLowerCase() +
-            ' yet. Add up to ten and put them in the order you would defend.</p>';
+        list.innerHTML = '<p class="pf-empty">Nothing here yet. Use “Add a title” to rank up to ten.</p>';
         return;
     }
-
     list.innerHTML = items.map(function (it, i) {
-        var last = i === items.length - 1;
-        return '<div class="pf-edit-row">' +
+        return '<div class="pf-edit-row" data-ref="' + mgEsc(it.game_id) + '">' +
+            '<span class="pf-drag-handle" aria-hidden="true">⠿</span>' +
             '<span class="pf-edit-pos">' + (i + 1) + '</span>' +
             mgPoster(it.background_image, '') +
             '<span class="pf-edit-name">' + mgEsc(it.name) + '</span>' +
             '<span class="pf-edit-actions">' +
-                '<button type="button" class="pf-icon-btn" data-move="up" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') +
-                    ' aria-label="Move ' + mgEsc(it.name) + ' up">&uarr;</button>' +
-                '<button type="button" class="pf-icon-btn" data-move="down" data-i="' + i + '"' + (last ? ' disabled' : '') +
-                    ' aria-label="Move ' + mgEsc(it.name) + ' down">&darr;</button>' +
-                '<button type="button" class="pf-icon-btn" data-remove="' + i + '"' +
-                    ' aria-label="Remove ' + mgEsc(it.name) + '">&times;</button>' +
+                '<button type="button" class="pf-icon-btn" data-remove="' + mgEsc(it.game_id) + '" aria-label="Remove ' + mgEsc(it.name) + '">×</button>' +
             '</span>' +
         '</div>';
     }).join('');
 
-    list.querySelectorAll('[data-move]').forEach(function (b) {
-        b.addEventListener('click', function () {
-            var i = parseInt(b.dataset.i, 10);
-            var to = b.dataset.move === 'up' ? i - 1 : i + 1;
-            var arr = mgTop[mgActiveCat];
-            if (to < 0 || to >= arr.length) return;
-            var tmp = arr[i]; arr[i] = arr[to]; arr[to] = tmp;
-            renderTopManager();
-            saveTop();
-        });
-    });
+    mgDragList(list, mgTop[mgActiveCat], function (it) { return it.game_id; }, function () { renderTop(); saveTop(); });
     list.querySelectorAll('[data-remove]').forEach(function (b) {
         b.addEventListener('click', function () {
-            mgTop[mgActiveCat].splice(parseInt(b.dataset.remove, 10), 1);
-            renderTopManager();
-            saveTop();
+            var arr = mgTop[mgActiveCat];
+            var i = arr.findIndex(function (x) { return String(x.game_id) === String(b.dataset.remove); });
+            if (i >= 0) arr.splice(i, 1);
+            renderTop(); saveTop();
+            var picker = document.getElementById('topPicker');
+            if (picker && !picker.hidden) renderPicker(document.getElementById('topPickerSearch').value);
         });
     });
+}
+
+function setTopEditing(on) {
+    topEditing = on;
+    var wrap = document.getElementById('topEditWrap');
+    var sc = document.getElementById('topShowcase');
+    if (wrap) wrap.hidden = !on;
+    if (sc) sc.hidden = on;
+    document.getElementById('topEditBtn').style.display = on ? 'none' : '';
+    document.getElementById('topDoneBtn').style.display = on ? '' : 'none';
+    if (on) { renderTopEditList(); }
+    else {
+        var p = document.getElementById('topPicker'); if (p) p.hidden = true;
+        var a = document.getElementById('topAddBtn'); if (a) a.textContent = 'Add a title';
+        mgStatus('topStatus', '');
+        renderTop();
+    }
 }
 
 /* The picker only offers titles of the active category that are not already
@@ -635,7 +720,7 @@ function renderPicker(term) {
             var g = mgLibrary.find(function (x) { return mgRef(x) === b.dataset.ref; });
             if (!g) return;
             mgTop[mgActiveCat].push({ game_id: mgRef(g), name: g.name, background_image: g.background_image });
-            renderTopManager();
+            renderTop();
             renderPicker(document.getElementById('topPickerSearch').value);
             saveTop();
         });
@@ -661,59 +746,173 @@ async function saveTop() {
     }
 }
 
-/* ── Currently into ───────────────────────────────────────────────────────── */
+/* ── Currently into ───────────────────────────────────────────────────────
+   Mirrors Top 10: category tabs (with an "All"), a read-only poster showcase,
+   and an edit mode with drag-to-reorder, remove, and an add picker - no ticks. */
 
-function renderCurrentPicker() {
-    var list = document.getElementById('currentPickList');
-    if (!list) return;
-    var playing = mgLibrary.filter(function (g) { return g.status === 'playing'; });
+var MG_CURRENT_CATS = ['all', 'movie', 'series', 'anime', 'game'];
+var MG_CURRENT_LABEL = { all: 'All', movie: 'Movies', series: 'Shows', anime: 'Anime', game: 'Games' };
 
-    if (!playing.length) {
-        list.innerHTML = '<p class="pf-empty">Nothing in progress right now. Set something to "In progress" and it shows up here.</p>';
-        return;
+function mgPlaying() {
+    return mgLibrary.filter(function (g) { return g.status === 'playing'; });
+}
+
+// Resolve the pinned refs back to library rows, in the pinned order.
+function mgPinnedItems() {
+    var byRef = {};
+    mgLibrary.forEach(function (g) { byRef[mgRef(g)] = g; });
+    return mgCurrentPinned.map(function (r) { return byRef[r]; }).filter(Boolean);
+}
+
+// What the profile actually shows: the pins if any, otherwise the most recent
+// in-progress titles (the auto-follow behaviour). Filtered by the active tab.
+function mgCurrentShowcaseItems() {
+    var base = mgCurrentPinned.length ? mgPinnedItems() : mgPlaying();
+    if (mgCurrentCat !== 'all') base = base.filter(function (g) { return (g.media_type || 'game') === mgCurrentCat; });
+    return base;
+}
+
+function renderCurrent() {
+    var wrap = document.getElementById('currentManager');
+    if (wrap) wrap.setAttribute('data-accent', mgCurrentCat === 'all' ? 'movie' : mgCurrentCat);
+    renderCurrentTabs();
+    var sc = document.getElementById('currentShowcase');
+    if (sc) {
+        sc.innerHTML = mgShowcase(mgCurrentShowcaseItems(), mgCurrentPinned.length
+            ? 'Nothing pinned in this category.'
+            : 'Nothing in progress right now. Set something to “In progress” and it shows up here.');
+        if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(sc);
     }
+    if (currentEditing) renderCurrentEditList();
+}
 
-    list.innerHTML = playing.map(function (g) {
-        var on = mgCurrentPinned.indexOf(mgRef(g)) !== -1;
-        var verb = (g.media_type === 'game') ? 'Playing' : 'Watching';
-        return '<label class="pf-edit-row">' +
-            '<input type="checkbox" data-ref="' + mgEsc(mgRef(g)) + '"' + (on ? ' checked' : '') + '>' +
-            mgPoster(g.background_image, '') +
-            '<span class="pf-edit-name">' + mgEsc(g.name) + '</span>' +
-            '<span class="pf-edit-pos" style="width:auto;font-size:0.75rem;">' + verb + '</span>' +
-        '</label>';
+function renderCurrentTabs() {
+    var tabs = document.getElementById('currentCatTabs');
+    if (!tabs) return;
+    tabs.innerHTML = MG_CURRENT_CATS.map(function (cat) {
+        var on = cat === mgCurrentCat;
+        return '<button type="button" role="tab" class="pf-chip' + (on ? ' active' : '') + '" data-cat="' + cat + '"' +
+            ' aria-selected="' + on + '">' + MG_CURRENT_LABEL[cat] + '</button>';
     }).join('');
-
-    list.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
-        cb.addEventListener('change', function () {
-            var picked = list.querySelectorAll('input[type="checkbox"]:checked');
-            if (picked.length > MG_CURRENT_MAX) {
-                cb.checked = false;
-                mgStatus('currentStatus', 'You can pin at most ' + MG_CURRENT_MAX + '.', true);
-            } else {
-                mgStatus('currentStatus', '');
-            }
+    tabs.querySelectorAll('.pf-chip').forEach(function (b) {
+        b.addEventListener('click', function () {
+            mgCurrentCat = b.dataset.cat;
+            mgStatus('currentStatus', '');
+            renderCurrent();
+            var picker = document.getElementById('currentPicker');
+            if (currentEditing && picker && !picker.hidden) renderCurrentPicker();
         });
     });
 }
 
-async function saveCurrentPicks() {
+function renderCurrentEditList() {
     var list = document.getElementById('currentPickList');
     if (!list) return;
-    var refs = [].slice.call(list.querySelectorAll('input[type="checkbox"]:checked'))
-        .map(function (cb) { return cb.dataset.ref; });
+    var byRef = {};
+    mgLibrary.forEach(function (g) { byRef[mgRef(g)] = g; });
+    var pins = mgCurrentPinned.map(function (r) {
+        var g = byRef[r];
+        return g ? { ref: r, name: g.name, img: g.background_image, mt: g.media_type || 'game' } : null;
+    }).filter(Boolean);
+    var visible = mgCurrentCat === 'all' ? pins : pins.filter(function (p) { return p.mt === mgCurrentCat; });
+
+    if (!visible.length) {
+        list.innerHTML = '<p class="pf-empty">Nothing pinned' +
+            (mgCurrentCat !== 'all' ? (' in ' + MG_CURRENT_LABEL[mgCurrentCat].toLowerCase()) : '') +
+            ' yet. Use “Add a title” to pin what you are into.</p>';
+        return;
+    }
+
+    list.innerHTML = visible.map(function (p) {
+        return '<div class="pf-edit-row" data-ref="' + mgEsc(p.ref) + '">' +
+            '<span class="pf-drag-handle" aria-hidden="true">⠿</span>' +
+            mgPoster(p.img, '') +
+            '<span class="pf-edit-name">' + mgEsc(p.name) + '</span>' +
+            '<span class="pf-edit-actions">' +
+                '<button type="button" class="pf-icon-btn" data-remove="' + mgEsc(p.ref) + '" aria-label="Unpin ' + mgEsc(p.name) + '">×</button>' +
+            '</span>' +
+        '</div>';
+    }).join('');
+
+    mgDragList(list, mgCurrentPinned, function (r) { return r; }, function () { renderCurrent(); saveCurrent(); });
+    list.querySelectorAll('[data-remove]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var i = mgCurrentPinned.indexOf(b.dataset.remove);
+            if (i >= 0) mgCurrentPinned.splice(i, 1);
+            renderCurrent(); saveCurrent();
+            var picker = document.getElementById('currentPicker');
+            if (picker && !picker.hidden) renderCurrentPicker();
+        });
+    });
+}
+
+function renderCurrentPicker() {
+    var out = document.getElementById('currentPickerResults');
+    if (!out) return;
+    var matches = mgPlaying().filter(function (g) {
+        if (mgCurrentPinned.indexOf(mgRef(g)) !== -1) return false;
+        if (mgCurrentCat !== 'all' && (g.media_type || 'game') !== mgCurrentCat) return false;
+        return true;
+    }).slice(0, 40);
+
+    if (!matches.length) {
+        out.innerHTML = '<p class="pf-empty">Nothing else in progress' +
+            (mgCurrentCat !== 'all' ? (' in ' + MG_CURRENT_LABEL[mgCurrentCat].toLowerCase()) : '') + '.</p>';
+        return;
+    }
+
+    var full = mgCurrentPinned.length >= MG_CURRENT_MAX;
+    out.innerHTML = matches.map(function (g) {
+        return '<button type="button" class="pf-picker-row" data-ref="' + mgEsc(mgRef(g)) + '"' +
+            (full ? ' aria-disabled="true"' : '') + '>' +
+            mgPoster(g.background_image, '') +
+            '<span class="pf-edit-name">' + mgEsc(g.name) + '</span>' +
+        '</button>';
+    }).join('');
+
+    out.querySelectorAll('.pf-picker-row').forEach(function (b) {
+        b.addEventListener('click', function () {
+            if (mgCurrentPinned.length >= MG_CURRENT_MAX) {
+                mgStatus('currentStatus', 'You can pin at most ' + MG_CURRENT_MAX + '. Remove one first.', true);
+                return;
+            }
+            mgCurrentPinned.push(b.dataset.ref);
+            renderCurrent();
+            renderCurrentPicker();
+            saveCurrent();
+        });
+    });
+}
+
+function setCurrentEditing(on) {
+    currentEditing = on;
+    var wrap = document.getElementById('currentEditWrap');
+    var sc = document.getElementById('currentShowcase');
+    if (wrap) wrap.hidden = !on;
+    if (sc) sc.hidden = on;
+    document.getElementById('currentEditBtn').style.display = on ? 'none' : '';
+    document.getElementById('currentDoneBtn').style.display = on ? '' : 'none';
+    if (on) { renderCurrentEditList(); }
+    else {
+        var p = document.getElementById('currentPicker'); if (p) p.hidden = true;
+        var a = document.getElementById('currentAddBtn'); if (a) a.textContent = 'Add a title';
+        mgStatus('currentStatus', '');
+        renderCurrent();
+    }
+}
+
+async function saveCurrent() {
     mgStatus('currentStatus', 'Saving…');
     try {
         var r = await fetch(API_BASE + '/user/profile/current', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
-            body: JSON.stringify({ game_ids: refs })
+            body: JSON.stringify({ game_ids: mgCurrentPinned })
         });
         var d = await r.json().catch(function () { return {}; });
         if (!r.ok) { mgStatus('currentStatus', d.error || 'Could not save.', true); return; }
-        mgCurrentPinned = refs.map(String);
-        mgStatus('currentStatus', refs.length ? 'Saved' : 'Cleared, your profile follows what you touched most recently');
-        setTimeout(function () { mgStatus('currentStatus', ''); }, 2600);
+        mgStatus('currentStatus', mgCurrentPinned.length ? 'Saved' : 'Cleared - your profile follows what you touched most recently');
+        setTimeout(function () { mgStatus('currentStatus', ''); }, 2400);
     } catch (_) {
         mgStatus('currentStatus', 'Could not reach the server.', true);
     }

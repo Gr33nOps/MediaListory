@@ -234,29 +234,22 @@ function updateMediaTabCounts() {
 }
 
 function updateStatistics(games) {
-    var stats = {
-        total:        games.length,
-        playing:      games.filter(function(g) { return g.status === 'playing'; }).length,
-        completed:    games.filter(function(g) { return g.status === 'completed'; }).length,
-        plan_to_play: games.filter(function(g) { return g.status === 'plan_to_play'; }).length,
-        on_hold:      games.filter(function(g) { return g.status === 'on_hold'; }).length,
-        dropped:      games.filter(function(g) { return g.status === 'dropped'; }).length
-    };
-    // Pie + bars share one set of segments: on "All" show how the library
-    // splits across the four categories; inside a category show its own status
-    // breakdown. Bars sit on the left, the pie on the right (classic layout).
-    var segments;
-    if (currentMediaFilter === 'all') {
-        var all = myGamesCache || [];
-        segments = CAT_META.map(function(c) {
-            return { label: c.label, color: c.color,
-                count: all.filter(function(g) { return (g.media_type || 'game') === c.key; }).length };
-        });
-    } else {
-        segments = STATUS_META.map(function(s) {
-            return { label: s.label, color: s.color, count: stats[s.key] };
-        });
+    // The bars + pie overview is the whole-library "By category" summary, so it
+    // only belongs on the "All" tab. Inside a single category it was repeating
+    // a status breakdown the tabs and rows already carry, so the collection list
+    // stands on its own there instead.
+    var overview = document.getElementById('collectionOverview');
+    if (currentMediaFilter !== 'all') {
+        if (overview) overview.hidden = true;
+        return;
     }
+    if (overview) overview.hidden = false;
+
+    var all = myGamesCache || [];
+    var segments = CAT_META.map(function(c) {
+        return { label: c.label, color: c.color,
+            count: all.filter(function(g) { return (g.media_type || 'game') === c.key; }).length };
+    });
     var segTotal = segments.reduce(function(s, x) { return s + x.count; }, 0);
     drawBars(segments, segTotal);
     drawPie(segments);
@@ -268,11 +261,7 @@ function updateStatistics(games) {
     }
 
     var titleEl = document.querySelector('.stats-title');
-    if (titleEl) {
-        titleEl.textContent = currentMediaFilter === 'all'
-            ? 'By category'
-            : MEDIA_TAB_LABEL[currentMediaFilter] + ' · by status';
-    }
+    if (titleEl) titleEl.textContent = 'By category';
 }
 
 // Horizontal bars, one per segment, coloured to match the pie slices.
@@ -303,13 +292,6 @@ var CAT_META = [
     { key: 'series', label: 'Shows',  color: '#34d399' },
     { key: 'anime',  label: 'Anime',  color: '#f472b6' },
     { key: 'game',   label: 'Games',  color: '#fbbf24' }
-];
-var STATUS_META = [
-    { key: 'playing',      label: 'Watching / Playing', color: '#3498db' },
-    { key: 'completed',    label: 'Completed',          color: '#2ecc71' },
-    { key: 'plan_to_play', label: 'Planned',            color: '#9b59b6' },
-    { key: 'on_hold',      label: 'On Hold',            color: '#f39c12' },
-    { key: 'dropped',      label: 'Dropped',            color: '#e74c3c' }
 ];
 
 function drawPie(segments) {

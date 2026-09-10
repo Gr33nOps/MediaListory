@@ -1718,13 +1718,12 @@ function setLibraryEntry(ref, entry) {
     else delete __libraryIndex[ref];
 }
 
-/* The badge on a browse card. Kept here so every category draws the same one. */
+/* Ownership on a browse card is shown by the quick-add control turning into a
+   tick, so the separate score chip in the corner was saying the same thing
+   twice and cluttering the artwork. Kept as a no-op so existing callers and the
+   refresh below stay valid. */
 function ownedBadgeHtml(ref) {
-    var entry = libraryEntry(ref);
-    if (!entry) return '';
-    var label = entry.score ? ('\u2713 ' + entry.score) : '\u2713';
-    var title = entry.score ? ('In your library, rated ' + entry.score) : 'In your library';
-    return '<span class="card-owned" title="' + esc(title) + '" aria-label="' + esc(title) + '">' + esc(label) + '</span>';
+    return '';
 }
 
 /* Update one card in place after an add or edit, so the badge appears without

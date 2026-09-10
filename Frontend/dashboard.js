@@ -143,12 +143,20 @@
     } catch (_) { btn.disabled = false; }
   });
 
-  // ── Trending ────────────────────────────────────────────────────────────
+  // ── Trending & Top rated ──────────────────────────────────────────────────
+  // Two rows per category, both built from the same row + poster components -
+  // "Trending" is the popular/recent feed, "Top rated" is the highest scored.
   var TRENDING = [
     { cat: 'movie',  endpoint: '/tmdb/movies', body: { sort: 'popularity', limit: 14 } },
     { cat: 'series', endpoint: '/tmdb/series', body: { sort: 'popularity', limit: 14 } },
     { cat: 'anime',  endpoint: '/kitsu/anime', body: { trending: true, limit: 14 } },
     { cat: 'game',   endpoint: '/igdb/games',  body: { trending: true, limit: 14 } }
+  ];
+  var TOP_RATED = [
+    { cat: 'movie',  endpoint: '/tmdb/movies', body: { sort: 'rating', limit: 14 } },
+    { cat: 'series', endpoint: '/tmdb/series', body: { sort: 'rating', limit: 14 } },
+    { cat: 'anime',  endpoint: '/kitsu/anime', body: { sort: 'rating', limit: 14 } },
+    { cat: 'game',   endpoint: '/igdb/games',  body: { sort: 'rating', limit: 14 } }
   ];
 
   // TMDB/Kitsu proxies return normalized objects; IGDB returns raw shape.
@@ -170,27 +178,28 @@
     }).filter(function (x) { return x.name && x.background_image; });
   }
 
-  async function loadTrending() {
-    var container = document.getElementById('dashTrending');
+  async function loadRowGroup(configs, containerId, prefix, emptyMsg) {
+    var container = document.getElementById(containerId);
     if (!container) return;
-    container.innerHTML = TRENDING.map(function (t) {
-      return rowShell('Trending ' + LABEL[t.cat], skelRow(), CAT_FOR[t.cat]);
+    container.innerHTML = configs.map(function (t) {
+      return rowShell(prefix + ' ' + LABEL[t.cat], skelRow(), CAT_FOR[t.cat]);
     }).join('');
-    var results = await Promise.all(TRENDING.map(function (t) {
+    var results = await Promise.all(configs.map(function (t) {
       return api(t.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t.body) })
         .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; });
     }));
     var html = '';
-    TRENDING.forEach(function (t, i) {
+    configs.forEach(function (t, i) {
       var items = normalizeList(t.cat, results[i]).slice(0, 14);
       if (!items.length) return;
-      html += rowShell('Trending ' + LABEL[t.cat], items.map(posterCard).join(''), CAT_FOR[t.cat]);
+      html += rowShell(prefix + ' ' + LABEL[t.cat], items.map(posterCard).join(''), CAT_FOR[t.cat]);
     });
-    container.innerHTML = html || '<p class="dash-empty">Could not load trending right now. Try refreshing.</p>';
+    container.innerHTML = html || (emptyMsg ? '<p class="dash-empty">' + emptyMsg + '</p>' : '');
     if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(container);
   }
 
   renderHero();
   loadUpNext();
-  loadTrending();
+  loadRowGroup(TRENDING, 'dashTrending', 'Trending', 'Could not load trending right now. Try refreshing.');
+  loadRowGroup(TOP_RATED, 'dashTopRated', 'Top rated', '');
 })();

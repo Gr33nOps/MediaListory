@@ -308,14 +308,23 @@ module.exports = (verifyToken, checkBanned, db) => {
     }
 
     // Text search: prefer IGDB's native `search` (handles multi-word titles,
-    // punctuation and relevance far better than a raw substring match). The
-    // substring fallback (opts.mode === 'substring') is an order-independent,
-    // punctuation-tolerant token match used only when native search finds nothing.
-    const useNativeSearch = !!search && opts.mode !== 'substring';
-    if (search && !useNativeSearch) {
+    // punctuation and relevance far better than a raw substring match). Two
+    // fallbacks run in turn only when the step before found nothing:
+    //   'substring' - every token must appear (order-independent, punctuation
+    //                 tolerant), for titles native search happened to miss;
+    //   'loose'     - any distinct token may appear, so a query with one
+    //                 misspelled word ("assasins creed") still finds the title
+    //                 through the words that are spelled right.
+    const useNativeSearch = !!search && !opts.mode;
+    if (search && opts.mode === 'substring') {
       const tokens = search.split(/\s+/).filter((t) => t.length >= 2).slice(0, 6);
       where.push(tokens.length
         ? '(' + tokens.map((t) => `name ~ *"${t}"*`).join(' & ') + ')'
+        : `name ~ *"${search}"*`);
+    } else if (search && opts.mode === 'loose') {
+      const tokens = search.split(/\s+/).filter((t) => t.length >= 4).slice(0, 6);
+      where.push(tokens.length
+        ? '(' + tokens.map((t) => `name ~ *"${t}"*`).join(' | ') + ')'
         : `name ~ *"${search}"*`);
     }
     if (genre) where.push(`genres.name = "${genre}"`);
@@ -538,12 +547,18 @@ module.exports = (verifyToken, checkBanned, db) => {
       let response = await igdbFetch('/games', buildGamesQuery(body));
       let data = await response.json();
 
-      // Native search found nothing - retry once with the punctuation-tolerant
-      // substring token fallback before giving up (still full-catalog, filtered).
+      // Native search found nothing - retry with the punctuation-tolerant
+      // substring token fallback, then a looser any-token match for typos,
+      // before giving up (each still full-catalog and where-filtered).
       if (response.ok && searchTerm && Array.isArray(data) && data.length === 0) {
         const fbResp = await igdbFetch('/games', buildGamesQuery(body, { mode: 'substring' }));
         const fbData = await fbResp.json();
         if (fbResp.ok && Array.isArray(fbData) && fbData.length) { response = fbResp; data = fbData; }
+      }
+      if (response.ok && searchTerm && Array.isArray(data) && data.length === 0) {
+        const lsResp = await igdbFetch('/games', buildGamesQuery(body, { mode: 'loose' }));
+        const lsData = await lsResp.json();
+        if (lsResp.ok && Array.isArray(lsData) && lsData.length) { response = lsResp; data = lsData; }
       }
 
       if (!response.ok) {
@@ -562,9 +577,13 @@ module.exports = (verifyToken, checkBanned, db) => {
         return res.status(response.status).json({ error: 'IGDB API error' });
       }
 
-      // Promote exact / prefix title matches to the top when searching. This
-      // re-orders the fetched results only - it never removes any of them.
+      // Promote exact / prefix title matches to the top when searching, and
+      // break ties by how many people have rated the game so the well-known
+      // title wins over obscure same-word ones ("cyberpunk" -> Cyberpunk 2077,
+      // not "Cyberpunk Sex"). Pre-sorting by rating count then ranking works
+      // because rankSearchResults keeps the incoming order within each tier.
       if (searchTerm && Array.isArray(data)) {
+        data.sort((a, b) => (b.total_rating_count || 0) - (a.total_rating_count || 0));
         data = rankSearchResults(data, searchTerm, (g) => g && g.name);
       }
 

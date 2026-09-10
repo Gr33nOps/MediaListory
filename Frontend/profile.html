@@ -171,28 +171,48 @@
         <section class="profile-section pf-manage" id="topManager" data-accent="movie" hidden>
             <div class="pf-section-head">
                 <h2 class="pf-section-title">Top 10 of all time</h2>
-                <div class="pf-chiprow" id="topCatTabs" role="tablist" aria-label="Top 10 category"></div>
+                <div class="pf-head-actions">
+                    <div class="pf-chiprow" id="topCatTabs" role="tablist" aria-label="Top 10 category"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="topEditBtn">Edit</button>
+                    <button type="button" class="btn btn-success btn-sm" id="topDoneBtn" style="display:none;">Done</button>
+                </div>
             </div>
-            <p class="pf-hint">Pick from titles already in your library. The order you set here is the order people see on your profile.</p>
-            <div class="pf-edit-top" id="topEditList"></div>
-            <div class="profile-actions">
-                <button type="button" class="btn btn-secondary btn-sm" id="topAddBtn">Add a title</button>
-                <span id="topStatus" class="pf-hint"></span>
-            </div>
-            <div id="topPicker" style="margin-top:12px;" hidden>
-                <label class="sr-only" for="topPickerSearch">Search your library</label>
-                <input type="search" id="topPickerSearch" class="form-input" placeholder="Search your library…" autocomplete="off">
-                <div class="pf-picker-results" id="topPickerResults"></div>
+            <div class="pf-showcase" id="topShowcase"></div>
+            <div id="topEditWrap" hidden>
+                <p class="pf-hint">Drag a title to reorder it. Pick from titles already in your library; the order here is the order people see on your profile.</p>
+                <div class="pf-edit-top" id="topEditList"></div>
+                <div class="profile-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" id="topAddBtn">Add a title</button>
+                    <span id="topStatus" class="pf-hint"></span>
+                </div>
+                <div id="topPicker" style="margin-top:12px;" hidden>
+                    <label class="sr-only" for="topPickerSearch">Search your library</label>
+                    <input type="search" id="topPickerSearch" class="form-input" placeholder="Search your library…" autocomplete="off">
+                    <div class="pf-picker-results" id="topPickerResults"></div>
+                </div>
             </div>
         </section>
 
-        <section class="profile-section pf-manage" id="currentManager" hidden>
-            <h2 class="pf-section-title">Currently into</h2>
-            <p class="pf-hint">Your profile shows what you are part way through. Tick up to six to pin exactly which ones appear; leave them all unticked and it follows whatever you touched most recently.</p>
-            <div class="pf-edit-top" id="currentPickList"></div>
-            <div class="profile-actions">
-                <button type="button" class="btn btn-secondary btn-sm" id="currentSaveBtn">Save selection</button>
-                <span id="currentStatus" class="pf-hint"></span>
+        <section class="profile-section pf-manage" id="currentManager" data-accent="movie" hidden>
+            <div class="pf-section-head">
+                <h2 class="pf-section-title">Currently into</h2>
+                <div class="pf-head-actions">
+                    <div class="pf-chiprow" id="currentCatTabs" role="tablist" aria-label="Currently into category"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="currentEditBtn">Edit</button>
+                    <button type="button" class="btn btn-success btn-sm" id="currentDoneBtn" style="display:none;">Done</button>
+                </div>
+            </div>
+            <div class="pf-showcase" id="currentShowcase"></div>
+            <div id="currentEditWrap" hidden>
+                <p class="pf-hint">Drag to reorder. Pin up to six in-progress titles to choose exactly what shows; pin none and your profile follows whatever you touched most recently.</p>
+                <div class="pf-edit-top" id="currentPickList"></div>
+                <div class="profile-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" id="currentAddBtn">Add a title</button>
+                    <span id="currentStatus" class="pf-hint"></span>
+                </div>
+                <div id="currentPicker" style="margin-top:12px;" hidden>
+                    <div class="pf-picker-results" id="currentPickerResults"></div>
+                </div>
             </div>
         </section>
 

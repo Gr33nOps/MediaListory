@@ -5404,6 +5404,17 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 .pf-swatch:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 
 /* The editor reuses the poster row above, plus controls that only exist here. */
+/* Section head: chips + Edit/Done sit together on the right. */
+.pf-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Read-only display strip - the same poster scroller as the home rows. */
+.pf-showcase .dash-scroller { grid-auto-columns: 130px; }
+.pf-showcase .dash-card-poster { width: 130px; }
+@media (max-width: 640px) {
+    .pf-showcase .dash-scroller { grid-auto-columns: 108px; }
+    .pf-showcase .dash-card-poster { width: 108px; }
+}
+
 .pf-edit-top { display: flex; flex-direction: column; gap: 10px; }
 .pf-edit-row {
     display: flex;
@@ -5414,6 +5425,10 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
     border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.02);
 }
+.pf-edit-row[draggable="true"] { cursor: grab; }
+.pf-edit-row.pf-dragging { opacity: 0.4; }
+.pf-edit-row.pf-drop-target { border-color: var(--pf-accent, var(--accent-light)); background: var(--pf-accent-dim, var(--accent-dim)); }
+.pf-drag-handle { color: var(--text-dim); font-size: 0.95rem; line-height: 1; letter-spacing: -2px; padding: 0 2px; user-select: none; }
 .pf-edit-row img { width: 34px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
 .pf-edit-pos {
     width: 1.6em;
@@ -5902,8 +5917,10 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 .qa-row .score-input { width: 68px; margin: 0; }
 .qa-score-hint { font-size: 0.78rem; color: var(--text-muted); }
 
-.qa-actions { margin-top: 12px; }
+.qa-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .qa-actions .btn { width: 100%; }
+.qa-actions .qa-remove { background: transparent; border: 1px solid var(--red); color: var(--red-light); }
+.qa-actions .qa-remove:hover { background: var(--red-dim); }
 
 .qa-msg { margin: 8px 0 0; font-size: 0.78rem; min-height: 0; }
 .qa-msg.is-error { color: var(--red-light); }
@@ -5930,8 +5947,10 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 
 .title-page { margin-bottom: 40px; }
 
-.title-page .game-detail-hero { border-radius: 16px; overflow: hidden; }
 .title-page .game-detail-body { padding: 0; }
+/* No banner on the title page any more, so the cover + title sit at the top of
+   the card instead of being pulled up over an image. */
+.title-page .game-detail-title-row { margin-top: 0; }
 
 .title-page .game-detail-title {
     font-family: var(--font-display);
