@@ -6190,6 +6190,51 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
    the card instead of being pulled up over an image. */
 .title-page .game-detail-title-row { margin-top: 0; }
 
+/* ── Poster-anchored hero ──────────────────────────────────────────────────
+   The poster is the page's anchor, so it gets real size and sits in its own
+   left rail spanning both right-hand rows: title/meta on top, facts + synopsis
+   filling the column beneath. This is how a media title reads on the products
+   people already use (a poster you recognise, everything else arranged around
+   it) rather than a thumbnail wedged beside a heading. */
+.title-hero {
+    display: grid;
+    grid-template-columns: 208px minmax(0, 1fr);
+    grid-template-areas:
+        "poster head"
+        "poster detail";
+    column-gap: 32px;
+    row-gap: 14px;
+    align-items: start;
+    margin-bottom: 26px;
+}
+.title-hero-poster {
+    grid-area: poster;
+    align-self: start;
+    width: 208px;
+    height: 312px;          /* 2:3 frame; games covers (3:4) letterbox in it */
+    border-radius: 12px;
+}
+.title-hero-head { grid-area: head; min-width: 0; }
+.title-hero-detail { grid-area: detail; min-width: 0; }
+/* The synopsis and info grid already carry their own bottom margins; the last
+   one shouldn't push extra space before the library panel. */
+.title-hero-detail > :last-child { margin-bottom: 0; }
+.title-hero-head .game-detail-genres { margin-bottom: 0; }
+
+/* Phone: the poster tucks beside the title (kept recognisable, not shrunk to an
+   icon) and the details drop to a full-width column under both. */
+@media (max-width: 719px) {
+    .title-hero {
+        grid-template-columns: 116px minmax(0, 1fr);
+        grid-template-areas:
+            "poster head"
+            "detail detail";
+        column-gap: 16px;
+        row-gap: 16px;
+    }
+    .title-hero-poster { width: 116px; height: 174px; }
+}
+
 .title-page .game-detail-title {
     font-family: var(--font-display);
     font-size: clamp(1.5rem, 3.4vw, 2.15rem);

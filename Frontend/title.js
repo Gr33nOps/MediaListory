@@ -324,18 +324,25 @@
       ? '<span class="detail-rating" title="Average rating">★ ' + esc(Number(item.rating).toFixed(1)) +
         '<span class="dr-sub">/5</span></span>' : '';
 
+    /* Poster-anchored two-column hero: the artwork carries the page (it is the
+       one thing a visitor recognises at a glance), title/meta sit beside it, and
+       the facts + synopsis fill the column under the title. The poster spans both
+       right-hand rows on desktop; on a phone it tucks next to the title and the
+       details drop full-width below. Everything after the hero stays full width. */
     byId('titleBody').innerHTML =
       '<div class="game-detail-body">' +
-        '<div class="game-detail-title-row">' +
-          '<img src="' + esc(cover) + '" alt="' + esc(item.name) + ' cover" class="game-detail-cover" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-          '<div class="game-detail-title-meta">' +
+        '<div class="title-hero">' +
+          '<img src="' + esc(cover) + '" alt="' + esc(item.name) + ' cover" class="game-detail-cover title-hero-poster" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
+          '<div class="title-hero-head">' +
             '<h1 class="game-detail-title">' + esc(item.name) + '</h1>' +
             '<div class="game-detail-badges">' + released + rating + '</div>' +
             genresHtml(item) +
           '</div>' +
+          '<div class="title-hero-detail">' +
+            infoGridHtml(item, kind) +
+            descriptionHtml(item) +
+          '</div>' +
         '</div>' +
-        infoGridHtml(item, kind) +
-        descriptionHtml(item) +
         libraryPanelHtml(item, kind, owned, state.lists) +
         trailerHtml(item) +
         providersHtml(item) +
