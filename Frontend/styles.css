@@ -4742,35 +4742,23 @@ a.pc-link:hover .pc-title { color: var(--accent-light); }
 .dash-social-panel .pf-people { grid-template-columns: 1fr; }
 .dash-social-panel .activity-item:not(:last-child) { margin-bottom: 2px; }
 
-/* ── Trending / Upcoming: four columns, one per category, never blended.
-   Each is a plain ranked list - small thumbnail + title - not another row of
-   poster cards, so four categories' worth of picks fit without turning into
-   a wall of artwork. */
-.dash-chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; align-items: start; }
-.dash-chart-h { font-size: 0.85rem; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
-.dash-chart-h::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dash-chart-col[data-cat="movies"] .dash-chart-h { color: var(--cat-movie-light); }
-.dash-chart-col[data-cat="movies"] .dash-chart-h::before { background: var(--cat-movie); }
-.dash-chart-col[data-cat="series"] .dash-chart-h { color: var(--cat-series-light); }
-.dash-chart-col[data-cat="series"] .dash-chart-h::before { background: var(--cat-series); }
-.dash-chart-col[data-cat="anime"]  .dash-chart-h { color: var(--cat-anime-light); }
-.dash-chart-col[data-cat="anime"]  .dash-chart-h::before { background: var(--cat-anime); }
-.dash-chart-col[data-cat="games"]  .dash-chart-h { color: var(--cat-game-light); }
-.dash-chart-col[data-cat="games"]  .dash-chart-h::before { background: var(--cat-game); }
-.dash-chart-list { display: flex; flex-direction: column; }
-.dash-chart-item { display: flex; align-items: center; gap: 10px; padding: 6px; margin: 0 -6px; border-radius: var(--radius-sm); text-decoration: none; }
-.dash-chart-item:hover { background: var(--accent-dim); }
-.dash-chart-thumb { width: 34px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: var(--bg-deep); flex-shrink: 0; }
-.dash-chart-name { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-@media (max-width: 900px) {
-    .dash-chart-grid { grid-template-columns: 1fr 1fr; row-gap: 26px; }
+/* ── Trending / Upcoming: All/Movies/Shows/Anime/Games filter tabs above one
+   poster row (same shape as Recent ratings) - same idiom the profile page
+   uses for "Currently into"/"Top 10", but keyed off the page-level --accent
+   token (already neutral by default via .dash-row[data-cat]) instead of
+   --pf-accent, so "All" never defaults to blue. */
+.dash-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+.dash-tab {
+    padding: 5px 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill);
+    background: transparent; color: var(--text-muted); font-family: inherit;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: color 0.15s, border-color 0.15s;
 }
+.dash-tab:hover { color: var(--text-secondary); border-color: var(--border); }
+.dash-tab.active { color: var(--accent-light); border-color: var(--accent-border); }
+.dash-tab:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+
 @media (max-width: 720px) {
     .dash-social { grid-template-columns: 1fr; gap: 20px; }
-}
-@media (max-width: 560px) {
-    .dash-chart-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -5362,6 +5350,10 @@ body[data-page="games"]  { --au-1: #f59e0b; --au-2: #f59e0b; --au-3: #f59e0b; }
 .profile-section[data-accent="series"] { --pf-accent: var(--cat-series); --pf-accent-dim: var(--cat-series-dim); }
 .profile-section[data-accent="anime"]  { --pf-accent: var(--cat-anime);  --pf-accent-dim: var(--cat-anime-dim); }
 .profile-section[data-accent="game"]   { --pf-accent: var(--cat-game);   --pf-accent-dim: var(--cat-game-dim); }
+/* "Currently into" viewed on the All tab isn't any one category, so it takes
+   no data-accent attribute at all - without this it would fall through every
+   var(--pf-accent, var(--cat-movie)) fallback straight to blue. */
+.profile-section:not([data-accent]) { --pf-accent: var(--accent-light); --pf-accent-dim: var(--accent-dim); }
 
 /* ── Header art ───────────────────────────────────────────────────────────
    A band of the profile's own posters, heavily scrimmed so it reads as texture

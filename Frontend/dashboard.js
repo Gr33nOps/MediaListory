@@ -41,12 +41,17 @@
     return '<span class="cl-cat-badge" data-cat="' + mediaType + '">' + esc(LABEL_SINGULAR[mediaType] || 'Game') + '</span>';
   }
 
-  // Poster card used by Recent ratings: the user's own score overlaid on the
-  // poster, same visual language as the score chips elsewhere in the app.
+  // Poster card shared by Recent ratings (the user's own score) and
+  // Trending/Upcoming (the catalog rating) - same visual language either way.
   function posterCard(item) {
     var ref = item.id;
-    var word = (typeof window.scoreWord === 'function') ? window.scoreWord(item.userScore) : '';
-    var overlay = '<span class="card-rating" title="Your score">' + esc(item.userScore) + (word ? ' · ' + esc(word) : '') + '</span>';
+    var overlay = '';
+    if (item.userScore != null) {
+      var word = (typeof window.scoreWord === 'function') ? window.scoreWord(item.userScore) : '';
+      overlay = '<span class="card-rating" title="Your score">' + esc(item.userScore) + (word ? ' · ' + esc(word) : '') + '</span>';
+    } else if (item.rating) {
+      overlay = '<span class="card-rating">★ ' + esc(Number(item.rating).toFixed(1)) + '</span>';
+    }
     return '<a class="dash-card" href="title.html?ref=' + encodeURIComponent(ref) + '" title="' + esc(item.name) + '">' +
       '<div class="dash-card-poster">' +
         '<img src="' + esc(item.background_image || '/img/no-image.svg') + '" alt="' + esc(item.name) + '" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' + overlay +
@@ -288,66 +293,100 @@
     host.innerHTML = '<section class="dash-row"><div class="dash-social">' + peopleHtml + activityHtml + '</div></section>';
   }
 
-  // ── Trending & Upcoming: one column per category, never blended ─────────
+  // ── Trending & Upcoming: All/Movies/Shows/Anime/Games tabs over one row ──
   // Same shape drives both - only the request body (and heading) differ - so
-  // one loader serves both sections instead of two near-duplicate copies.
+  // one setup function serves both sections instead of two near-duplicate
+  // copies. Every category is fetched once up front; switching tabs re-renders
+  // from what's already in hand, no extra request per click.
   var SOURCES = [
     { cat: 'movie',  endpoint: '/tmdb/movies' },
     { cat: 'series', endpoint: '/tmdb/series' },
     { cat: 'anime',  endpoint: '/kitsu/anime' },
     { cat: 'game',   endpoint: '/igdb/games' }
   ];
+  var TAB_ORDER = ['all', 'movie', 'series', 'anime', 'game'];
+  var TAB_LABEL = { all: 'All', movie: 'Movies', series: 'Shows', anime: 'Anime', game: 'Games' };
 
   function normalizeList(cat, arr) {
     if (!Array.isArray(arr)) return [];
     if (cat === 'game') {
       return arr.map(function (g) {
         var cover = (g.cover && g.cover.url) ? ('https:' + String(g.cover.url).replace('t_thumb', 't_cover_big')) : (g.background_image || null);
-        return { id: 'igdb_' + g.id, name: g.name, background_image: cover };
+        return { id: 'igdb_' + g.id, name: g.name, background_image: cover, rating: g.total_rating ? Number((g.total_rating / 20).toFixed(1)) : null };
       }).filter(function (x) { return x.name && x.background_image; });
     }
     return arr.map(function (m) {
-      return { id: m.id, name: m.name, background_image: m.background_image };
+      return { id: m.id, name: m.name, background_image: m.background_image, rating: m.rating };
     }).filter(function (x) { return x.name && x.background_image; });
   }
 
-  function chartItemHtml(item) {
-    return '<a class="dash-chart-item" href="title.html?ref=' + encodeURIComponent(item.id) + '" title="' + esc(item.name) + '">' +
-      '<img class="dash-chart-thumb" src="' + esc(item.background_image) + '" alt="" loading="lazy" onerror="this.src=\'/img/no-image.svg\'">' +
-      '<span class="dash-chart-name">' + esc(item.name) + '</span>' +
-    '</a>';
+  // Round-robin across categories so the "All" tab reads as one mixed shelf
+  // rather than four blocks glued together.
+  function interleave(lists) {
+    var out = [];
+    var max = Math.max.apply(null, lists.map(function (l) { return l.length; }).concat([0]));
+    for (var i = 0; i < max; i++) lists.forEach(function (l) { if (l[i]) out.push(l[i]); });
+    return out;
   }
 
-  function chartColumnHtml(cat, items) {
-    if (!items.length) return '';
-    return '<div class="dash-chart-col" data-cat="' + CAT_FOR[cat] + '">' +
-      '<h3 class="dash-chart-h">' + esc(LABEL_PLURAL[cat]) + '</h3>' +
-      '<div class="dash-chart-list">' + items.map(chartItemHtml).join('') + '</div>' +
-    '</div>';
-  }
-
-  async function loadChartSection(hostId, title, bodyExtra) {
+  function initDiscoverySection(hostId, title, bodyExtra) {
     var host = document.getElementById(hostId);
     if (!host) return;
-    var results = await Promise.all(SOURCES.map(function (s) {
-      var body = Object.assign({ limit: 10 }, bodyExtra);
+    var listsByCat = {};
+    var activeTab = 'all';
+
+    function itemsFor(tab) {
+      if (tab === 'all') return interleave(CAT_ORDER.map(function (c) { return listsByCat[c] || []; })).slice(0, 20);
+      return (listsByCat[tab] || []).slice(0, 20);
+    }
+
+    function renderRow() {
+      var section = host.querySelector('.dash-row');
+      var scroller = host.querySelector('.dash-scroller');
+      if (!section || !scroller) return;
+      // Neutral on All; the selected category's own color otherwise - reuses
+      // the same [data-cat] accent tokens the nav tabs use, so the active tab
+      // pill and the row's title dot pick up the right color automatically.
+      if (activeTab === 'all') delete section.dataset.cat;
+      else section.dataset.cat = CAT_FOR[activeTab];
+      var items = itemsFor(activeTab);
+      scroller.innerHTML = items.length ? items.map(posterCard).join('') : '<p class="dash-empty">Nothing to show yet.</p>';
+      if (typeof window.enhanceScrollers === 'function') window.enhanceScrollers(host);
+      host.querySelectorAll('.dash-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.cat === activeTab); });
+    }
+
+    host.innerHTML = '<section class="dash-row"><h2 class="dash-row-title">' + esc(title) + '</h2>' +
+      '<div class="dash-tabs">' + TAB_ORDER.map(function (t) {
+        return '<button type="button" class="dash-tab' + (t === 'all' ? ' active' : '') + '" data-cat="' + t + '">' + esc(TAB_LABEL[t]) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="dash-scroller">' + skelRow() + '</div></section>';
+
+    host.querySelectorAll('.dash-tab').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (activeTab === btn.dataset.cat) return;
+        activeTab = btn.dataset.cat;
+        renderRow();
+      });
+    });
+
+    Promise.all(SOURCES.map(function (s) {
+      var body = Object.assign({ limit: 20 }, bodyExtra);
       return api(s.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; });
-    }));
-    var columns = SOURCES.map(function (s, i) {
-      return chartColumnHtml(s.cat, normalizeList(s.cat, results[i]).slice(0, 10));
-    }).join('');
-    if (!columns.replace(/\s/g, '')) { host.innerHTML = ''; return; }
-    host.innerHTML = '<section class="dash-row"><h2 class="dash-row-title">' + esc(title) + '</h2>' +
-      '<div class="dash-chart-grid">' + columns + '</div></section>';
+    })).then(function (results) {
+      SOURCES.forEach(function (s, i) { listsByCat[s.cat] = normalizeList(s.cat, results[i]); });
+      var anyData = CAT_ORDER.some(function (c) { return (listsByCat[c] || []).length; });
+      if (!anyData) { host.innerHTML = ''; return; }
+      renderRow();
+    });
   }
 
   function loadTrending() {
-    return loadChartSection('dashTrending', 'Trending now', { sort: 'popularity' });
+    initDiscoverySection('dashTrending', 'Trending now', { sort: 'popularity' });
   }
 
   function loadUpcoming() {
-    return loadChartSection('dashUpcoming', 'Popular upcoming', { comingSoon: true });
+    initDiscoverySection('dashUpcoming', 'Popular upcoming', { comingSoon: true });
   }
 
   // ── Boot ─────────────────────────────────────────────────────────────────

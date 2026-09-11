@@ -876,7 +876,12 @@ function mgCurrentShowcaseItems() {
 
 function renderCurrent() {
     var wrap = document.getElementById('currentManager');
-    if (wrap) wrap.setAttribute('data-accent', mgCurrentCat === 'all' ? 'movie' : mgCurrentCat);
+    // All isn't any one category, so it takes no accent rather than
+    // defaulting to Movies' blue (see .profile-section:not([data-accent])).
+    if (wrap) {
+        if (mgCurrentCat === 'all') wrap.removeAttribute('data-accent');
+        else wrap.setAttribute('data-accent', mgCurrentCat);
+    }
     renderCurrentTabs();
     var sc = document.getElementById('currentShowcase');
     if (sc) {
