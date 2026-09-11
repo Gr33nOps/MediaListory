@@ -4691,25 +4691,15 @@ a.pc-link:hover .pc-title { color: var(--accent-light); }
 .my-games-list.as-grid .coll-item-right { width: 100%; justify-content: space-between; margin-top: 2px; }
 .view-toggle-btn { min-width: 44px; }
 
-/* ══ Home dashboard: hero · Continue · overview · ratings · recs · social · trending ══ */
+/* ══ Home dashboard: hero · Continue · ratings · social · trending/upcoming charts ══ */
 .dash-hero-inner { padding: 12px 0 6px; text-align: center; }
 .dash-hero-title { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; margin: 0; color: var(--text-primary); text-wrap: balance; }
 .dash-hero-sub { color: var(--text-muted); font-size: 1.02rem; margin: 10px auto 0; max-width: 60ch; }
 .dash-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; justify-content: center; }
-
-/* A search-shaped button rather than a plain one - it should read as "type
-   here" at a glance, the same job the nav's search icon does, just spelled out
-   for a page whose whole point is being the place you start from. */
-.dash-hero-search {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; max-width: 420px; margin: 18px auto 0;
-    padding: 12px 18px; border-radius: var(--radius-pill);
-    border: 1px solid var(--border-subtle); background: var(--bg-card);
-    color: var(--text-muted); font-family: var(--font-body); font-size: 0.92rem;
-    cursor: pointer; transition: var(--transition-fast);
-}
-.dash-hero-search:hover, .dash-hero-search:focus-visible { border-color: var(--accent-border); color: var(--text-secondary); }
-.dash-hero-search svg { flex-shrink: 0; opacity: 0.7; }
+/* Library counts stand in for a second headline stat block - centered, same
+   pill used on the profile page, so it reads as one consistent component
+   rather than a one-off dashboard widget. */
+.dash-hero-counts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 18px 0 0; }
 
 .dash-row { margin: 30px 0; }
 .dash-row-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 14px; }
@@ -4721,24 +4711,18 @@ a.pc-link:hover .pc-title { color: var(--accent-light); }
 .dash-scroller { display: grid; grid-auto-flow: column; grid-auto-columns: 150px; gap: 14px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x proximity; }
 
 .dash-card { display: block; text-decoration: none; scroll-snap-align: start; }
-.dash-card[data-ref] { cursor: pointer; }
 .dash-card:focus-visible { outline: none; }
 .dash-card:focus-visible .dash-card-poster { outline: 2px solid var(--accent-light); outline-offset: 3px; }
 .dash-card-poster { position: relative; width: 150px; aspect-ratio: 3 / 4; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-deep); border: 1px solid var(--border-subtle); }
 .dash-card-poster img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease; }
 .dash-card:hover .dash-card-poster img { transform: scale(1.04); }
 .dash-card:hover .dash-card-poster { border-color: var(--accent); }
-.dash-card-tag { margin-top: 7px; }
-.dash-card-tag .cl-cat-badge { font-size: 0.6rem; padding: 1px 7px; }
-.dash-card-name { margin-top: 5px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.dash-card-tag + .dash-card-name { margin-top: 2px; }
+.dash-card-name { margin-top: 7px; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
+/* Continue: a plain card like everything else on the site - no colour-coded
+   side stripe. The category badge already says what it is. */
 .dash-upnext { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
-.dash-upnext-card { display: flex; gap: 14px; padding: 12px; border-radius: var(--radius-lg); background: var(--bg-card); border: 1px solid var(--border-subtle); border-left: 3px solid var(--border); }
-.dash-upnext-card[data-cat="movie"]  { border-left-color: var(--cat-movie); }
-.dash-upnext-card[data-cat="series"] { border-left-color: var(--cat-series); }
-.dash-upnext-card[data-cat="anime"]  { border-left-color: var(--cat-anime); }
-.dash-upnext-card[data-cat="game"]   { border-left-color: var(--cat-game); }
+.dash-upnext-card { display: flex; gap: 14px; padding: 12px; border-radius: var(--radius-lg); background: var(--bg-card); border: 1px solid var(--border-subtle); }
 .dash-upnext-poster { flex-shrink: 0; width: 66px; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: var(--bg-deep); }
 .dash-upnext-poster img { width: 100%; height: 100%; object-fit: cover; }
 .dash-upnext-info { display: flex; flex-direction: column; justify-content: center; gap: 7px; min-width: 0; flex: 1; }
@@ -4750,10 +4734,6 @@ a.pc-link:hover .pc-title { color: var(--accent-light); }
 .dash-plus { align-self: flex-start; }
 .dash-empty { color: var(--text-muted); text-align: center; padding: 40px; }
 
-/* ── Library overview: the same compact tiles + category counts the profile
-   page uses, so "your library at a glance" reads the same wherever it shows up. */
-.dash-stat-tiles { margin-bottom: 14px; }
-
 /* ── Social: similar-taste and friends'-activity side by side, each optional -
    the section itself never renders when there is nothing in either. */
 .dash-social { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -4762,8 +4742,35 @@ a.pc-link:hover .pc-title { color: var(--accent-light); }
 .dash-social-panel .pf-people { grid-template-columns: 1fr; }
 .dash-social-panel .activity-item:not(:last-child) { margin-bottom: 2px; }
 
+/* ── Trending / Upcoming: four columns, one per category, never blended.
+   Each is a plain ranked list - small thumbnail + title - not another row of
+   poster cards, so four categories' worth of picks fit without turning into
+   a wall of artwork. */
+.dash-chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; align-items: start; }
+.dash-chart-h { font-size: 0.85rem; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.dash-chart-h::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dash-chart-col[data-cat="movies"] .dash-chart-h { color: var(--cat-movie-light); }
+.dash-chart-col[data-cat="movies"] .dash-chart-h::before { background: var(--cat-movie); }
+.dash-chart-col[data-cat="series"] .dash-chart-h { color: var(--cat-series-light); }
+.dash-chart-col[data-cat="series"] .dash-chart-h::before { background: var(--cat-series); }
+.dash-chart-col[data-cat="anime"]  .dash-chart-h { color: var(--cat-anime-light); }
+.dash-chart-col[data-cat="anime"]  .dash-chart-h::before { background: var(--cat-anime); }
+.dash-chart-col[data-cat="games"]  .dash-chart-h { color: var(--cat-game-light); }
+.dash-chart-col[data-cat="games"]  .dash-chart-h::before { background: var(--cat-game); }
+.dash-chart-list { display: flex; flex-direction: column; }
+.dash-chart-item { display: flex; align-items: center; gap: 10px; padding: 6px; margin: 0 -6px; border-radius: var(--radius-sm); text-decoration: none; }
+.dash-chart-item:hover { background: var(--accent-dim); }
+.dash-chart-thumb { width: 34px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: var(--bg-deep); flex-shrink: 0; }
+.dash-chart-name { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 900px) {
+    .dash-chart-grid { grid-template-columns: 1fr 1fr; row-gap: 26px; }
+}
 @media (max-width: 720px) {
     .dash-social { grid-template-columns: 1fr; gap: 20px; }
+}
+@media (max-width: 560px) {
+    .dash-chart-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
