@@ -740,8 +740,12 @@
     var v = (value === 0 || (value != null && value !== '')) ? Number(value) : null;
     if (v != null) v = Math.min(10, Math.max(0, Math.round(v)));
     var pct = (v == null ? 0 : v * 10);
+    // Positioned at the exact percentage each value sits at (i*10%), not laid
+    // out with flex space-between - that spaced 9 ticks across 8 gaps, which
+    // put them at 0/12.5/25...100% instead of on the 10 points the thumb
+    // actually stops at.
     var ticks = '';
-    for (var i = 1; i < 10; i++) ticks += '<span class="score-slider-tick"></span>';
+    for (var i = 1; i < 10; i++) ticks += '<span class="score-slider-tick" style="left:' + (i * 10) + '%"></span>';
     return '<div class="score-meter' + (v == null ? ' is-empty' : '') + '" data-score-meter="' + id + '">' +
         '<div class="score-meter-head">' +
           '<span class="score-meter-value">' + (v == null ? '–' : v) + '</span>' +

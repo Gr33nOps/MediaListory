@@ -1993,11 +1993,11 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
 .score-meter.is-empty .score-slider-fill { opacity: 0.45; }
 /* Reference marks at each whole point, purely decorative (not interactive) -
    keeps some of the "which number is where" cue the old dots gave. */
-.score-slider-ticks {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
-    padding: 0 1px; pointer-events: none;
+.score-slider-ticks { position: absolute; inset: 0; pointer-events: none; }
+.score-slider-tick {
+    position: absolute; top: 50%; width: 2px; height: 6px; border-radius: 1px;
+    background: rgba(148, 163, 184, 0.3); transform: translate(-50%, -50%);
 }
-.score-slider-tick { width: 2px; height: 6px; border-radius: 1px; background: rgba(148, 163, 184, 0.3); }
 .score-slider-thumb {
     position: absolute; top: 50%; left: 0; width: 24px; height: 24px;
     background: var(--accent); border: 3px solid var(--bg-card); border-radius: 50%;
@@ -4385,7 +4385,10 @@ a.cat-stat:hover { border-color: var(--cs-color); }
 .detail-section { margin-top: 26px; }
 .detail-h { font-family: var(--font-display); font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary); margin: 0 0 13px; }
 
-.detail-trailer { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; background: #000; cursor: pointer; border: 1px solid var(--border-subtle); }
+/* Capped rather than stretched to the full 1400px content width - a 16:9
+   video at that width is enormous on a wide desktop, taller than the
+   viewport itself. */
+.detail-trailer { position: relative; max-width: 900px; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; background: #000; cursor: pointer; border: 1px solid var(--border-subtle); }
 .detail-trailer img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.82; transition: opacity 0.2s; }
 .detail-trailer:hover img { opacity: 1; }
 .detail-trailer iframe { width: 100%; height: 100%; border: 0; display: block; }

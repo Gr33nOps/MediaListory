@@ -191,6 +191,15 @@ function initCollectionTab() {
         }
     });
 
+    // A homepage category pill ("Movies", "Shows", ...) links here with
+    // ?media=movie so the collection opens already filtered to that category
+    // instead of dumping the visitor back on "All".
+    var urlMedia = new URLSearchParams(location.search).get('media');
+    if (['movie', 'series', 'anime', 'game'].indexOf(urlMedia) !== -1) {
+        var preselect = document.querySelector('.media-tab[data-media="' + urlMedia + '"]');
+        if (preselect) preselect.click();
+    }
+
     loadMyGames();
 }
 

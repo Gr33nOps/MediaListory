@@ -77,7 +77,7 @@
   // ── Hero ─────────────────────────────────────────────────────────────────
   function catCountsHtml(byCat) {
     return '<div class="dash-hero-counts">' + CAT_ORDER.map(function (cat) {
-      return '<a class="cat-stat" data-cat="' + cat + '" href="library.html" title="View your ' + esc(LABEL_PLURAL[cat]) + '">' +
+      return '<a class="cat-stat" data-cat="' + cat + '" href="library.html?media=' + cat + '" title="View your ' + esc(LABEL_PLURAL[cat]) + '">' +
         '<span class="cs-num">' + (byCat[cat] || 0) + '</span><span class="cs-label">' + LABEL_PLURAL[cat] + '</span></a>';
     }).join('') + '</div>';
   }
