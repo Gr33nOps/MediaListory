@@ -11,8 +11,11 @@
 
 <p align="center">
   <a href="https://github.com/Gr33nOps/medialistory/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Gr33nOps/medialistory/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18 or newer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18 or newer"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/build-none-informational?style=flat-square" alt="No build step"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs welcome"></a>
+  <a href="CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/code%20of%20conduct-read-6b4fbb?style=flat-square" alt="Code of Conduct"></a>
 </p>
 
 MediaListory started as a game tracker and grew into one place for everything I watch and play. Movies and shows, anime, and games all share the same library, ratings, reviews, lists, and profile, so there is no juggling four apps to remember what you finished.
@@ -23,21 +26,21 @@ This repository is the app itself, MIT licensed. The tour below is the short ver
 
 ## A look around
 
-You land on trending, not on an empty search box. Each category gets its own row, and nothing here is gated: browsing, searching, and opening a title all work signed out.
+Everything here works signed out. Browsing, searching, filtering, and opening any title all work without an account; signing in is only for saving to your library, rating, and following people. Every category opens on popular titles rather than an empty box.
 
-![The MediaListory home page, with trending movies and trending shows in separate rows](docs/screenshots/home.png)
+Each browses on its own terms, because every provider does. Movies and shows come from TMDB, anime from Kitsu, games from IGDB, and each page offers only the filters its provider genuinely supports. Nothing is filtered client side after the fact, so an exact title match comes back first instead of whatever was already on the page.
 
-Every category browses on its own terms, because every provider does. Movies and shows come from TMDB, anime from Kitsu, games from IGDB, and each page only offers the filters its provider genuinely supports. Nothing is filtered client side after the fact, so an exact title match comes back first instead of whatever happened to be on the page you were already looking at.
+The four categories are not skins over one page. They share one layout, library, and rating system, but each carries its own accent color throughout, so you always know where you are.
 
-![The Movies page with the filter panel open, showing genre, year, rating, length, and language](docs/screenshots/browse.png)
+| ![The Movies page — a grid of film posters carrying a blue accent](docs/screenshots/browse.png) | ![The Shows page — the same grid carrying a green accent](docs/screenshots/shows.png) |
+|:--:|:--:|
+| **Movies** — TMDB · blue | **Shows** — TMDB · green |
+| ![The Anime page — the same grid carrying a pink accent](docs/screenshots/anime.png) | ![The Games page — the same grid carrying an amber accent](docs/screenshots/games.png) |
+| **Anime** — Kitsu · pink | **Games** — IGDB · amber |
 
-Open a title and you get the whole record without leaving the grid: genres, director and studio, runtime, the synopsis, a trailer, where to watch it, and a few things to go to next. Saving it takes a status, a score out of ten, and a review if you feel like writing one.
+Open a title and the poster anchors the page. Beside it sit the genres, credits, runtime, and synopsis; below it the trailer, where to watch, and a few things to go to next. Depending on what it is, a title also picks up the best price today, its opening and ending themes, or the run it belongs to. Saving takes a status, a score out of ten, and a review if you feel like writing one.
 
-![The Odyssey opened in a detail overlay, showing metadata, synopsis, and trailer](docs/screenshots/detail.png)
-
-The four categories are not skins over one page. Each carries its own accent color throughout, so you always know where you are: blue for movies, green for shows, pink for anime, amber for games.
-
-![The Games page, the same layout carrying an amber accent instead of blue](docs/screenshots/games.png)
+![The Red Dead Redemption 2 page: a large cover on the left, with genres, developer, publisher, platforms and synopsis beside it, the add-to-library panel, and the current best price below](docs/screenshots/detail.png)
 
 ## What you can do
 
@@ -59,6 +62,19 @@ Beyond that:
 - Switch between light and dark, on desktop or phone
 
 Admin and moderator dashboards ship with it for handling reports and bans.
+
+## Open source
+
+MediaListory is MIT licensed, has no build step, and needs no paid services beyond the data providers, so you can clone it and run your own copy. [Running it yourself](#running-it-yourself) is the full guide.
+
+- **[MIT License](LICENSE)** — use it, fork it, ship it.
+- **[Contributing guide](CONTRIBUTING.md)** — setup, what CI checks, and how the code is laid out. Issues and pull requests are welcome.
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** — short, and it comes down to criticise the work, not the person.
+- **[Security policy](SECURITY.md)** — report a vulnerability privately instead of in the public tracker.
+- **Issue templates** for [bug reports](.github/ISSUE_TEMPLATE/bug_report.md) and [feature requests](.github/ISSUE_TEMPLATE/feature_request.md), so a report carries what's needed to act on it.
+- **Kept honest in CI** — every push runs the unit, smoke, and Playwright suites plus a Semgrep security scan that fails on any finding, and Dependabot watches dependencies.
+
+The app is free and stays that way. If it's useful to you and you feel like it, there's a [Ko-fi](https://ko-fi.com/zain021xd) and [GitHub Sponsors](https://github.com/sponsors/Gr33nOps) — entirely optional.
 
 ## Credits
 
