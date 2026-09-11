@@ -1131,6 +1131,8 @@
           '<a href="about.html">About</a>' +
           '<a href="privacy.html">Privacy Policy</a>' +
           '<a href="terms.html">Terms of Service</a>' +
+          '<a href="https://github.com/Gr33nOps" target="_blank" rel="noopener noreferrer">GitHub</a>' +
+          '<a href="https://ko-fi.com/zain021xd" target="_blank" rel="noopener noreferrer">Support</a>' +
         '</div>' +
       '</div>';
     host.appendChild(f);
