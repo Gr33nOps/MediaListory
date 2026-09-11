@@ -734,7 +734,7 @@
     for (var i = 0; i <= 10; i++) {
       dots += '<button type="button" class="score-meter-dot' +
         (v != null && i <= v ? ' on' : '') + (v === i ? ' sel' : '') +
-        '" data-v="' + i + '" aria-label="' + i + ' – ' + SCORE_WORDS[i] + '"></button>';
+        '" data-v="' + i + '" aria-label="' + i + ' – ' + SCORE_WORDS[i] + '">' + i + '</button>';
     }
     return '<div class="score-meter' + (v == null ? ' is-empty' : '') + '" data-score-meter="' + id + '">' +
         '<div class="score-meter-head">' +
@@ -1687,6 +1687,21 @@
   global.bindScoreInput = bindScoreInput;
   global.scoreMeterHTML = scoreMeterHTML;
   global.bindScoreMeter = bindScoreMeter;
+  // n -> "Fire" (0 = Trash .. 10 = Peak), or '' for no score. Shared with every
+  // badge that shows a saved score, so the same vocabulary reads everywhere.
+  global.scoreWord = function (n) {
+    if (n == null || n === '') return '';
+    var i = Math.round(Number(n));
+    return (i >= 0 && i <= 10) ? SCORE_WORDS[i] : '';
+  };
+  // The number + word badge shown on collection rows (coll-score-badge). One
+  // place for the markup so every list renders a saved score the same way.
+  global.scoreBadgeHTML = function (score) {
+    if (score == null || score === '') return '<div class="coll-score-badge is-empty">–</div>';
+    var word = global.scoreWord(score);
+    return '<div class="coll-score-badge"><span class="csb-num">' + score + '</span>' +
+      (word ? '<span class="csb-word">' + word + '</span>' : '') + '</div>';
+  };
   global.MEDIA_STATUS_KEYS = STATUS_KEYS;
 })(typeof window !== 'undefined' ? window : globalThis);
 

@@ -270,5 +270,46 @@ module.exports = (db, verifyToken, checkBanned) => {
     }
   });
 
+  /* Wipe everything derived from the collection - library, custom lists (and
+     the games inside them, via cascade), Top 10s, and season ratings - but
+     keep the account and profile untouched. user_season_entries references
+     users(id) directly rather than through user_game_lists, so it needs its
+     own delete; custom_list_games cascades off custom_lists. */
+  router.delete('/data', verifyToken, checkBanned, async (req, res) => {
+    try {
+      await db.transaction(async (trx) => {
+        await trx('user_season_entries').where({ user_id: req.userId }).del();
+        await trx('user_game_lists').where({ user_id: req.userId }).del();
+        await trx('custom_lists').where({ user_id: req.userId }).del();
+        await trx('user_top_media').where({ user_id: req.userId }).del();
+      });
+      res.json({ message: 'Your collection has been cleared.' });
+    } catch (error) {
+      return clientError(res, 500, 'Could not clear your data', error);
+    }
+  });
+
+  /* Permanently delete the account. Every table that references it (library,
+     lists, follows, follow requests, top media, season ratings) is declared
+     ON DELETE CASCADE, so one delete on users unwinds all of it. Typing the
+     exact username is the confirmation - it works the same way whether the
+     account signs in with a password or with Google/GitHub. */
+  router.delete('/account', verifyToken, checkBanned, async (req, res) => {
+    try {
+      const u = await db('users').where({ id: req.userId }).first('username');
+      if (!u) return res.status(404).json({ error: 'User not found' });
+
+      const typed = String(req.body?.username || '').trim().toLowerCase();
+      if (!typed || typed !== String(u.username).toLowerCase()) {
+        return res.status(400).json({ error: 'Type your username exactly to confirm.' });
+      }
+
+      await db('users').where({ id: req.userId }).del();
+      res.json({ message: 'Account deleted.' });
+    } catch (error) {
+      return clientError(res, 500, 'Could not delete your account', error);
+    }
+  });
+
   return router;
 };

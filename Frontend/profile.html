@@ -89,6 +89,45 @@
                     </div>
                     <p class="data-tools-note">Export one category (e.g. just your movies) to move it to another site, or download a full backup of your whole account: collection and lists. To restore a backup, use <strong>Import</strong> with Auto-detect.</p>
                 </div>
+
+                <div class="data-tools danger-zone">
+                    <h3 class="data-tools-h danger-zone-h">Danger zone</h3>
+                    <div class="data-tools-row">
+                        <button id="clearDataBtn" class="btn btn-danger" type="button">Clear all data</button>
+                        <button id="deleteAccountBtn" class="btn btn-danger" type="button">Delete account</button>
+                    </div>
+                    <p class="data-tools-note">Both are permanent. <strong>Clear all data</strong> empties your collection and custom lists but keeps your account and profile. <strong>Delete account</strong> removes everything - your collection, lists, follows, and profile - and signs you out for good. Download a backup above first if you might want this again.</p>
+                </div>
+            </div>
+
+            <div id="clearDataModal" class="cl-modal-overlay">
+                <div class="cl-modal-box cl-modal-box-sm">
+                    <button class="cl-modal-close" id="clearDataClose" aria-label="Close">×</button>
+                    <h3>Clear all data?</h3>
+                    <p class="cl-confirm-text">This empties your entire collection and every custom list - every movie, show, anime and game you've tracked, rated, or ranked. Your account, username, and followers stay. <strong>This cannot be undone.</strong></p>
+                    <div id="clearDataMessage"></div>
+                    <div class="cl-modal-actions">
+                        <button class="btn btn-secondary" id="clearDataCancel" type="button">Cancel</button>
+                        <button class="btn btn-danger" id="clearDataConfirm" type="button">Clear everything</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="deleteAccountModal" class="cl-modal-overlay">
+                <div class="cl-modal-box cl-modal-box-sm">
+                    <button class="cl-modal-close" id="deleteAccountClose" aria-label="Close">×</button>
+                    <h3>Delete your account?</h3>
+                    <p class="cl-confirm-text">This permanently deletes your MediaListory account: your collection, custom lists, Top 10s, followers and following, and your profile. There is no way back from this. Consider <strong>Download full backup</strong> above before you continue.</p>
+                    <div class="cl-form-group">
+                        <label class="cl-form-label" for="deleteAccountConfirmInput">Type <strong id="deleteAccountUsername">your username</strong> to confirm</label>
+                        <input type="text" id="deleteAccountConfirmInput" class="cl-form-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    </div>
+                    <div id="deleteAccountMessage"></div>
+                    <div class="cl-modal-actions">
+                        <button class="btn btn-secondary" id="deleteAccountCancel" type="button">Cancel</button>
+                        <button class="btn btn-danger" id="deleteAccountConfirm" type="button" disabled>Delete my account</button>
+                    </div>
+                </div>
             </div>
 
             <div id="profileEdit" class="profile-content hidden">

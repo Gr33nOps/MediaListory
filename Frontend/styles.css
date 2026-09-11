@@ -1301,19 +1301,35 @@ select.update-status-select option,
 }
 
 /* The user's score is category-agnostic, so the badge is neutral - not tied
-   to the movies-blue colour on every row. */
+   to the movies-blue colour on every row. Number + word stacked, same
+   vocabulary as the score meter (0 Trash .. 10 Peak), so a badge on its own
+   says exactly what the meter would have shown while it was being set. */
 .coll-score-badge {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
     background: var(--bg-deep);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 6px 14px;
-    min-width: 48px;
+    padding: 5px 14px;
+    min-width: 56px;
     text-align: center;
+}
+.coll-score-badge .csb-num {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.15;
     font-variant-numeric: tabular-nums;
 }
+.coll-score-badge .csb-word {
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    line-height: 1.1;
+}
+.coll-score-badge.is-empty { color: var(--text-dim); font-size: 1.05rem; font-weight: 700; padding: 10px 14px; }
 
 .coll-item-edit-actions {
     display: flex;
@@ -1611,6 +1627,9 @@ select.update-status-select option,
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    /* Breathing room before the genre row below - without it, a badge row that
+       wraps to two lines sits flush against the genre pills with no gap. */
+    margin-bottom: 10px;
 }
 
 .game-detail-score {
@@ -1909,16 +1928,26 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
     max-width: calc(100% - 20px); background: var(--accent);
     border-radius: 999px; transition: width 0.2s ease;
 }
+/* Sized to hold its own number ("10" included) at a legible size, in both
+   the off state (bg-card + muted text - matches whichever theme is active,
+   since both tokens flip together) and the on/filled state (accent + white,
+   except Games' amber fill, which needs the dark ink token like every other
+   filled control on that page). */
 .score-meter-dot {
-    position: relative; z-index: 1; width: 15px; height: 15px; flex-shrink: 0; padding: 0;
+    position: relative; z-index: 1; width: 22px; height: 22px; flex-shrink: 0; padding: 0;
+    display: flex; align-items: center; justify-content: center;
     border: 2px solid var(--border); border-radius: 50%; background: var(--bg-card);
-    cursor: pointer; transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    color: var(--text-dim);
+    font-family: var(--font-body); font-size: 8.5px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer; transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
 /* Comfortable tap target on touch without enlarging the visible dot. */
-.score-meter-dot::after { content: ''; position: absolute; top: 50%; left: 50%; width: 30px; height: 34px; transform: translate(-50%, -50%); }
-.score-meter-dot:hover { transform: scale(1.28); border-color: var(--accent-light); }
-.score-meter-dot.on { background: var(--accent); border-color: var(--accent); }
-.score-meter-dot.sel { transform: scale(1.4); box-shadow: 0 0 0 4px var(--accent-dim); }
+.score-meter-dot::after { content: ''; position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; transform: translate(-50%, -50%); }
+.score-meter-dot:hover { transform: scale(1.22); border-color: var(--accent-light); color: var(--text-primary); }
+.score-meter-dot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+body[data-page="games"] .score-meter-dot.on, [data-cat="games"] .score-meter-dot.on { color: var(--cat-game-ink); }
+.score-meter-dot.sel { transform: scale(1.32); box-shadow: 0 0 0 4px var(--accent-dim); }
 .score-meter-dot:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
 .score-meter-scale {
     display: flex; justify-content: space-between;
@@ -4926,6 +4955,13 @@ body.imp-open { overflow: hidden; }
     .data-export .filter-select { flex: 1; }
 }
 
+/* Danger zone: same data-tools rhythm, tinted red so it reads as a different
+   kind of action from Import/Export above it rather than just more buttons. */
+.danger-zone { border-top-color: var(--red-dim); }
+.danger-zone-h { color: var(--red-light); }
+.danger-zone .data-tools-note { color: var(--text-muted); }
+.danger-zone .data-tools-note strong { color: var(--text-secondary); }
+
 /* ══ AURORA - animated gradient-blob atmosphere ═════════════════════════════
    Moving luminous light in the brand's own colours (the four media hues), used
    as an environmental background behind content - not inside cards. One reusable
@@ -5985,6 +6021,9 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 .qa-row-score { flex-direction: column; align-items: stretch; gap: 8px; }
 .qa-row-score > label { width: auto; }
 .qa-row-score .score-meter-value { font-size: 1.4rem; }
+/* The popover is a fixed 260px, too narrow for 11 full-size numbered dots. */
+.qa-row-score .score-meter-dot { width: 18px; height: 18px; font-size: 7px; }
+.qa-row-score .score-meter-dot.sel { transform: scale(1.3); }
 
 .qa-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .qa-actions .btn { width: 100%; }

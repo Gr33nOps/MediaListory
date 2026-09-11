@@ -82,6 +82,7 @@ function initPage() {
         });
     }
 
+    initDangerZone();
     loadProfile();
 }
 
@@ -429,6 +430,107 @@ function logout() {
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
         window.location.href = 'auth.html';
+    }
+}
+
+/* ── Danger zone: clear collection / delete account ──────────────────────
+   Both use the same overlay+.open pattern as the custom-list modals so they
+   match the rest of the app rather than introducing a second modal system. */
+function dzOpenModal(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    var focusable = el.querySelector('input, button, [href]');
+    if (focusable) focusable.focus();
+}
+function dzCloseModal(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function initDangerZone() {
+    var clearBtn = document.getElementById('clearDataBtn');
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+        document.getElementById('clearDataMessage').innerHTML = '';
+        dzOpenModal('clearDataModal');
+    });
+    document.getElementById('clearDataClose').addEventListener('click', function () { dzCloseModal('clearDataModal'); });
+    document.getElementById('clearDataCancel').addEventListener('click', function () { dzCloseModal('clearDataModal'); });
+    document.getElementById('clearDataModal').addEventListener('click', function (e) {
+        if (e.target.id === 'clearDataModal') dzCloseModal('clearDataModal');
+    });
+    document.getElementById('clearDataConfirm').addEventListener('click', confirmClearData);
+
+    var delBtn = document.getElementById('deleteAccountBtn');
+    if (delBtn) delBtn.addEventListener('click', function () {
+        var nameEl = document.getElementById('deleteAccountUsername');
+        var inputEl = document.getElementById('deleteAccountConfirmInput');
+        var okBtn = document.getElementById('deleteAccountConfirm');
+        var uname = (currentUser && currentUser.username) || '';
+        if (nameEl) nameEl.textContent = uname;
+        if (inputEl) inputEl.value = '';
+        if (okBtn) okBtn.disabled = true;
+        document.getElementById('deleteAccountMessage').innerHTML = '';
+        dzOpenModal('deleteAccountModal');
+    });
+    document.getElementById('deleteAccountClose').addEventListener('click', function () { dzCloseModal('deleteAccountModal'); });
+    document.getElementById('deleteAccountCancel').addEventListener('click', function () { dzCloseModal('deleteAccountModal'); });
+    document.getElementById('deleteAccountModal').addEventListener('click', function (e) {
+        if (e.target.id === 'deleteAccountModal') dzCloseModal('deleteAccountModal');
+    });
+    document.getElementById('deleteAccountConfirmInput').addEventListener('input', function () {
+        var uname = (currentUser && currentUser.username) || '';
+        var okBtn = document.getElementById('deleteAccountConfirm');
+        okBtn.disabled = !uname || this.value.trim().toLowerCase() !== uname.toLowerCase();
+    });
+    document.getElementById('deleteAccountConfirm').addEventListener('click', confirmDeleteAccount);
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        dzCloseModal('clearDataModal');
+        dzCloseModal('deleteAccountModal');
+    });
+}
+
+async function confirmClearData() {
+    var btn = document.getElementById('clearDataConfirm');
+    var msgDiv = document.getElementById('clearDataMessage');
+    btn.disabled = true;
+    try {
+        var r = await fetch(`${API_BASE}/user/data`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        var data = await r.json().catch(function () { return {}; });
+        if (!r.ok) throw new Error(data.error || 'Could not clear your data');
+        if (typeof notify === 'function') notify('Your collection has been cleared.', 'success');
+        else if (typeof toast === 'function') toast('Your collection has been cleared.', 'success');
+        setTimeout(function () { window.location.reload(); }, 900);
+    } catch (err) {
+        showError(msgDiv, err.message || 'Could not clear your data. Please try again.');
+        btn.disabled = false;
+    }
+}
+
+async function confirmDeleteAccount() {
+    var btn = document.getElementById('deleteAccountConfirm');
+    var msgDiv = document.getElementById('deleteAccountMessage');
+    var inputEl = document.getElementById('deleteAccountConfirmInput');
+    btn.disabled = true;
+    try {
+        var r = await fetch(`${API_BASE}/user/account`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: inputEl.value.trim() })
+        });
+        var data = await r.json().catch(function () { return {}; });
+        if (!r.ok) throw new Error(data.error || 'Could not delete your account');
+        logout();
+    } catch (err) {
+        showError(msgDiv, err.message || 'Could not delete your account. Please try again.');
+        btn.disabled = false;
     }
 }
 

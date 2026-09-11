@@ -337,7 +337,7 @@ function renderCollectionRow(game) {
                 (game.notes ? '<div class="coll-note" title="Review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right">' +
-                '<div class="coll-score-badge">' + (game.score != null ? game.score : '-') + '</div>' +
+                scoreBadgeHTML(game.score) +
             '</div>' +
         '</div>' +
     '</div>';
@@ -540,7 +540,6 @@ function upRenderAccGames(listId) {
 }
 
 function upRenderGameRow(g) {
-    var score       = g.user_score != null ? g.user_score : '-';
     var statusColor = STATUS_COLOR[g.status] || '#555';
     var statusLabel = STATUS_LABEL[g.status] || (g.status ? g.status : 'No Status');
     var imgSrc      = g.background_image || '/img/no-image.svg';
@@ -557,7 +556,7 @@ function upRenderGameRow(g) {
                 '<div class="coll-item-meta">' + statusMetaHtml + '</div>' +
                 (g.note ? '<div class="coll-note" title="Review or note">' + esc(g.note) + '</div>' : '') +
             '</div>' +
-            '<div class="coll-item-right"><div class="coll-score-badge">' + score + '</div></div>' +
+            '<div class="coll-item-right">' + scoreBadgeHTML(g.user_score) + '</div>' +
         '</div>' +
     '</div>';
 }
@@ -718,9 +717,23 @@ function pfEsc(v) {
     return (typeof esc === 'function') ? esc(v) : String(v == null ? '' : v);
 }
 
+// Straight to the title's own page rather than a browse grid that bounces
+// there. Validated against the same ref shapes title.js's parseRef accepts,
+// so a row with a missing or malformed ref (bad join, stale data) never
+// renders a link that just dead-ends on "That link does not point at a
+// title we can open" - it renders as plain, unclickable text instead.
+var PF_REF_RE = /^(igdb_|tmdb_movie_|tmdb_series_|kitsu_)\d+$/;
 function pfOpenHref(mediaType, ref) {
-    // Straight to the title's own page rather than a browse grid that bounces there.
-    return 'title.html?ref=' + encodeURIComponent(ref);
+    return PF_REF_RE.test(String(ref || '')) ? 'title.html?ref=' + encodeURIComponent(ref) : null;
+}
+
+// Renders an <a> when href is usable, otherwise a plain non-clickable <span>
+// with the same classes/content - never a link that leads nowhere.
+function pfLinkOrSpan(cls, extraAttrs, href, inner) {
+    var tag = href ? 'a' : 'span';
+    var classAttr = cls ? ' class="' + cls + '"' : '';
+    var hrefAttr = href ? ' href="' + pfEsc(href) + '"' : '';
+    return '<' + tag + classAttr + (extraAttrs || '') + hrefAttr + '>' + inner + '</' + tag + '>';
 }
 
 function pfPoster(src, alt) {
@@ -822,14 +835,14 @@ function renderCurrentlyInto(current) {
         if (it.episode_count && it.progress != null) {
             prog = '<span class="pf-current-prog">Episode ' + Number(it.progress) + ' of ' + Number(it.episode_count) + '</span>';
         }
-        return '<a class="pf-current-item" data-cat="' + pfEsc(it.media_type) + '" href="' + pfEsc(pfOpenHref(it.media_type, it.game_id)) + '">' +
+        return pfLinkOrSpan('pf-current-item', ' data-cat="' + pfEsc(it.media_type) + '"',
+            pfOpenHref(it.media_type, it.game_id),
             pfPoster(it.background_image, '') +
             '<span class="pf-current-body">' +
                 '<span class="pf-current-verb">' + verb + '</span>' +
                 '<span class="pf-current-name">' + pfEsc(it.name) + '</span>' +
                 prog +
-            '</span>' +
-        '</a>';
+            '</span>');
     }).join('');
 }
 
@@ -861,11 +874,10 @@ function renderTopTen(top) {
     var items = pfTop[pfActiveTopCat] || [];
     list.innerHTML = items.map(function (it) {
         return '<li class="pf-top-item">' +
-            '<a href="' + pfEsc(pfOpenHref(pfActiveTopCat, it.game_id)) + '" title="' + pfEsc(it.name) + '">' +
+            pfLinkOrSpan('', ' title="' + pfEsc(it.name) + '"', pfOpenHref(pfActiveTopCat, it.game_id),
                 '<span class="pf-top-rank">' + Number(it.position) + '</span>' +
                 pfPoster(it.background_image, it.name) +
-                '<span class="pf-top-name">' + pfEsc(it.name) + '</span>' +
-            '</a>' +
+                '<span class="pf-top-name">' + pfEsc(it.name) + '</span>') +
         '</li>';
     }).join('');
 }
@@ -952,11 +964,10 @@ async function loadCompare() {
 
 function compareTitleRow(item, right) {
     var href = pfOpenHref(item.media_type, item.media_ref);
-    return '<a class="pf-cmp-row" href="' + pfEsc(href) + '" data-cat="' + pfEsc(item.media_type) + '">' +
+    return pfLinkOrSpan('pf-cmp-row', ' data-cat="' + pfEsc(item.media_type) + '"', href,
         pfPoster(item.background_image, '') +
         '<span class="pf-cmp-name">' + pfEsc(item.name) + '</span>' +
-        right +
-    '</a>';
+        right);
 }
 
 function renderCompare(d) {

@@ -475,6 +475,15 @@
   async function boot() {
     if (typeof ensureSession === 'function') { try { await ensureSession(); } catch (_) {} }
 
+    // Wired before the ref is even checked, so a bad or missing ref below
+    // still leaves a working way out instead of a dead "Back" link.
+    var back = byId('titleBack');
+    var cameFromApp = document.referrer && document.referrer.indexOf(location.origin) === 0;
+    if (back) {
+      back.setAttribute('href', cameFromApp ? '#' : 'dashboard.html');
+      if (cameFromApp) back.addEventListener('click', function (e) { e.preventDefault(); history.back(); });
+    }
+
     var ref = new URLSearchParams(location.search).get('ref');
     var parsed = parseRef(ref);
     if (!parsed) { fail('That link does not point at a title we can open.'); return; }
@@ -485,16 +494,11 @@
 
     document.body.setAttribute('data-page', cfg.page);
 
-    var back = byId('titleBack');
     if (back) {
       // Prefer real history, so Back returns to the exact grid position the
       // visitor came from rather than the top of the category.
-      var cameFromApp = document.referrer && document.referrer.indexOf(location.origin) === 0;
       back.setAttribute('href', cfg.back);
       back.textContent = cameFromApp ? 'Back' : ('Back to ' + cfg.label);
-      if (cameFromApp) {
-        back.addEventListener('click', function (e) { e.preventDefault(); history.back(); });
-      }
     }
 
     if (typeof loadLibraryIndex === 'function') { try { await loadLibraryIndex(); } catch (_) {} }

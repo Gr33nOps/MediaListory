@@ -452,7 +452,7 @@ function renderCollectionRow(game) {
                 (game.notes ? '<div class="coll-note" title="Your review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right">' +
-                '<div class="coll-score-badge">' + (game.score != null ? game.score : '-') + '</div>' +
+                scoreBadgeHTML(game.score) +
                 editActions +
             '</div>' +
         '</div>' +
@@ -853,7 +853,6 @@ function clRenderAccGames(listId) {
 }
 
 function clRenderGameRow(g, listId, editMode) {
-    var score       = g.user_score != null ? g.user_score : '-';
     var statusColor = STATUS_COLOR[g.status] || '#555';
     var statusLabel = STATUS_LABEL[g.status] || (g.status ? g.status : 'No Status');
     var imgSrc      = g.background_image || '/img/no-image.svg';
@@ -875,7 +874,7 @@ function clRenderGameRow(g, listId, editMode) {
                 '<div class="coll-item-meta">' + statusMetaHtml + '</div>' +
                 (g.note ? '<div class="coll-note" title="Your review or note">' + esc(g.note) + '</div>' : '') +
             '</div>' +
-            '<div class="coll-item-right"><div class="coll-score-badge">' + score + '</div>' + editActions + '</div>' +
+            '<div class="coll-item-right">' + scoreBadgeHTML(g.user_score) + editActions + '</div>' +
         '</div>' +
     '</div>';
 }
