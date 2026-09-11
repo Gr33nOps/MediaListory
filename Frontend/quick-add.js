@@ -47,7 +47,10 @@
       publishers: item.publishers || [],
       developers: item.developers || []
     };
-    if (kind === 'game') {
+    // A mixed grid (the homepage) carries several kinds in one container, so
+    // the item's own media_type - when the caller supplied one - decides the
+    // shape rather than the single `kind` the container was bound with.
+    if ((item.media_type || kind) === 'game') {
       base.igdb_id = item.igdb_id || item.id;
       base.playtime = item.playtime || 0;
     } else {
