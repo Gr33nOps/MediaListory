@@ -639,6 +639,11 @@
     logoutToAuth();
   }
 
+  var TOAST_ICON = {
+    success: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
+    error:   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>',
+    info:    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.25" fill="currentColor" stroke-width="1.5"/></svg>'
+  };
   function toast(message, type) {
     var kind = type || 'info';
     var host = document.getElementById('toastHost');
@@ -651,7 +656,9 @@
     }
     var el = document.createElement('div');
     el.className = 'toast toast-' + kind;
-    el.textContent = String(message || '');
+    el.innerHTML = '<span class="toast-icon">' + (TOAST_ICON[kind] || TOAST_ICON.info) + '</span>' +
+      '<span class="toast-text"></span>';
+    el.querySelector('.toast-text').textContent = String(message || '');
     host.appendChild(el);
     setTimeout(function () {
       el.classList.add('toast-out');
@@ -720,32 +727,34 @@
     });
   }
 
-  // ── Score meter (0–10 with a word for each point) ───────────────────────
-  // A horizontal 0–10 track the user taps instead of typing a number. It keeps
-  // a hidden <input> so existing submit code can read `.value` unchanged; empty
-  // value = "No score", 0 = a real "Trash" rating. Used by the title page,
-  // quick-add and the library update dialogs so scoring feels the same app-wide.
+  // ── Score meter (0–10, a draggable bar like a volume slider) ────────────
+  // One thumb you drag or tap-to-jump, rather than eleven small tap targets -
+  // the old dot row read as a cramped cluster on a phone. Keeps the same
+  // hidden <input> so existing submit code reads `.value` unchanged; empty
+  // value = "No score", 0 = a real "Trash" rating at the far left. Used by
+  // the title page, quick-add and the library update dialogs so scoring
+  // feels the same app-wide.
   var SCORE_WORDS = ['Trash', 'Awful', 'Bad', 'Rough', 'Meh', 'Mid', 'Decent', 'Solid', 'Fire', 'Elite', 'Peak'];
 
   function scoreMeterHTML(id, value) {
     var v = (value === 0 || (value != null && value !== '')) ? Number(value) : null;
     if (v != null) v = Math.min(10, Math.max(0, Math.round(v)));
-    var dots = '';
-    for (var i = 0; i <= 10; i++) {
-      dots += '<button type="button" class="score-meter-dot' +
-        (v != null && i <= v ? ' on' : '') + (v === i ? ' sel' : '') +
-        '" data-v="' + i + '" aria-label="' + i + ' – ' + SCORE_WORDS[i] + '">' + i + '</button>';
-    }
+    var pct = (v == null ? 0 : v * 10);
+    var ticks = '';
+    for (var i = 1; i < 10; i++) ticks += '<span class="score-slider-tick"></span>';
     return '<div class="score-meter' + (v == null ? ' is-empty' : '') + '" data-score-meter="' + id + '">' +
         '<div class="score-meter-head">' +
           '<span class="score-meter-value">' + (v == null ? '–' : v) + '</span>' +
           '<span class="score-meter-word">' + (v == null ? 'No score' : SCORE_WORDS[v]) + '</span>' +
           '<button type="button" class="score-meter-clear"' + (v == null ? ' hidden' : '') + '>Clear</button>' +
         '</div>' +
-        '<div class="score-meter-track" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="10"' +
+        '<div class="score-slider" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="10"' +
           (v == null ? '' : ' aria-valuenow="' + v + '"') + ' aria-label="Score, 0 to 10">' +
-          '<span class="score-meter-fill" style="width:' + (v == null ? 0 : v * 10) + '%"></span>' +
-          dots +
+          '<div class="score-slider-track">' +
+            '<span class="score-slider-fill" style="width:' + pct + '%"></span>' +
+            '<span class="score-slider-ticks" aria-hidden="true">' + ticks + '</span>' +
+            '<span class="score-slider-thumb" style="left:' + pct + '%"></span>' +
+          '</div>' +
         '</div>' +
         '<div class="score-meter-scale"><span>0 · Trash</span><span>10 · Peak</span></div>' +
         '<input type="hidden" id="' + id + '"' + (v == null ? '' : ' value="' + v + '"') + '>' +
@@ -757,6 +766,9 @@
     if (!input) return;
     var meter = input.closest('.score-meter') || document.querySelector('[data-score-meter="' + id + '"]');
     if (!meter) return;
+    var slider = meter.querySelector('.score-slider');
+    var track  = meter.querySelector('.score-slider-track');
+
     function render(v) {
       v = (v === 0 || (v != null && v !== '')) ? Number(v) : null;
       input.value = (v == null) ? '' : String(v);
@@ -764,25 +776,48 @@
       meter.querySelector('.score-meter-value').textContent = (v == null) ? '–' : v;
       meter.querySelector('.score-meter-word').textContent = (v == null) ? 'No score' : SCORE_WORDS[v];
       var clr = meter.querySelector('.score-meter-clear'); if (clr) clr.hidden = (v == null);
-      meter.querySelector('.score-meter-fill').style.width = (v == null ? 0 : v * 10) + '%';
-      var track = meter.querySelector('.score-meter-track');
-      if (v == null) track.removeAttribute('aria-valuenow'); else track.setAttribute('aria-valuenow', v);
-      var dots = meter.querySelectorAll('.score-meter-dot');
-      for (var i = 0; i < dots.length; i++) {
-        var dv = Number(dots[i].dataset.v);
-        dots[i].classList.toggle('on', v != null && dv <= v);
-        dots[i].classList.toggle('sel', v === dv);
-      }
+      var pct = (v == null ? 0 : v * 10);
+      meter.querySelector('.score-slider-fill').style.width = pct + '%';
+      meter.querySelector('.score-slider-thumb').style.left = pct + '%';
+      if (v == null) slider.removeAttribute('aria-valuenow'); else slider.setAttribute('aria-valuenow', v);
     }
     meter._renderScore = render;
     if (meter.dataset.bound) return; // fresh markup each open, but guard reuse
     meter.dataset.bound = '1';
-    meter.querySelectorAll('.score-meter-dot').forEach(function (d) {
-      d.addEventListener('click', function () { render(Number(d.dataset.v)); });
+
+    function valueFromClientX(clientX) {
+      var rect = track.getBoundingClientRect();
+      var pct = rect.width ? (clientX - rect.left) / rect.width : 0;
+      return Math.round(Math.min(1, Math.max(0, pct)) * 10);
+    }
+
+    var dragging = false;
+    slider.addEventListener('pointerdown', function (e) {
+      if (e.button != null && e.button !== 0) return;
+      dragging = true;
+      slider.classList.add('dragging');
+      slider.focus();
+      try { slider.setPointerCapture(e.pointerId); } catch (_) {}
+      render(valueFromClientX(e.clientX));
+      e.preventDefault();
     });
+    slider.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      render(valueFromClientX(e.clientX));
+    });
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      slider.classList.remove('dragging');
+      try { slider.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    slider.addEventListener('pointerup', endDrag);
+    slider.addEventListener('pointercancel', endDrag);
+
     var clr = meter.querySelector('.score-meter-clear');
     if (clr) clr.addEventListener('click', function () { render(null); });
-    meter.querySelector('.score-meter-track').addEventListener('keydown', function (e) {
+
+    slider.addEventListener('keydown', function (e) {
       var cur = input.value === '' ? null : Number(input.value);
       if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); render(cur == null ? 0 : Math.max(0, cur - 1)); }
       else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); render(cur == null ? 0 : Math.min(10, cur + 1)); }
@@ -1684,6 +1719,25 @@
   global.mediaTypeLabel = mediaTypeLabel;
   global.statusLabel = statusLabel;
   global.statusOptions = statusOptions;
+  // Shared button-loading state: spinner + text swap while an action is in
+  // flight, restored exactly afterwards. One helper so every Save/Add/Delete
+  // button in the app gets the same feedback instead of each screen inventing
+  // its own "disable and rewrite textContent" pattern.
+  function setBtnLoading(btn, loading, label) {
+    if (!btn) return;
+    if (loading) {
+      if (btn.dataset.idleHtml == null) btn.dataset.idleHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+      btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>' + (label || 'Working…') + '</span>';
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('is-loading');
+      if (btn.dataset.idleHtml != null) { btn.innerHTML = btn.dataset.idleHtml; delete btn.dataset.idleHtml; }
+    }
+  }
+  global.setBtnLoading = setBtnLoading;
+
   global.bindScoreInput = bindScoreInput;
   global.scoreMeterHTML = scoreMeterHTML;
   global.bindScoreMeter = bindScoreMeter;

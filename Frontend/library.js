@@ -562,6 +562,8 @@ async function confirmUpdate() {
         var pv = progInput.value;
         body.progress = pv === '' ? null : Math.max(0, parseInt(pv, 10) || 0);
     }
+    var updBtn = document.getElementById('confirmUpdateBtn');
+    if (typeof setBtnLoading === 'function') setBtnLoading(updBtn, true, 'Saving…');
     try {
         var r = await fetch(`${API_BASE}/user/games/${currentUpdateGameId}`, {
             method: 'PUT',
@@ -574,8 +576,12 @@ async function confirmUpdate() {
             setTimeout(function() { closeUpdateModal(); loadMyGames(); }, 1500);
         } else {
             showError(msgDiv, d.error || 'Failed to update game');
+            if (typeof setBtnLoading === 'function') setBtnLoading(updBtn, false);
         }
-    } catch (e) { showError(msgDiv, 'Network error. Please try again.'); }
+    } catch (e) {
+        showError(msgDiv, 'Network error. Please try again.');
+        if (typeof setBtnLoading === 'function') setBtnLoading(updBtn, false);
+    }
 }
 
 function showRemoveModal(gameId, gameName) {
@@ -968,7 +974,7 @@ async function clSaveEditGame() {
     var msgDiv   = document.getElementById('clEditGameMessage');
     if (score != null && (score < 0 || score > 10)) { showError(msgDiv, 'Score must be between 0 and 10'); return; }
     var btn = document.getElementById('clEditGameSave');
-    btn.disabled = true;
+    if (typeof setBtnLoading === 'function') setBtnLoading(btn, true, 'Saving…'); else btn.disabled = true;
     try {
         var payload = { score: score, status: status };
         if (note !== undefined) payload.note = note;
@@ -980,8 +986,9 @@ async function clSaveEditGame() {
         }
         showSuccess(msgDiv, 'Game updated successfully!');
         setTimeout(function() { clCloseEditModal(); clRenderAccGames(_clEditListId); }, 1500);
+        return;
     } catch (e) { showError(msgDiv, e.message); }
-    finally { btn.disabled = false; }
+    if (typeof setBtnLoading === 'function') setBtnLoading(btn, false); else btn.disabled = false;
 }
 
 function clOpenRemoveGameModal(gameId, listId, gameName) {

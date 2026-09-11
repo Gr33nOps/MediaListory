@@ -223,6 +223,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 
 .hidden { display: none !important; }
 
+.error,
+.success {
+    animation: msg-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) { .error, .success { animation: none; } }
+
 .error {
     color: #fecaca;
     background: var(--red-dim);
@@ -589,6 +595,32 @@ body[data-page="games"] .nav-cta, body[data-page="games"] .nav-ava { color: var(
     box-shadow: var(--shadow-btn-hover) rgba(245, 158, 11, 0.4);
     transform: translateY(-2px);
 }
+
+/* One consistent press response for every button on the site - placed after
+   the per-variant hover rules so it wins the cascade on equal specificity
+   and always registers, whether or not the pointer is also hovering. */
+.btn:active:not(:disabled) { transform: scale(0.97) !important; transition-duration: 0.08s; }
+@media (prefers-reduced-motion: reduce) { .btn:active:not(:disabled) { transform: none !important; } }
+
+/* Inline loading state for any button (setBtnLoading in common.js): a small
+   spinner in front of the label, colour-matched to the button it sits in
+   (white on solid fills, the page accent on ghost/secondary buttons, and the
+   dark ink on Games' amber fill like every other filled control there). */
+.btn.is-loading { cursor: wait; }
+.btn-spinner {
+    display: inline-block; width: 14px; height: 14px; margin-right: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -2px;
+    flex-shrink: 0;
+}
+.btn-secondary .btn-spinner {
+    border-color: var(--border); border-top-color: var(--text-primary);
+}
+body[data-page="games"] .btn-primary .btn-spinner,
+[data-cat="games"] .btn-primary .btn-spinner {
+    border-color: rgba(26, 18, 5, 0.35); border-top-color: var(--cat-game-ink);
+}
+@media (prefers-reduced-motion: reduce) { .btn-spinner { animation-duration: 1.4s; } }
 
 .btn-sm  { padding: 10px 14px; font-size: 13px; min-height: 44px; }
 .btn-xs  { font-size: 12px !important; padding: 8px 10px !important; min-height: 44px; border-radius: var(--radius-sm) !important; }
@@ -1482,6 +1514,28 @@ select.update-status-select option,
     padding: 20px;
 }
 
+/* One entrance for every modal family in the app (this one, the custom-list
+   overlays, and the game-detail overlay) - a CSS animation on an element
+   restarts automatically whenever it goes from display:none (or .open being
+   toggled) to visible, so this needs no JS beyond the existing show/hide. */
+.modal, .update-modal, .remove-modal, .cl-modal-overlay, .cl-game-modal-overlay {
+    animation: modal-scrim-in 0.18s ease both;
+}
+.modal-content, .update-modal-content, .remove-modal-content, .cl-modal-box, .cl-game-modal-box {
+    animation: modal-pop-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes modal-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-pop-in {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .modal, .update-modal, .remove-modal, .cl-modal-overlay, .cl-game-modal-overlay,
+    .modal-content, .update-modal-content, .remove-modal-content, .cl-modal-box, .cl-game-modal-box {
+        animation: none;
+    }
+}
+
 .update-modal-content,
 .remove-modal-content {
     background: var(--bg-card);
@@ -1891,16 +1945,19 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
     box-shadow: none;
 }
 
-/* Score meter: a 0–10 track you tap, with the word for the chosen point shown
-   above it. Follows the page/dialog accent like every other control; the hidden
-   input carries the value so save code reads `.value` unchanged. */
-.score-meter { display: flex; flex-direction: column; gap: 10px; }
+/* Score meter: a draggable 0–10 bar, like a volume slider, with the word for
+   the chosen point shown above it. Follows the page/dialog accent like every
+   other control; the hidden input carries the value so save code reads
+   `.value` unchanged. One thumb reads far better on a phone than a row of
+   eleven small dots did. */
+.score-meter { display: flex; flex-direction: column; gap: 8px; }
 .score-meter-head { display: flex; align-items: baseline; gap: 9px; }
 .score-meter-value {
     font-family: var(--font-display);
     font-size: 1.6rem; font-weight: 800; line-height: 1;
     letter-spacing: -0.02em; color: var(--accent-light);
     font-variant-numeric: tabular-nums; min-width: 1.4ch;
+    transition: color 0.15s ease;
 }
 .score-meter.is-empty .score-meter-value { color: var(--text-dim); }
 .score-meter-word { font-size: 0.95rem; font-weight: 700; color: var(--text-secondary); }
@@ -1913,47 +1970,55 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
 }
 .score-meter-clear:hover { color: var(--text-primary); border-color: var(--border); }
 
-.score-meter-track {
-    position: relative; display: flex; align-items: center;
-    justify-content: space-between; padding: 9px 3px; touch-action: manipulation;
+/* The whole bar is the hit target (generous vertical padding), not just the
+   thin visible line - comfortable to grab on a phone without precision. */
+.score-slider {
+    position: relative;
+    padding: 15px 13px;
+    cursor: pointer;
+    touch-action: none;
 }
-.score-meter-track:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 4px; border-radius: var(--radius-sm); }
-.score-meter-track::before {
-    content: ''; position: absolute; left: 10px; right: 10px; top: 50%;
-    height: 4px; transform: translateY(-50%);
+.score-slider:focus-visible { outline: none; }
+.score-slider:focus-visible .score-slider-thumb { outline: 2px solid var(--accent-light); outline-offset: 3px; }
+.score-slider-track { position: relative; height: 6px; }
+.score-slider-track::before {
+    content: ''; position: absolute; inset: 0;
     background: var(--bg-deep); border: 1px solid var(--border-subtle); border-radius: 999px;
 }
-.score-meter-fill {
-    position: absolute; left: 10px; top: 50%; height: 4px; transform: translateY(-50%);
-    max-width: calc(100% - 20px); background: var(--accent);
-    border-radius: 999px; transition: width 0.2s ease;
+.score-slider-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--accent); border-radius: 999px 0 0 999px;
+    transition: width 0.15s ease;
 }
-/* Sized to hold its own number ("10" included) at a legible size, in both
-   the off state (bg-card + muted text - matches whichever theme is active,
-   since both tokens flip together) and the on/filled state (accent + white,
-   except Games' amber fill, which needs the dark ink token like every other
-   filled control on that page). */
-.score-meter-dot {
-    position: relative; z-index: 1; width: 22px; height: 22px; flex-shrink: 0; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px solid var(--border); border-radius: 50%; background: var(--bg-card);
-    color: var(--text-dim);
-    font-family: var(--font-body); font-size: 8.5px; font-weight: 800; line-height: 1;
-    font-variant-numeric: tabular-nums;
-    cursor: pointer; transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+.score-meter.is-empty .score-slider-fill { opacity: 0.45; }
+/* Reference marks at each whole point, purely decorative (not interactive) -
+   keeps some of the "which number is where" cue the old dots gave. */
+.score-slider-ticks {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1px; pointer-events: none;
 }
-/* Comfortable tap target on touch without enlarging the visible dot. */
-.score-meter-dot::after { content: ''; position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; transform: translate(-50%, -50%); }
-.score-meter-dot:hover { transform: scale(1.22); border-color: var(--accent-light); color: var(--text-primary); }
-.score-meter-dot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-body[data-page="games"] .score-meter-dot.on, [data-cat="games"] .score-meter-dot.on { color: var(--cat-game-ink); }
-.score-meter-dot.sel { transform: scale(1.32); box-shadow: 0 0 0 4px var(--accent-dim); }
-.score-meter-dot:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+.score-slider-tick { width: 2px; height: 6px; border-radius: 1px; background: rgba(148, 163, 184, 0.3); }
+.score-slider-thumb {
+    position: absolute; top: 50%; left: 0; width: 24px; height: 24px;
+    background: var(--accent); border: 3px solid var(--bg-card); border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    transform: translate(-50%, -50%);
+    transition: left 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.score-meter.is-empty .score-slider-thumb { opacity: 0.55; }
+.score-slider:hover .score-slider-thumb { transform: translate(-50%, -50%) scale(1.08); }
+.score-slider.dragging { cursor: grabbing; }
+.score-slider.dragging .score-slider-thumb {
+    transition: box-shadow 0.15s ease;
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 7px var(--accent-dim);
+}
+body[data-page="games"] .score-slider-thumb, [data-cat="games"] .score-slider-thumb { box-shadow: 0 2px 8px rgba(66, 32, 0, 0.35); }
 .score-meter-scale {
     display: flex; justify-content: space-between;
     font-size: 0.68rem; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums;
 }
-@media (prefers-reduced-motion: reduce) { .score-meter-dot, .score-meter-fill { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .score-slider-thumb, .score-slider-fill { transition: none; } }
 
 .update-form,
 .remove-form { margin: 0; }
@@ -3854,6 +3919,9 @@ body[data-page="games"] .score-meter-dot.on, [data-cat="games"] .score-meter-dot
 
 .toast {
     pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
     padding: 12px 14px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
@@ -3862,12 +3930,27 @@ body[data-page="games"] .score-meter-dot.on, [data-cat="games"] .score-meter-dot
     box-shadow: var(--shadow-card);
     font-size: 0.9rem;
     line-height: 1.4;
+    animation: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.toast-icon { flex-shrink: 0; margin-top: 1px; }
+.toast-text { min-width: 0; }
 
-.toast-success { border-color: var(--green); color: var(--green-light); }
-.toast-error { border-color: var(--red); color: var(--red-light); }
+.toast-success { border-color: var(--green); }
+.toast-success .toast-icon { color: var(--green-light); }
+.toast-error { border-color: var(--red); }
+.toast-error .toast-icon { color: var(--red-light); }
 .toast-info { border-color: var(--blue); }
-.toast-out { opacity: 0; transition: opacity 0.2s ease; }
+.toast-info .toast-icon { color: var(--blue-light); }
+.toast-out { opacity: 0; transform: translateY(4px) scale(0.97); transition: opacity 0.2s ease, transform 0.2s ease; }
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .toast { animation: none; }
+    .toast-out { transform: none; }
+}
 
 /* Cold-start state (Render free tier). Replaces the endless skeleton shimmer with
    a calm, centred "the server is starting, it will load" panel. A light scrim
@@ -6021,14 +6104,12 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 .qa-row-score { flex-direction: column; align-items: stretch; gap: 8px; }
 .qa-row-score > label { width: auto; }
 .qa-row-score .score-meter-value { font-size: 1.4rem; }
-/* The popover is a fixed 260px, too narrow for 11 full-size numbered dots. */
-.qa-row-score .score-meter-dot { width: 18px; height: 18px; font-size: 7px; }
-.qa-row-score .score-meter-dot.sel { transform: scale(1.3); }
 
 .qa-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .qa-actions .btn { width: 100%; }
 .qa-actions .qa-remove { background: transparent; border: 1px solid var(--red); color: var(--red-light); }
 .qa-actions .qa-remove:hover { background: var(--red-dim); }
+.qa-actions .qa-remove .btn-spinner { border-color: rgba(239, 68, 68, 0.3); border-top-color: var(--red-light); }
 
 .qa-msg { margin: 8px 0 0; font-size: 0.78rem; min-height: 0; }
 .qa-msg.is-error { color: var(--red-light); }
@@ -6122,7 +6203,15 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 }
 .title-page .atl-controls .filter-select { width: 100%; margin: 0; }
 .title-page .atl-note { margin-top: 14px; }
-.atl-msg { display: block; margin-top: 10px; font-size: 0.82rem; font-weight: 600; }
+.atl-msg { display: none; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.82rem; font-weight: 600; }
+.atl-msg:empty { display: none; }
+.atl-msg.is-shown { display: flex; animation: msg-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.atl-msg-icon { display: inline-flex; flex-shrink: 0; }
+@keyframes msg-pop-in {
+    from { opacity: 0; transform: translateY(-3px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .atl-msg.is-shown { animation: none; } }
 
 @media (max-width: 640px) {
     .title-page .atl-controls { grid-template-columns: minmax(0, 1fr); }

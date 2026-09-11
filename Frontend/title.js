@@ -393,11 +393,16 @@
     if (save) save.addEventListener('click', saveToLibrary);
   }
 
+  var MSG_ICON_OK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>';
+  var MSG_ICON_ERR = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>';
   function showMsg(text, type) {
     var el = byId('addGameMessage');
     if (!el) return;
-    el.textContent = text;
-    el.style.color = type === 'error' ? 'var(--red-light)' : 'var(--green-light)';
+    var ok = type !== 'error';
+    el.innerHTML = '<span class="atl-msg-icon">' + (ok ? MSG_ICON_OK : MSG_ICON_ERR) + '</span><span>' + esc(text) + '</span>';
+    el.style.color = ok ? 'var(--green-light)' : 'var(--red-light)';
+    // Restart the pop-in animation even when the same message class repeats.
+    el.classList.remove('is-shown'); void el.offsetWidth; el.classList.add('is-shown');
   }
 
   async function saveToLibrary() {
@@ -415,6 +420,8 @@
     var score = raw ? Number(raw) : null;
     var gameData = window.MGLQuickAdd.toGameData(state.item, state.kind);
     var owned = typeof libraryEntry === 'function' ? libraryEntry(state.ref) : null;
+    var saveBtn = byId('titleSaveBtn');
+    if (typeof setBtnLoading === 'function') setBtnLoading(saveBtn, true, owned ? 'Saving…' : 'Adding…');
 
     try {
       if (listValue === 'default' && owned && owned.id) {
@@ -462,6 +469,8 @@
       showMsg('Added to that list.', 'success');
     } catch (err) {
       showMsg('Network error. Please try again.', 'error');
+    } finally {
+      if (typeof setBtnLoading === 'function') setBtnLoading(saveBtn, false);
     }
   }
 

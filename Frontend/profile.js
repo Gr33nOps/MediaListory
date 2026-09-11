@@ -497,7 +497,7 @@ function initDangerZone() {
 async function confirmClearData() {
     var btn = document.getElementById('clearDataConfirm');
     var msgDiv = document.getElementById('clearDataMessage');
-    btn.disabled = true;
+    if (typeof setBtnLoading === 'function') setBtnLoading(btn, true, 'Clearing…'); else btn.disabled = true;
     try {
         var r = await fetch(`${API_BASE}/user/data`, {
             method: 'DELETE',
@@ -510,7 +510,7 @@ async function confirmClearData() {
         setTimeout(function () { window.location.reload(); }, 900);
     } catch (err) {
         showError(msgDiv, err.message || 'Could not clear your data. Please try again.');
-        btn.disabled = false;
+        if (typeof setBtnLoading === 'function') setBtnLoading(btn, false); else btn.disabled = false;
     }
 }
 
@@ -518,7 +518,7 @@ async function confirmDeleteAccount() {
     var btn = document.getElementById('deleteAccountConfirm');
     var msgDiv = document.getElementById('deleteAccountMessage');
     var inputEl = document.getElementById('deleteAccountConfirmInput');
-    btn.disabled = true;
+    if (typeof setBtnLoading === 'function') setBtnLoading(btn, true, 'Deleting…'); else btn.disabled = true;
     try {
         var r = await fetch(`${API_BASE}/user/account`, {
             method: 'DELETE',
@@ -530,7 +530,7 @@ async function confirmDeleteAccount() {
         logout();
     } catch (err) {
         showError(msgDiv, err.message || 'Could not delete your account. Please try again.');
-        btn.disabled = false;
+        if (typeof setBtnLoading === 'function') setBtnLoading(btn, false); else btn.disabled = false;
     }
 }
 

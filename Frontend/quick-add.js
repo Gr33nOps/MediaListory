@@ -246,7 +246,8 @@
     var listName = toList && targetEl.options[targetEl.selectedIndex]
       ? targetEl.options[targetEl.selectedIndex].textContent : '';
 
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+    if (saveBtn && typeof global.setBtnLoading === 'function') global.setBtnLoading(saveBtn, true, owned ? 'Saving…' : 'Adding…');
+    else if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
 
     try {
       var res, data;
@@ -279,7 +280,7 @@
       if (!res.ok) {
         var already = data.error === 'Game already in your list' || data.error === 'Game already in this list';
         message(already ? (toList ? 'Already in that list.' : 'Already in your library.') : (data.error || 'Could not save that.'), already ? 'ok' : 'error');
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = owned ? 'Save changes' : 'Add'; }
+        restoreSaveBtn();
         return;
       }
 
@@ -303,7 +304,13 @@
       close();
     } catch (err) {
       message('Network error. Please try again.', 'error');
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = owned ? 'Save changes' : 'Add'; }
+      restoreSaveBtn();
+    }
+
+    function restoreSaveBtn() {
+      if (!saveBtn) return;
+      if (typeof global.setBtnLoading === 'function') global.setBtnLoading(saveBtn, false);
+      else { saveBtn.disabled = false; saveBtn.textContent = owned ? 'Save changes' : 'Add'; }
     }
   }
 
@@ -311,12 +318,15 @@
   async function remove(ref, owned, anchor) {
     if (!owned || !owned.id) return;
     var btn = panelEl && panelEl.querySelector('.qa-remove');
-    if (btn) { btn.disabled = true; btn.textContent = 'Removing…'; }
+    if (btn) {
+      if (typeof global.setBtnLoading === 'function') global.setBtnLoading(btn, true, 'Removing…');
+      else { btn.disabled = true; btn.textContent = 'Removing…'; }
+    }
     try {
       var res = await global.apiFetch('/user/games/' + encodeURIComponent(owned.id), { method: 'DELETE' });
       if (!res.ok) {
         message('Could not remove that.', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = 'Remove from library'; }
+        restoreRemoveBtn();
         return;
       }
       if (typeof global.setLibraryEntry === 'function') global.setLibraryEntry(ref, null);
@@ -327,7 +337,13 @@
       if (anchor) anchor.focus();
     } catch (err) {
       message('Network error. Please try again.', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Remove from library'; }
+      restoreRemoveBtn();
+    }
+
+    function restoreRemoveBtn() {
+      if (!btn) return;
+      if (typeof global.setBtnLoading === 'function') global.setBtnLoading(btn, false);
+      else { btn.disabled = false; btn.textContent = 'Remove from library'; }
     }
   }
 
