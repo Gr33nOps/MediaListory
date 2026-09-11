@@ -511,7 +511,7 @@
         '<td class="imp-c-meta">' + (m.addedForFranchise
           ? '<span class="imp-title-sub">from your season rows</span>'
           : esc(global.statusLabel ? global.statusLabel(m.row.status, cat) : m.row.status) +
-            (m.row.score ? ' · ' + m.row.score + '/10' : '')) + '</td></tr>';
+            (m.row.score != null ? ' · ' + m.row.score + '/10' : '')) + '</td></tr>';
     }).join('');
     var addBtn = overlay.querySelector('#impAddBtn');
     addBtn.disabled = matched.length === 0;

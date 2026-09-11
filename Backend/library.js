@@ -608,8 +608,8 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
       const { game_id, game_data, note, status, score } = req.body;
       if (!game_id && !game_data) return res.status(400).json({ error: 'game_id or game_data is required' });
 
-      if (score !== undefined && score !== null && (score < 1 || score > 10)) {
-        return res.status(400).json({ error: 'Score must be between 1 and 10' });
+      if (score !== undefined && score !== null && (score < 0 || score > 10)) {
+        return res.status(400).json({ error: 'Score must be between 0 and 10' });
       }
       const validStatuses = ['playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];
       if (status && !validStatuses.includes(status)) {
@@ -662,8 +662,8 @@ module.exports = (db, verifyToken, checkBanned, deps = {}) => {
 
       const { note, status, score } = req.body;
 
-      if (score !== undefined && score !== null && (score < 1 || score > 10)) {
-        return res.status(400).json({ error: 'Score must be between 1 and 10' });
+      if (score !== undefined && score !== null && (score < 0 || score > 10)) {
+        return res.status(400).json({ error: 'Score must be between 0 and 10' });
       }
 
       const validStatuses = ['playing', 'completed', 'plan_to_play', 'on_hold', 'dropped'];

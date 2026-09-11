@@ -106,15 +106,8 @@
                             <option value="on_hold">On hold</option>
                             <option value="dropped">Dropped</option>
                         </select>
-                        <label for="updateScore">Score (1-10, optional):</label>
-                        <div class="score-input-container">
-                            <input type="number" id="updateScore" class="score-input" min="1" max="10" step="1" placeholder="Score">
-                            <div class="score-controls">
-                                <button type="button" class="score-btn" id="updateScoreUpBtn" aria-label="Increase score">+</button>
-                                <button type="button" class="score-btn" id="updateScoreDownBtn" aria-label="Decrease score">−</button>
-                            </div>
-                            <button type="button" class="btn btn-sm score-clear-btn" id="updateScoreClearBtn">No Score</button>
-                        </div>
+                        <label>Score <span class="atl-optional">optional</span></label>
+                        <div id="updateScoreMount"></div>
                         <label for="updateNote">Review or note <span class="atl-optional">optional</span></label>
                         <textarea id="updateNote" class="atl-note-input" rows="3" maxlength="2000" placeholder="Write a quick review or note, or leave it blank."></textarea>
                         <div id="updateMessage"></div>
@@ -237,15 +230,8 @@
                     <option value="on_hold">On hold</option>
                     <option value="dropped">Dropped</option>
                 </select>
-                <label for="clEditScoreInput">Score (1-10, optional):</label>
-                <div class="score-input-container">
-                    <input type="number" id="clEditScoreInput" class="score-input" min="1" max="10" step="1" placeholder="Score">
-                    <div class="score-controls">
-                        <button type="button" class="score-btn" id="clEditScoreUpBtn" aria-label="Increase score">+</button>
-                        <button type="button" class="score-btn" id="clEditScoreDownBtn" aria-label="Decrease score">−</button>
-                    </div>
-                    <button type="button" class="btn btn-sm score-clear-btn" id="clEditScoreClearBtn">No Score</button>
-                </div>
+                <label>Score <span class="atl-optional">optional</span></label>
+                <div id="clEditScoreMount"></div>
                 <label for="clEditNoteInput">Review or note <span class="atl-optional">optional</span></label>
                 <textarea id="clEditNoteInput" class="atl-note-input" rows="3" maxlength="2000" placeholder="Write a quick review or note, or leave it blank."></textarea>
                 <div id="clEditGameMessage"></div>

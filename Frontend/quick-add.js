@@ -147,11 +147,9 @@
         '<label for="qaStatus">Status</label>' +
         '<select id="qaStatus" class="filter-select">' + statusOptionsFor(kind, statusSel) + '</select>' +
       '</div>' +
-      '<div class="qa-row">' +
+      '<div class="qa-row qa-row-score">' +
         '<label for="qaScore">Score</label>' +
-        '<input type="number" id="qaScore" class="score-input" min="1" max="10" placeholder="—"' +
-          (owned && owned.score ? ' value="' + esc(String(owned.score)) + '"' : '') + '>' +
-        '<span class="qa-score-hint">/ 10</span>' +
+        scoreMeterHTML('qaScore', owned && owned.score != null ? owned.score : null) +
       '</div>' +
       '<div class="qa-actions">' +
         '<button type="button" class="btn btn-primary qa-save">' + (owned ? 'Save changes' : 'Add') + '</button>' +
@@ -161,6 +159,7 @@
 
     document.body.appendChild(panelEl);
     position(anchor);
+    if (typeof bindScoreMeter === 'function') bindScoreMeter('qaScore');
 
     // Fill the "Add to" dropdown with the user's custom lists once they load.
     var targetSel = panelEl.querySelector('#qaTarget');
@@ -234,8 +233,8 @@
     var status = statusEl ? statusEl.value : 'completed';
     var raw = scoreEl ? String(scoreEl.value).trim() : '';
 
-    if (raw && (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > 10)) {
-      message('Score must be a whole number from 1 to 10.', 'error');
+    if (raw && (!/^\d+$/.test(raw) || Number(raw) < 0 || Number(raw) > 10)) {
+      message('Score must be a whole number from 0 to 10.', 'error');
       if (scoreEl) scoreEl.focus();
       return;
     }

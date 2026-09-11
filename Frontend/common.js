@@ -720,6 +720,77 @@
     });
   }
 
+  // ── Score meter (0–10 with a word for each point) ───────────────────────
+  // A horizontal 0–10 track the user taps instead of typing a number. It keeps
+  // a hidden <input> so existing submit code can read `.value` unchanged; empty
+  // value = "No score", 0 = a real "Trash" rating. Used by the title page,
+  // quick-add and the library update dialogs so scoring feels the same app-wide.
+  var SCORE_WORDS = ['Trash', 'Awful', 'Bad', 'Rough', 'Meh', 'Mid', 'Decent', 'Solid', 'Fire', 'Elite', 'Peak'];
+
+  function scoreMeterHTML(id, value) {
+    var v = (value === 0 || (value != null && value !== '')) ? Number(value) : null;
+    if (v != null) v = Math.min(10, Math.max(0, Math.round(v)));
+    var dots = '';
+    for (var i = 0; i <= 10; i++) {
+      dots += '<button type="button" class="score-meter-dot' +
+        (v != null && i <= v ? ' on' : '') + (v === i ? ' sel' : '') +
+        '" data-v="' + i + '" aria-label="' + i + ' – ' + SCORE_WORDS[i] + '"></button>';
+    }
+    return '<div class="score-meter' + (v == null ? ' is-empty' : '') + '" data-score-meter="' + id + '">' +
+        '<div class="score-meter-head">' +
+          '<span class="score-meter-value">' + (v == null ? '–' : v) + '</span>' +
+          '<span class="score-meter-word">' + (v == null ? 'No score' : SCORE_WORDS[v]) + '</span>' +
+          '<button type="button" class="score-meter-clear"' + (v == null ? ' hidden' : '') + '>Clear</button>' +
+        '</div>' +
+        '<div class="score-meter-track" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="10"' +
+          (v == null ? '' : ' aria-valuenow="' + v + '"') + ' aria-label="Score, 0 to 10">' +
+          '<span class="score-meter-fill" style="width:' + (v == null ? 0 : v * 10) + '%"></span>' +
+          dots +
+        '</div>' +
+        '<div class="score-meter-scale"><span>0 · Trash</span><span>10 · Peak</span></div>' +
+        '<input type="hidden" id="' + id + '"' + (v == null ? '' : ' value="' + v + '"') + '>' +
+      '</div>';
+  }
+
+  function bindScoreMeter(id) {
+    var input = document.getElementById(id);
+    if (!input) return;
+    var meter = input.closest('.score-meter') || document.querySelector('[data-score-meter="' + id + '"]');
+    if (!meter) return;
+    function render(v) {
+      v = (v === 0 || (v != null && v !== '')) ? Number(v) : null;
+      input.value = (v == null) ? '' : String(v);
+      meter.classList.toggle('is-empty', v == null);
+      meter.querySelector('.score-meter-value').textContent = (v == null) ? '–' : v;
+      meter.querySelector('.score-meter-word').textContent = (v == null) ? 'No score' : SCORE_WORDS[v];
+      var clr = meter.querySelector('.score-meter-clear'); if (clr) clr.hidden = (v == null);
+      meter.querySelector('.score-meter-fill').style.width = (v == null ? 0 : v * 10) + '%';
+      var track = meter.querySelector('.score-meter-track');
+      if (v == null) track.removeAttribute('aria-valuenow'); else track.setAttribute('aria-valuenow', v);
+      var dots = meter.querySelectorAll('.score-meter-dot');
+      for (var i = 0; i < dots.length; i++) {
+        var dv = Number(dots[i].dataset.v);
+        dots[i].classList.toggle('on', v != null && dv <= v);
+        dots[i].classList.toggle('sel', v === dv);
+      }
+    }
+    meter._renderScore = render;
+    if (meter.dataset.bound) return; // fresh markup each open, but guard reuse
+    meter.dataset.bound = '1';
+    meter.querySelectorAll('.score-meter-dot').forEach(function (d) {
+      d.addEventListener('click', function () { render(Number(d.dataset.v)); });
+    });
+    var clr = meter.querySelector('.score-meter-clear');
+    if (clr) clr.addEventListener('click', function () { render(null); });
+    meter.querySelector('.score-meter-track').addEventListener('keydown', function (e) {
+      var cur = input.value === '' ? null : Number(input.value);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); render(cur == null ? 0 : Math.max(0, cur - 1)); }
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); render(cur == null ? 0 : Math.min(10, cur + 1)); }
+      else if (e.key === 'Home') { e.preventDefault(); render(0); }
+      else if (e.key === 'End') { e.preventDefault(); render(10); }
+    });
+  }
+
   function mountAppNav() {
     var el = document.getElementById('appNav');
     if (!el) return;
@@ -1614,6 +1685,8 @@
   global.statusLabel = statusLabel;
   global.statusOptions = statusOptions;
   global.bindScoreInput = bindScoreInput;
+  global.scoreMeterHTML = scoreMeterHTML;
+  global.bindScoreMeter = bindScoreMeter;
   global.MEDIA_STATUS_KEYS = STATUS_KEYS;
 })(typeof window !== 'undefined' ? window : globalThis);
 

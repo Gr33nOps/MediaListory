@@ -267,6 +267,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
     margin: 0 auto 20px;
 }
 
+/* The full-page loader follows the page's own accent (pink on Anime, green on
+   Shows, amber on Games) rather than a fixed blue that belonged to no category.
+   Scoped to the standalone loader so the tiny in-button spinners are untouched. */
+.loading-indicator .spinner {
+    border-color: var(--accent-dim);
+    border-top-color: var(--accent-light);
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .container {
@@ -1163,13 +1171,13 @@ select.update-status-select option,
 
 .status-tab:hover {
     color: var(--text-primary);
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--accent-dim);
 }
 
 .status-tab.active {
-    color: var(--blue);
-    border-bottom-color: var(--blue);
-    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-light);
+    border-bottom-color: var(--accent-light);
+    background: var(--accent-dim);
 }
 
 .status-badge {
@@ -1863,6 +1871,60 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
     transform: none;
     box-shadow: none;
 }
+
+/* Score meter: a 0–10 track you tap, with the word for the chosen point shown
+   above it. Follows the page/dialog accent like every other control; the hidden
+   input carries the value so save code reads `.value` unchanged. */
+.score-meter { display: flex; flex-direction: column; gap: 10px; }
+.score-meter-head { display: flex; align-items: baseline; gap: 9px; }
+.score-meter-value {
+    font-family: var(--font-display);
+    font-size: 1.6rem; font-weight: 800; line-height: 1;
+    letter-spacing: -0.02em; color: var(--accent-light);
+    font-variant-numeric: tabular-nums; min-width: 1.4ch;
+}
+.score-meter.is-empty .score-meter-value { color: var(--text-dim); }
+.score-meter-word { font-size: 0.95rem; font-weight: 700; color: var(--text-secondary); }
+.score-meter.is-empty .score-meter-word { font-weight: 600; color: var(--text-dim); }
+.score-meter-clear {
+    margin-left: auto; background: transparent;
+    border: 1px solid var(--border-subtle); color: var(--text-muted);
+    font-size: 0.72rem; font-weight: 600; padding: 4px 11px;
+    border-radius: var(--radius-pill); cursor: pointer; transition: var(--transition-fast);
+}
+.score-meter-clear:hover { color: var(--text-primary); border-color: var(--border); }
+
+.score-meter-track {
+    position: relative; display: flex; align-items: center;
+    justify-content: space-between; padding: 9px 3px; touch-action: manipulation;
+}
+.score-meter-track:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 4px; border-radius: var(--radius-sm); }
+.score-meter-track::before {
+    content: ''; position: absolute; left: 10px; right: 10px; top: 50%;
+    height: 4px; transform: translateY(-50%);
+    background: var(--bg-deep); border: 1px solid var(--border-subtle); border-radius: 999px;
+}
+.score-meter-fill {
+    position: absolute; left: 10px; top: 50%; height: 4px; transform: translateY(-50%);
+    max-width: calc(100% - 20px); background: var(--accent);
+    border-radius: 999px; transition: width 0.2s ease;
+}
+.score-meter-dot {
+    position: relative; z-index: 1; width: 15px; height: 15px; flex-shrink: 0; padding: 0;
+    border: 2px solid var(--border); border-radius: 50%; background: var(--bg-card);
+    cursor: pointer; transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* Comfortable tap target on touch without enlarging the visible dot. */
+.score-meter-dot::after { content: ''; position: absolute; top: 50%; left: 50%; width: 30px; height: 34px; transform: translate(-50%, -50%); }
+.score-meter-dot:hover { transform: scale(1.28); border-color: var(--accent-light); }
+.score-meter-dot.on { background: var(--accent); border-color: var(--accent); }
+.score-meter-dot.sel { transform: scale(1.4); box-shadow: 0 0 0 4px var(--accent-dim); }
+.score-meter-dot:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+.score-meter-scale {
+    display: flex; justify-content: space-between;
+    font-size: 0.68rem; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) { .score-meter-dot, .score-meter-fill { transition: none; } }
 
 .update-form,
 .remove-form { margin: 0; }
@@ -3061,8 +3123,8 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
 
 .cl-form-textarea:focus {
     outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .cl-form-textarea::placeholder { color: var(--text-dim); }
@@ -3333,14 +3395,14 @@ body[data-page="games"] .score-btn, [data-cat="games"] .score-btn { color: var(-
 .my-games-section .status-tab:hover,
 .cl-acc-status-tabs .status-tab:hover {
     color: var(--text-primary);
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--accent-dim);
 }
 
 .my-games-section .status-tab.active,
 .cl-acc-status-tabs .status-tab.active {
-    color: var(--blue);
-    border-bottom-color: var(--blue);
-    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-light);
+    border-bottom-color: var(--accent-light);
+    background: var(--accent-dim);
 }
 
 .cl-acc-status-tabs {
@@ -4582,6 +4644,8 @@ body.gsearch-open { overflow: hidden; }
 :root[data-theme="light"] .footer-col h4 { color: var(--text-secondary); }
 :root[data-theme="light"] .footer-col ul li a,
 :root[data-theme="light"] .footer-bottom,
+:root[data-theme="light"] .footer-brand p,
+:root[data-theme="light"] .footer-igdb-text,
 :root[data-theme="light"] .footer-bottom-links a { color: var(--text-muted); }
 /* The IGDB attribution stays a dark card (its text is light) - good on both. */
 
@@ -5916,6 +5980,11 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 .qa-row .filter-select { flex: 1; margin: 0; min-width: 0; }
 .qa-row .score-input { width: 68px; margin: 0; }
 .qa-score-hint { font-size: 0.78rem; color: var(--text-muted); }
+/* Score row breaks the label/control pairing: the meter spans the full panel
+   width with its label sitting above it. */
+.qa-row-score { flex-direction: column; align-items: stretch; gap: 8px; }
+.qa-row-score > label { width: auto; }
+.qa-row-score .score-meter-value { font-size: 1.4rem; }
 
 .qa-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .qa-actions .btn { width: 100%; }
@@ -5992,7 +6061,9 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
     color: var(--text-primary);
 }
 .atl-list-row { margin-bottom: 12px; }
+.atl-score-row { margin-bottom: 14px; }
 .atl-list-row label,
+.atl-score-row > label,
 .title-page .atl-field label,
 .title-page .atl-note label {
     display: block;
@@ -6006,7 +6077,7 @@ body[data-page="games"] .card-quick-add.is-owned { color: var(--cat-game-ink); }
 .atl-list-row .filter-select { width: 100%; margin: 0; }
 .title-page .atl-controls {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
     align-items: end;
 }

@@ -452,7 +452,7 @@ function renderCollectionRow(game) {
                 (game.notes ? '<div class="coll-note" title="Your review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right">' +
-                '<div class="coll-score-badge">' + (game.score ? game.score : '-') + '</div>' +
+                '<div class="coll-score-badge">' + (game.score != null ? game.score : '-') + '</div>' +
                 editActions +
             '</div>' +
         '</div>' +
@@ -479,7 +479,7 @@ function showUpdateModal(gameId) {
     currentUpdateGameId = gameId;
     var game = myGamesCache.find(function(g) { return g.game_id == gameId; });
     document.getElementById('updateStatus').value        = game ? game.status : 'completed';
-    document.getElementById('updateScore').value         = game && game.score ? game.score : '';
+    document.getElementById('updateScoreMount').innerHTML = scoreMeterHTML('updateScore', game && game.score != null ? game.score : null);
     var updNote = document.getElementById('updateNote');
     if (updNote) updNote.value = game && game.notes ? game.notes : '';
     document.getElementById('updateGameName').textContent = game ? game.name : '';
@@ -506,9 +506,7 @@ function showUpdateModal(gameId) {
     }
     if (typeof openModal === 'function') openModal('updateModal');
     else document.getElementById('updateModal').style.display = 'flex';
-    if (typeof bindScoreInput === 'function') {
-        bindScoreInput('updateScore', 'updateScoreUpBtn', 'updateScoreDownBtn', 'updateScoreClearBtn');
-    }
+    if (typeof bindScoreMeter === 'function') bindScoreMeter('updateScore');
 }
 
 function closeUpdateModal() {
@@ -531,7 +529,7 @@ async function incrementEpisode(gameId) {
         var r = await fetch(`${API_BASE}/user/games/${gameId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ status: status, score: game.score || null, progress: next })
+            body: JSON.stringify({ status: status, score: game.score == null ? null : game.score, progress: next })
         });
         if (r.ok) {
             game.progress = next;
@@ -557,8 +555,8 @@ async function confirmUpdate() {
     var progRow = document.getElementById('updateProgressRow');
     var progInput = document.getElementById('updateProgress');
     var msgDiv = document.getElementById('updateMessage');
-    if (score && (score < 1 || score > 10)) { showError(msgDiv, 'Score must be between 1 and 10'); return; }
-    var body = { status: status, score: score ? parseInt(score) : null };
+    if (score !== '' && (Number(score) < 0 || Number(score) > 10)) { showError(msgDiv, 'Score must be between 0 and 10'); return; }
+    var body = { status: status, score: score !== '' ? parseInt(score) : null };
     if (noteEl) body.notes = noteEl.value.trim();
     if (progRow && progRow.style.display !== 'none' && progInput) {
         var pv = progInput.value;
@@ -632,15 +630,6 @@ function initCustomListsTab() {
     document.getElementById('clEditGameCancel').addEventListener('click', function() { clCloseEditModal(); });
     document.getElementById('clEditGameSave').addEventListener('click',   clSaveEditGame);
     document.getElementById('clEditGameModal').addEventListener('click',  function(e) { if (e.target.id === 'clEditGameModal') clCloseEditModal(); });
-
-    document.getElementById('clEditScoreUpBtn').addEventListener('click', function() {
-        var inp = document.getElementById('clEditScoreInput');
-        if (!inp.value) inp.value = 1; else if (parseInt(inp.value) < 10) inp.value = parseInt(inp.value) + 1;
-    });
-    document.getElementById('clEditScoreDownBtn').addEventListener('click', function() {
-        var inp = document.getElementById('clEditScoreInput');
-        if (!inp.value) inp.value = 1; else if (parseInt(inp.value) > 1) inp.value = parseInt(inp.value) - 1;
-    });
 
     document.getElementById('clGameModal').addEventListener('click', function(e) { if (e.target.id === 'clGameModal') clCloseModal('clGameModal'); });
     document.getElementById('clGameModalClose').addEventListener('click', function() { clCloseModal('clGameModal'); });
@@ -864,7 +853,7 @@ function clRenderAccGames(listId) {
 }
 
 function clRenderGameRow(g, listId, editMode) {
-    var score       = g.user_score ? g.user_score : '-';
+    var score       = g.user_score != null ? g.user_score : '-';
     var statusColor = STATUS_COLOR[g.status] || '#555';
     var statusLabel = STATUS_LABEL[g.status] || (g.status ? g.status : 'No Status');
     var imgSrc      = g.background_image || '/img/no-image.svg';
@@ -958,7 +947,9 @@ function clOpenEditGameModal(gameId, listId, gameName, existingScore, existingSt
     _clEditGameId = gameId;
     _clEditListId = listId;
     document.getElementById('clEditGameName').textContent   = gameName || '';
-    document.getElementById('clEditScoreInput').value       = existingScore || '';
+    var _existScore = (existingScore === 0 || existingScore === '0' || (existingScore != null && existingScore !== '')) ? Number(existingScore) : null;
+    document.getElementById('clEditScoreMount').innerHTML   = scoreMeterHTML('clEditScoreInput', _existScore);
+    if (typeof bindScoreMeter === 'function') bindScoreMeter('clEditScoreInput');
     document.getElementById('clEditGameMessage').innerHTML  = '';
     document.getElementById('clEditStatusSelect').value     = existingStatus || 'plan_to_play';
     var clNoteEl = document.getElementById('clEditNoteInput');
@@ -967,26 +958,16 @@ function clOpenEditGameModal(gameId, listId, gameName, existingScore, existingSt
         clNoteEl.value = _g && _g.note ? _g.note : '';
     }
     clOpenEditModal();
-    setTimeout(function() {
-        var inp = document.getElementById('clEditScoreInput');
-        var clr = document.getElementById('clEditScoreClearBtn');
-        inp.focus();
-        if (clr) clr.onclick = function() { inp.value = ''; };
-        inp.addEventListener('input', function() {
-            var v = inp.value.replace(/[^0-9]/g, '');
-            inp.value = v ? Math.min(10, Math.max(1, parseInt(v))) : '';
-        });
-    }, 100);
 }
 
 async function clSaveEditGame() {
     var scoreVal = document.getElementById('clEditScoreInput').value;
-    var score    = scoreVal ? parseInt(scoreVal) : null;
+    var score    = scoreVal !== '' ? parseInt(scoreVal) : null;
     var status   = document.getElementById('clEditStatusSelect').value || null;
     var noteEl   = document.getElementById('clEditNoteInput');
     var note     = noteEl ? noteEl.value.trim() : undefined;
     var msgDiv   = document.getElementById('clEditGameMessage');
-    if (scoreVal && (score < 1 || score > 10)) { showError(msgDiv, 'Score must be between 1 and 10'); return; }
+    if (score != null && (score < 0 || score > 10)) { showError(msgDiv, 'Score must be between 0 and 10'); return; }
     var btn = document.getElementById('clEditGameSave');
     btn.disabled = true;
     try {
@@ -1104,9 +1085,10 @@ window.logout = logout;
 var seasonCache = {};
 
 function seasonScoreOptions(selected) {
+    var words = ['Trash', 'Awful', 'Bad', 'Rough', 'Meh', 'Mid', 'Decent', 'Solid', 'Fire', 'Elite', 'Peak'];
     var out = '<option value="">No score</option>';
     for (var i = 10; i >= 1; i--) {
-        out += '<option value="' + i + '"' + (Number(selected) === i ? ' selected' : '') + '>' + i + '</option>';
+        out += '<option value="' + i + '"' + (Number(selected) === i ? ' selected' : '') + '>' + i + ' · ' + words[i] + '</option>';
     }
     return out;
 }

@@ -277,11 +277,15 @@
       '<h2>' + (owned ? 'In your library' : 'Add to your library') + '</h2>' +
       (owned ? '<p class="atl-owned-note">Saved as <strong>' +
         esc(typeof statusLabel === 'function' ? statusLabel(owned.status, kind) : (owned.status || '')) + '</strong>' +
-        (owned.score ? ', rated <strong>' + esc(String(owned.score)) + '/10</strong>' : ', not rated yet') +
+        (owned.score != null ? ', rated <strong>' + esc(String(owned.score)) + '/10</strong>' : ', not rated yet') +
         '. Change it below.</p>' : '') +
       '<div class="atl-list-row">' +
         '<label for="gameListSelect">Add to list</label>' +
         '<select id="gameListSelect" class="filter-select">' + options + '</select>' +
+      '</div>' +
+      '<div class="atl-score-row">' +
+        '<label for="gameScore">Your score</label>' +
+        scoreMeterHTML('gameScore', owned && owned.score != null ? owned.score : null) +
       '</div>' +
       '<div class="atl-controls">' +
         '<div class="atl-field atl-field-status">' +
@@ -289,17 +293,6 @@
           '<select id="gameStatus" class="filter-select">' +
             (typeof statusOptions === 'function' ? statusOptions(kind, (owned && owned.status) || 'completed') : '') +
           '</select>' +
-        '</div>' +
-        '<div class="atl-field">' +
-          '<label for="gameScore">Your score (1-10)</label>' +
-          '<div class="score-input-container">' +
-            '<input type="number" id="gameScore" class="score-input" min="1" max="10" placeholder="--"' +
-              (owned && owned.score ? ' value="' + esc(String(owned.score)) + '"' : '') + '>' +
-            '<div class="score-controls">' +
-              '<button type="button" class="score-btn" id="tScoreUp" aria-label="Increase score">+</button>' +
-              '<button type="button" class="score-btn" id="tScoreDown" aria-label="Decrease score">−</button>' +
-            '</div>' +
-          '</div>' +
         '</div>' +
         '<button type="button" class="btn btn-primary atl-add" id="titleSaveBtn">' +
           (owned ? 'Save changes' : 'Add to library') + '</button>' +
@@ -395,7 +388,7 @@
       });
     }
 
-    if (typeof bindScoreInput === 'function') bindScoreInput('gameScore', 'tScoreUp', 'tScoreDown', null);
+    if (typeof bindScoreMeter === 'function') bindScoreMeter('gameScore');
     var save = byId('titleSaveBtn');
     if (save) save.addEventListener('click', saveToLibrary);
   }
@@ -415,8 +408,8 @@
     var note = byId('gameNote') ? byId('gameNote').value.trim() : '';
     var listValue = byId('gameListSelect') ? byId('gameListSelect').value : 'default';
 
-    if (raw && (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > 10)) {
-      showMsg('Score must be a whole number from 1 to 10.', 'error');
+    if (raw && (!/^\d+$/.test(raw) || Number(raw) < 0 || Number(raw) > 10)) {
+      showMsg('Score must be a whole number from 0 to 10.', 'error');
       return;
     }
     var score = raw ? Number(raw) : null;

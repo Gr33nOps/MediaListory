@@ -337,7 +337,7 @@ function renderCollectionRow(game) {
                 (game.notes ? '<div class="coll-note" title="Review or note">' + esc(game.notes) + '</div>' : '') +
             '</div>' +
             '<div class="coll-item-right">' +
-                '<div class="coll-score-badge">' + (game.score ? game.score : '-') + '</div>' +
+                '<div class="coll-score-badge">' + (game.score != null ? game.score : '-') + '</div>' +
             '</div>' +
         '</div>' +
     '</div>';
@@ -540,7 +540,7 @@ function upRenderAccGames(listId) {
 }
 
 function upRenderGameRow(g) {
-    var score       = g.user_score ? g.user_score : '-';
+    var score       = g.user_score != null ? g.user_score : '-';
     var statusColor = STATUS_COLOR[g.status] || '#555';
     var statusLabel = STATUS_LABEL[g.status] || (g.status ? g.status : 'No Status');
     var imgSrc      = g.background_image || '/img/no-image.svg';

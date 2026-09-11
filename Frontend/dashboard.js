@@ -130,7 +130,7 @@
       var r = await api('/user/games/' + id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: status, score: g.score || null, progress: next })
+        body: JSON.stringify({ status: status, score: g.score == null ? null : g.score, progress: next })
       });
       if (r.ok) {
         g.progress = next; g.status = status;
